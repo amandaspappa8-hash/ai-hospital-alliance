@@ -26,3 +26,14 @@ infra/*.tar.gz
 infra/**/.env
 dicom/demo/.venv
 node_modules
+
+# DICOM demo runtime/cache (DO NOT COMMIT)
+dicom/data/
+dicom/**/WebViewerCache/
+*.db
+*.db-wal
+*.db-shm
+
+# Backups
+*.tar.gz
+infra/*.tar.gz
