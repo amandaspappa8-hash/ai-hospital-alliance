@@ -1,0 +1,28 @@
+# Node
+node_modules/
+dist/
+build/
+.coverage/
+.vite/
+*.log
+
+# Next / Turbo
+.next/
+.turbo/
+out/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# OS / Editor
+.DS_Store
+.idea/
+.vscode/
+# local infra artifacts
+infra/*.tar.gz
+infra/**/.env
+dicom/demo/.venv
+node_modules

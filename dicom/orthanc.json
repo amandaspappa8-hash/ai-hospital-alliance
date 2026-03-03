@@ -1,0 +1,31 @@
+{
+  "Name": "Orthanc (AI Hospital Alliance)",
+  "HttpServerEnabled": true,
+  "OrthancExplorerEnabled": true,
+  "HttpPort": 8042,
+
+  "AuthenticationEnabled": false,
+  "RegisteredUsers": { },
+  "RemoteAccessAllowed": true,
+  "WadoEnabled": true,
+
+  "DicomWeb": {
+    "Enable": true,
+    "Root": "/dicom-web/",
+    "EnableWado": true,
+    "EnableQido": true,
+    "EnableStow": true
+  },
+
+  "Plugins": [
+    "/usr/share/orthanc/plugins",
+    "/usr/local/share/orthanc/plugins"
+  ],
+
+  "DicomServerEnabled": true,
+  "DicomPort": 4242,
+  "WadoEnabled": true,
+
+  "StorageDirectory": "/var/lib/orthanc/db",
+  "IndexDirectory": "/var/lib/orthanc/db"
+}

@@ -1,0 +1,10 @@
+{
+   "Details" : "This WADO-RS plugin cannot generate the following content type: application/dicom",
+   "HttpError" : "Bad Request",
+   "HttpStatus" : 400,
+   "Message" : "Bad request",
+   "Method" : "GET",
+   "OrthancError" : "Bad request",
+   "OrthancStatus" : 8,
+   "Uri" : "/dicom-web/studies/1.2.276.0.7230010.3.1.2.296485376.1.1521713414.1800996/series/1.2.276.0.7230010.3.1.3.296485376.1.1521713419.1802493/instances/1.2.826.0.1.3680043.2.1143.6234428899086018376578420169896863246"
+}

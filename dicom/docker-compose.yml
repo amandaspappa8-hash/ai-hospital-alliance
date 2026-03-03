@@ -1,0 +1,33 @@
+version: "3.8"
+
+services:
+  orthanc:
+    image: jodogne/orthanc-plugins:latest
+    container_name: orthanc
+    ports:
+      - "8042:8042"
+      - "4242:4242"
+    environment:
+      ORTHANC__AUTHENTICATION_ENABLED: "false"
+      ORTHANC__REGISTERED_USERS: "{}"
+      ORTHANC__REMOTE_ACCESS_ALLOWED: "true"
+      ORTHANC__DICOM_WEB__ENABLE: "true"
+      ORTHANC__DICOM_WEB__ROOT: "/dicom-web/"
+      ORTHANC__DICOM_WEB__ENABLE_WADO: "true"
+      ORTHANC__DICOM_WEB__ENABLE_QIDO: "true"
+      ORTHANC__DICOM_WEB__ENABLE_STOW: "true"
+    volumes:
+      - orthanc-db:/var/lib/orthanc/db
+      - ./orthanc.json:/etc/orthanc/orthanc.json:ro
+  ohif:
+    image: orthancteam/orthanc:latest
+    container_name: ohif
+    ports:
+      - "3005:80"
+    volumes:
+      - ./app-config.js:/usr/share/nginx/html/app-config.js:ro
+    depends_on:
+      - orthanc
+
+volumes:
+  orthanc-db: {}
