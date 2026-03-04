@@ -1,17 +1,36 @@
 import * as React from "react"
+import { useLocation } from "react-router-dom"
+
 import AppSidebar from "@/components/app/AppSidebar"
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
-import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
-import { useLocation } from "react-router-dom"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
+
+type AdminLayoutProps = {
+  children: React.ReactNode
+  title?: string
+  subtitle?: string
+  actions?: React.ReactNode
+}
 
 function useCrumbs() {
   const { pathname } = useLocation()
-  const parts = pathname.split("/").filter(Boolean)
-  return parts
+  return pathname.split("/").filter(Boolean)
 }
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+function titleFromPart(part: string) {
+  return part
+    .replace(/[-_]/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+export default function AdminLayout({ children, title, subtitle, actions }: AdminLayoutProps) {
   const parts = useCrumbs()
 
   return (
@@ -28,25 +47,31 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <BreadcrumbItem>
                 <BreadcrumbPage>AI Hospital Alliance</BreadcrumbPage>
               </BreadcrumbItem>
-              {parts.length > 0 && <BreadcrumbSeparator />}
-              {parts.map((p, idx) => {
-                const isLast = idx === parts.length - 1
-                return (
-                  <React.Fragment key={idx}>
-                    <BreadcrumbItem>
-                      <BreadcrumbPage className={isLast ? "font-medium" : "text-muted-foreground"}>
-                        {p}
-                      </BreadcrumbPage>
-                    </BreadcrumbItem>
-                    {!isLast && <BreadcrumbSeparator />}
-                  </React.Fragment>
-                )
-              })}
+
+              {parts.map((p, i) => (
+                <React.Fragment key={`${p}-${i}`}>
+                  <BreadcrumbSeparator />
+                  <BreadcrumbItem>
+                    <BreadcrumbPage>{titleFromPart(p)}</BreadcrumbPage>
+                  </BreadcrumbItem>
+                </React.Fragment>
+              ))}
             </BreadcrumbList>
           </Breadcrumb>
+
+          {/* right side */}
+          <div className="ml-auto flex items-center gap-2">{actions}</div>
         </header>
 
-        <main className="p-4">{children}</main>
+        {/* optional page heading */}
+        {(title || subtitle) && (
+          <div className="px-4 pt-4">
+            {title && <h1 className="text-2xl font-semibold">{title}</h1>}
+            {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+          </div>
+        )}
+
+        <main className="p-4 md:p-6">{children}</main>
       </SidebarInset>
     </SidebarProvider>
   )

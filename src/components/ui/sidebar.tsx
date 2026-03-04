@@ -280,10 +280,10 @@ const SidebarTrigger = React.forwardRef<
       variant="ghost"
       size="icon"
       className={cn("h-7 w-7", className)}
-        onClick={(event: React.MouseEvent) => {
-        onClick?.(event)
-        toggleSidebar()
-      }}
+        onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
+  onClick?.(event)
+  toggleSidebar()
+}}
       {...props}
     >
       <PanelLeft />
@@ -659,10 +659,11 @@ const SidebarMenuSkeleton = React.forwardRef<
   }
 >(({ className, showIcon = false, ...props }, ref) => {
   // Random width between 50 to 90%.
-  const width = React.useMemo(() => {
-    return `${Math.floor(Math.random() * 40) + 50}%`
-  }, [])
-
+  const widthRef = React.useRef<string | null>(null)
+if (widthRef.current === null) {
+  widthRef.current = `${Math.floor(Math.random() * 40) + 50}%`
+}
+const width = widthRef.current
   return (
     <div
       ref={ref}
