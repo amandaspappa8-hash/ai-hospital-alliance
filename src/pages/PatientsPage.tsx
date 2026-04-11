@@ -1,239 +1,313 @@
-import { useMemo, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { Separator } from "@/components/ui/separator"
-
-type PatientStatus = "in_care" | "waiting" | "discharged"
-type Department = "Cardiology" | "Neurology" | "Orthopedics" | "ER" | "Radiology" | "Lab"
+import { useEffect, useMemo, useState } from "react"
+import { useNavigate, useSearchParams } from "react-router-dom"
+import { apiGet } from "@/lib/api"
+import { createDoctorAssignment } from "@/lib/doctorAssignments"
 
 type Patient = {
   id: string
   name: string
-  department: Department
-  status: PatientStatus
-  age: number
-  phone: string
-  lastVisit: string
-}
-
-const PATIENTS: Patient[] = [
-  { id: "P-10291", name: "Sarah Jones", department: "Cardiology", status: "in_care", age: 52, phone: "+218 91 000 0001", lastVisit: "2026-02-14" },
-  { id: "P-10274", name: "John Smith", department: "Neurology", status: "waiting", age: 61, phone: "+218 92 000 0002", lastVisit: "2026-02-13" },
-  { id: "P-10260", name: "Emily Brown", department: "Orthopedics", status: "discharged", age: 37, phone: "+218 93 000 0003", lastVisit: "2026-02-10" },
-  { id: "P-10241", name: "Patient A", department: "Radiology", status: "in_care", age: 45, phone: "+218 94 000 0004", lastVisit: "2026-02-15" },
-  { id: "P-10211", name: "Patient B", department: "ER", status: "waiting", age: 29, phone: "+218 95 000 0005", lastVisit: "2026-02-15" },
-  { id: "P-10198", name: "Patient C", department: "Lab", status: "in_care", age: 70, phone: "+218 96 000 0006", lastVisit: "2026-02-12" },
-]
-
-function statusBadge(status: PatientStatus) {
-  switch (status) {
-    case "in_care":
-      return <Badge>In care</Badge>
-    case "waiting":
-      return <Badge variant="secondary">Waiting</Badge>
-    case "discharged":
-      return <Badge variant="outline">Discharged</Badge>
-  }
+  age?: number
+  gender?: string
+  phone?: string
+  condition?: string
+  department?: string
+  status?: string
 }
 
 export default function PatientsPage() {
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+
+  const doctorId = searchParams.get("doctorId") ?? ""
+  const doctorName = searchParams.get("doctorName") ?? ""
+
+  const [patients, setPatients] = useState<Patient[]>([])
   const [q, setQ] = useState("")
-  const [dept, setDept] = useState<Department | "all">("all")
-  const [status, setStatus] = useState<PatientStatus | "all">("all")
+  const [department, setDepartment] = useState("all")
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+  const [selectedId, setSelectedId] = useState("")
+  const [assigning, setAssigning] = useState(false)
+  const [marCount, setMarCount] = useState(0)
 
-  const [open, setOpen] = useState(false)
-  const [selected, setSelected] = useState<Patient | null>(null)
+  useEffect(() => {
+    async function loadPatients() {
+      try {
+        setLoading(true)
+        setError("")
 
-  const rows = useMemo(() => {
+        const data = await apiGet<Patient[]>("/patients")
+        setPatients(Array.isArray(data) ? data : [])
+      } catch (err) {
+        console.error("ERROR:", err)
+        setError("Failed to load patients")
+        setPatients([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadPatients()
+  }, [])
+
+  const filtered = useMemo(() => {
     const query = q.trim().toLowerCase()
-    return PATIENTS.filter((p) => {
-      const matchesQuery =
+
+    return patients.filter((p) => {
+      const matchesText =
         !query ||
-        p.name.toLowerCase().includes(query) ||
         p.id.toLowerCase().includes(query) ||
-        p.phone.toLowerCase().includes(query)
+        p.name.toLowerCase().includes(query) ||
+        String(p.department ?? "").toLowerCase().includes(query) ||
+        String(p.condition ?? "").toLowerCase().includes(query)
 
-      const matchesDept = dept === "all" ? true : p.department === dept
-      const matchesStatus = status === "all" ? true : p.status === status
+      const matchesDepartment =
+        department === "all" ||
+        String(p.department ?? "").toLowerCase() === department.toLowerCase()
 
-      return matchesQuery && matchesDept && matchesStatus
+      return matchesText && matchesDepartment
     })
-  }, [q, dept, status])
+  }, [patients, q, department])
+
+  const selected =
+    patients.find((p) => p.id === selectedId) ||
+    filtered[0] ||
+    null
+
+  const handleAssignPatient = async () => {
+    if (!selected || !doctorName || !doctorId) return
+
+    try {
+      setAssigning(true)
+
+      await createDoctorAssignment(doctorId, {
+        patientId: selected.id,
+        patientName: selected.name,
+        department: selected.department,
+        condition: selected.condition,
+        status: "Assigned",
+      })
+
+      alert(`Patient ${selected.name} assigned to ${doctorName}`)
+      navigate(`/doctors/${doctorId}`)
+    } catch (err) {
+      console.error(err)
+      alert("Failed to assign patient")
+    } finally {
+      setAssigning(false)
+    }
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">Patients</h1>
-          <p className="text-sm text-muted-foreground">Search, filter, and open patient details.</p>
-        </div>
-        <Button
-          onClick={() => {
-            setSelected({
-              id: "NEW",
-              name: "New Patient",
-              department: "ER",
-              status: "waiting",
-              age: 0,
-              phone: "",
-              lastVisit: new Date().toISOString().slice(0, 10),
-            })
-            setOpen(true)
+    <div style={{ padding: "24px", color: "white" }}>
+      <h1 style={{ fontSize: "30px", marginBottom: "8px" }}>Patients System</h1>
+      <p style={{ opacity: 0.8, marginBottom: "20px" }}>
+        Electronic Medical Record workspace
+      </p>
+
+      {doctorName && (
+        <div
+          style={{
+            background: "#0f172a",
+            border: "1px solid #0f766e",
+            color: "#ccfbf1",
+            borderRadius: "14px",
+            padding: "14px 16px",
+            marginBottom: "18px",
           }}
         >
-          + New Patient
-        </Button>
+          <div style={{ fontWeight: 800, marginBottom: 4 }}>
+            Assign patient workflow for {doctorName}
+          </div>
+          <div style={{ opacity: 0.85, fontSize: 14 }}>
+            Doctor ID: {doctorId || "N/A"} • Select a patient, then assign from the summary panel.
+          </div>
+        </div>
+      )}
+
+      <div style={{ marginBottom: "16px", opacity: 0.8 }}>
+        Total patients: {patients.length} | Filtered: {filtered.length}
       </div>
 
-      <Card className="rounded-2xl">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Patients list</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Filters */}
-          <div className="flex flex-col gap-3 md:flex-row md:items-center">
-            <div className="flex-1">
-              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name, ID, phone..." />
-            </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "380px minmax(0,1fr)",
+          gap: "20px",
+          alignItems: "start",
+        }}
+      >
+        <div
+          style={{
+            background: "#111827",
+            border: "1px solid #374151",
+            borderRadius: "16px",
+            padding: "16px",
+          }}
+        >
+          <div style={{ display: "grid", gap: "12px", marginBottom: "16px" }}>
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search by ID, name, department, condition"
+              style={{
+                width: "100%",
+                padding: "12px",
+                borderRadius: "10px",
+                border: "1px solid #4b5563",
+                background: "#0f172a",
+                color: "white",
+              }}
+            />
 
-            <div className="flex gap-2">
-              <Select value={dept} onValueChange={(v) => setDept(v as any)}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Department" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All departments</SelectItem>
-                  <SelectItem value="Cardiology">Cardiology</SelectItem>
-                  <SelectItem value="Neurology">Neurology</SelectItem>
-                  <SelectItem value="Orthopedics">Orthopedics</SelectItem>
-                  <SelectItem value="ER">ER</SelectItem>
-                  <SelectItem value="Radiology">Radiology</SelectItem>
-                  <SelectItem value="Lab">Lab</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={status} onValueChange={(v) => setStatus(v as any)}>
-                <SelectTrigger className="w-[160px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  <SelectItem value="in_care">In care</SelectItem>
-                  <SelectItem value="waiting">Waiting</SelectItem>
-                  <SelectItem value="discharged">Discharged</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <select
+              value={department}
+              onChange={(e) => setDepartment(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "12px",
+                borderRadius: "10px",
+                border: "1px solid #4b5563",
+                background: "#0f172a",
+                color: "white",
+              }}
+            >
+              <option value="all">All departments</option>
+              <option value="cardiology">Cardiology</option>
+              <option value="neurology">Neurology</option>
+              <option value="orthopedics">Orthopedics</option>
+              <option value="icu">ICU</option>
+              <option value="emergency">Emergency</option>
+            </select>
           </div>
 
-          <Separator />
+          {loading && <p>Loading patients...</p>}
+          {error && <p style={{ color: "#fca5a5" }}>{error}</p>}
 
-          {/* Table */}
-          <div className="rounded-xl border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[120px]">ID</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Department</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
-                </TableRow>
-              </TableHeader>
+          {!loading && !error && filtered.length === 0 && (
+            <p>No patients found.</p>
+          )}
 
-              <TableBody>
-                {rows.map((p) => (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-medium">{p.id}</TableCell>
-                    <TableCell>{p.name}</TableCell>
-                    <TableCell className="text-muted-foreground">{p.department}</TableCell>
-                    <TableCell>{statusBadge(p.status)}</TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelected(p)
-                          setOpen(true)
-                        }}
-                      >
-                        Open
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+          {!loading && !error && filtered.length > 0 && (
+            <div style={{ display: "grid", gap: "10px" }}>
+              {filtered.map((p) => {
+                const active = selected?.id === p.id
 
-                {rows.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
-                      No results.
-                    </TableCell>
-                  </TableRow>
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => setSelectedId(p.id)}
+                    style={{
+                      textAlign: "left",
+                      padding: "14px",
+                      borderRadius: "12px",
+                      border: active ? "1px solid #60a5fa" : "1px solid #374151",
+                      background: active ? "#1e3a8a" : "#0f172a",
+                      color: "white",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <div style={{ fontWeight: 700 }}>{p.name}</div>
+                    <div style={{ fontSize: "13px", opacity: 0.8 }}>
+                      ID: {p.id}
+                    </div>
+                    <div style={{ fontSize: "13px", opacity: 0.8 }}>
+                      {p.department ?? "No department"} • {p.condition ?? "No condition"}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        <div
+          style={{
+            background: "#111827",
+            border: "1px solid #374151",
+            borderRadius: "16px",
+            padding: "20px",
+            minHeight: "500px",
+          }}
+        >
+          <h2 style={{ marginTop: 0, marginBottom: "16px" }}>Patient Summary</h2>
+
+          {!selected ? (
+            <p>Select a patient to view details.</p>
+          ) : (
+            <div style={{ display: "grid", gap: "12px" }}>
+              <div><strong>Name:</strong> {selected.name}</div>
+              <div><strong>ID:</strong> {selected.id}</div>
+              <div><strong>Age:</strong> {selected.age ?? "—"}</div>
+              <div><strong>Gender:</strong> {selected.gender ?? "—"}</div>
+              <div><strong>Phone:</strong> {selected.phone ?? "—"}</div>
+              <div><strong>Department:</strong> {selected.department ?? "—"}</div>
+              <div><strong>Condition:</strong> {selected.condition ?? "—"}</div>
+              <div><strong>Status:</strong> {selected.status ?? "—"}</div>
+              <div><strong>MAR Count:</strong> {marCount}</div>
+
+              <div
+                style={{
+                  marginTop: "16px",
+                  display: "flex",
+                  gap: "12px",
+                  flexWrap: "wrap",
+                }}
+              >
+                <button
+                  onClick={() => navigate(`/patient-profile?id=${selected.id}`)}
+                  style={{
+                    padding: "12px 16px",
+                    borderRadius: "10px",
+                    border: "none",
+                    background: "#2563eb",
+                    color: "white",
+                    cursor: "pointer",
+                    fontWeight: 600,
+                  }}
+                >
+                  Open Patient Profile
+                </button>
+
+                <button
+                  onClick={() => navigate(`/nurses?patientId=${selected.id}`)}
+                  style={{
+                    padding: "12px 16px",
+                    borderRadius: "10px",
+                    border: "none",
+                    background: "#7c3aed",
+                    color: "white",
+                    cursor: "pointer",
+                    fontWeight: 600,
+                  }}
+                >
+                  Open Nursing Station
+                </button>
+
+
+                {doctorName && (
+                  <button
+                    onClick={handleAssignPatient}
+                    disabled={assigning}
+                    style={{
+                      padding: "12px 16px",
+                      borderRadius: "10px",
+                      border: "none",
+                      background: "#0f766e",
+                      color: "white",
+                      cursor: assigning ? "not-allowed" : "pointer",
+                      opacity: assigning ? 0.7 : 1,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {assigning ? "Assigning..." : "Assign Selected Patient"}
+                  </button>
                 )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Details Sheet */}
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent className="w-full sm:max-w-lg">
-          <SheetHeader>
-            <SheetTitle>Patient details</SheetTitle>
-          </SheetHeader>
-
-          <div className="mt-6 space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <div className="text-xs text-muted-foreground">ID</div>
-                <div className="font-medium">{selected?.id ?? "-"}</div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-xs text-muted-foreground">Status</div>
-                <div>{selected ? statusBadge(selected.status) : "-"}</div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-xs text-muted-foreground">Name</div>
-                <div className="font-medium">{selected?.name ?? "-"}</div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-xs text-muted-foreground">Department</div>
-                <div className="font-medium">{selected?.department ?? "-"}</div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-xs text-muted-foreground">Age</div>
-                <div className="font-medium">{selected?.age ?? "-"}</div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-xs text-muted-foreground">Phone</div>
-                <div className="font-medium">{selected?.phone ?? "-"}</div>
               </div>
             </div>
-
-            <Separator />
-
-            <div className="space-y-2">
-              <div className="text-sm font-semibold">Notes</div>
-              <p className="text-sm text-muted-foreground">
-                This is a UI template. Next: connect real patient profile + visits + documents.
-              </p>
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <Button className="flex-1">Save</Button>
-              <Button variant="outline" className="flex-1" onClick={() => setOpen(false)}>
-                Close
-              </Button>
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

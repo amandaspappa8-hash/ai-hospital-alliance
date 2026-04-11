@@ -1,92 +1,102 @@
-import AdminLayout from "@/layouts/AdminLayout"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
+import { useEffect, useState } from "react"
+import { apiGet } from "@/lib/api"
+import * as Sentry from "@sentry/react"
 
-const stats = [
-  { title: "Total Patients", value: "2,420", hint: "+4.7% / month" },
-  { title: "New Appointments", value: "226", hint: "+10.3% / month" },
-  { title: "Pending Reports", value: "193", hint: "-2.5% / month" },
-  { title: "Active Beds", value: "106", hint: "Stable" },
-]
+type Patient = {
+  id: string
+  name: string
+}
 
-const rows = [
-  { id: "A-1021", name: "Sara Ali", dept: "Cardiology", status: "In Review" },
-  { id: "A-1022", name: "John Smith", dept: "Neurology", status: "Approved" },
-  { id: "A-1023", name: "Mona Omar", dept: "Radiology", status: "Pending" },
-  { id: "A-1024", name: "Khaled Noor", dept: "Orthopedics", status: "Approved" },
-]
+type Appointment = {
+  id: string
+  patient: string
+  status: string
+}
 
-function StatusBadge({ s }: { s: string }) {
-  if (s === "Approved") return <Badge>Approved</Badge>
-  if (s === "Pending") return <Badge variant="secondary">Pending</Badge>
-  return <Badge variant="outline">In Review</Badge>
+type Report = {
+  id: string
+  title: string
+  status: string
 }
 
 export default function Dashboard() {
+  const [patientsCount, setPatientsCount] = useState(0)
+  const [appointmentsCount, setAppointmentsCount] = useState(0)
+  const [reportsCount, setReportsCount] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    async function loadDashboard() {
+      try {
+        const [patients, appointments, reports] = await Promise.all([
+          apiGet<Patient[]>("/patients"),
+          apiGet<Appointment[]>("/appointments"),
+          apiGet<Report[]>("/reports"),
+        ])
+
+        setPatientsCount(Array.isArray(patients) ? patients.length : 0)
+        setAppointmentsCount(Array.isArray(appointments) ? appointments.length : 0)
+        setReportsCount(Array.isArray(reports) ? reports.length : 0)
+      } catch (err) {
+        console.error(err)
+        setError("Failed to load dashboard data")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadDashboard()
+  }, [])
+
   return (
-    <AdminLayout
-      title="Dashboard"
-      subtitle="Overview of key hospital metrics"
-      actions={<Button variant="outline" size="sm">New</Button>}
+    <div style={{ padding: "24px", color: "white" }}>
+      <h1 style={{ fontSize: "30px", marginBottom: "8px" }}>Smart Hospital Dashboard</h1>
+      <p style={{ opacity: 0.8, marginBottom: "20px" }}>
+        Welcome, System Admin — Admin
+      </p>
+
+      {error && <div style={{ color: "#fca5a5", marginBottom: "16px" }}>{error}</div>}
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))",
+          gap: "16px",
+        }}
+      >
+        <StatCard
+          title="Patients"
+          value={loading ? "..." : String(patientsCount)}
+        />
+        <StatCard
+          title="Appointments"
+          value={loading ? "..." : String(appointmentsCount)}
+        />
+        <StatCard
+          title="Pending Reports"
+          value={loading ? "..." : String(reportsCount)}
+        />
+      </div>
+    </div>
+  )
+}
+
+function StatCard({ title, value }: { title: string; value: string }) {
+  return (
+    <div
+      style={{
+        background: "#111827",
+        border: "1px solid #374151",
+        borderRadius: "14px",
+        padding: "22px",
+        minHeight: "140px",
+      }}
     >
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((s) => (
-          <Card key={s.title}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{s.title}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-semibold">{s.value}</div>
-              <div className="text-xs text-muted-foreground">{s.hint}</div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <div className="mt-6 flex items-center justify-between gap-3">
-        <div className="text-sm font-medium">Recent Appointments</div>
-        <div className="w-full max-w-sm">
-          <Input placeholder="Search patient…" />
-        </div>
-      </div>
-
-      <Separator className="my-4" />
-
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Appointments</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[120px]">Ref</TableHead>
-                  <TableHead>Patient</TableHead>
-                  <TableHead>Department</TableHead>
-                  <TableHead className="text-right">Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-medium">{r.id}</TableCell>
-                    <TableCell>{r.name}</TableCell>
-                    <TableCell className="text-muted-foreground">{r.dept}</TableCell>
-                    <TableCell className="text-right">
-                      <StatusBadge s={r.status} />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
-    </AdminLayout>
+      <div style={{ opacity: 0.8, marginBottom: "18px" }}>{title}</div>
+      <div style={{ fontSize: "42px", fontWeight: 700 }}>{value}</div>
+    
+      <button onClick={() => Sentry.captureException(new Error("Dashboard test"))}>Test Sentry</button>
+</div>
   )
 }

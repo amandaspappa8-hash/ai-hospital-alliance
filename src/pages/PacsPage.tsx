@@ -1,137 +1,195 @@
-import { useMemo } from "react"
-import { useSearchParams, Link } from "react-router-dom"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useEffect, useMemo, useState } from "react"
+import { apiGet } from "@/lib/api"
 
-import { getStudyById, listStudies, clearImagingDemo } from "@/lib/imaging-store"
+type PacsStudy = {
+  studyInstanceUID: string
+  patientId: string
+  patientName?: string
+  modality?: string
+  studyDate?: string
+  studyDescription?: string
+}
+
+const OHIF_BASE = "http://127.0.0.1:3005"
 
 export default function PacsPage() {
-  const [params] = useSearchParams()
-  const studyId = params.get("study")
+  const [studies, setStudies] = useState<PacsStudy[]>([])
+  const [selectedUid, setSelectedUid] = useState("")
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
 
-  const studies = useMemo(() => listStudies(), [])
-  const selected = studyId ? getStudyById(studyId) : undefined
+  useEffect(() => {
+    apiGet<PacsStudy[]>("/pacs/studies")
+      .then((data) => {
+        const rows = Array.isArray(data) ? data : []
+        setStudies(rows)
+        if (rows.length > 0) {
+          setSelectedUid(rows[0].studyInstanceUID)
+        }
+      })
+      .catch((err) => {
+        console.error(err)
+        setError("Failed to load PACS studies from backend")
+      })
+      .finally(() => setLoading(false))
+  }, [])
+
+  const selected = useMemo(
+    () => studies.find((study) => study.studyInstanceUID === selectedUid) || null,
+    [studies, selectedUid]
+  )
+
+  const openOhif = (studyUid?: string) => {
+    const uid = studyUid || selected?.studyInstanceUID
+    if (!uid) return
+
+    window.open(
+      `${OHIF_BASE}/viewer?StudyInstanceUIDs=${encodeURIComponent(uid)}`,
+      "_blank",
+      "noopener,noreferrer"
+    )
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">PACS</h1>
-          <p className="text-sm text-muted-foreground">
-            Study list + viewer placeholder. Next step: OHIF + DICOMweb + real PACS integration.
-          </p>
-        </div>
+    <div style={{ padding: "24px", color: "white" }}>
+      <h1 style={{ fontSize: "28px", marginBottom: "8px" }}>PACS</h1>
+      <p style={{ opacity: 0.8, marginBottom: "20px" }}>
+        Real Orthanc studies via backend PACS proxy
+      </p>
 
-        <div className="flex gap-2">
-          <Button asChild variant="outline">
-            <Link to="/imaging">Create Order</Link>
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => {
-              clearImagingDemo()
-              window.location.href = "/pacs"
+      {loading && <div>Loading studies...</div>}
+      {error && <div style={{ color: "#fca5a5" }}>{error}</div>}
+
+      {!loading && !error && (
+        <>
+          <div
+            style={{
+              overflowX: "auto",
+              border: "1px solid #374151",
+              borderRadius: "12px",
+              marginBottom: "20px",
             }}
           >
-            Clear Demo Data
-          </Button>
-        </div>
-      </div>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead style={{ background: "#111827" }}>
+                <tr>
+                  <th style={th}>Patient</th>
+                  <th style={th}>Patient ID</th>
+                  <th style={th}>Modality</th>
+                  <th style={th}>Date</th>
+                  <th style={th}>Description</th>
+                  <th style={th}>Study UID</th>
+                  <th style={th}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {studies.map((study) => (
+                  <tr
+                    key={study.studyInstanceUID}
+                    style={{
+                      background:
+                        selectedUid === study.studyInstanceUID ? "#0f172a" : "transparent",
+                    }}
+                  >
+                    <td style={td}>{study.patientName || "-"}</td>
+                    <td style={td}>{study.patientId || "-"}</td>
+                    <td style={td}>{study.modality || "-"}</td>
+                    <td style={td}>{study.studyDate || "-"}</td>
+                    <td style={td}>{study.studyDescription || "-"}</td>
+                    <td style={td}>{study.studyInstanceUID}</td>
+                    <td style={td}>
+                      <button
+                        onClick={() => setSelectedUid(study.studyInstanceUID)}
+                        style={{
+                          padding: "8px 12px",
+                          borderRadius: "8px",
+                          border: "1px solid #374151",
+                          background:
+                            selectedUid === study.studyInstanceUID ? "#166534" : "#111827",
+                          color: "white",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Open
+                      </button>
+                    </td>
+                  </tr>
+                ))}
 
-      {selected ? (
-        <Card className="rounded-2xl">
-          <CardHeader>
-            <CardTitle className="text-base">Viewer (Demo)</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="secondary">{selected.modality}</Badge>
-              <Badge variant="secondary">{selected.status}</Badge>
-              <Badge variant="secondary">{selected.seriesCount} series</Badge>
-              <Badge variant="secondary">{selected.instanceCount} instances</Badge>
-            </div>
-
-            <div className="rounded-xl border p-4">
-              <div className="font-medium">{selected.description}</div>
-              <div className="text-sm text-muted-foreground">
-                Patient: {selected.patientName} ({selected.patientId})
-              </div>
-              <div className="text-sm text-muted-foreground">
-                Study: {selected.studyId} • {new Date(selected.studyDate).toLocaleString()}
-              </div>
-
-              <div className="mt-4 text-sm">
-                ✅ Demo viewer works. Next: embed OHIF viewer and load this study via DICOMweb endpoint.
-              </div>
-            </div>
-
-            <Button asChild variant="outline">
-              <Link to="/pacs">Back to list</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      <Card className="rounded-2xl">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Studies</CardTitle>
-          <Badge variant="secondary">{studies.length} studies</Badge>
-        </CardHeader>
-        <CardContent>
-    <div className="rounded-xl border overflow-hidden">
-  {!studyId ? (
-    <div className="p-6 space-y-3">
-      <div className="text-sm text-muted-foreground">
-        اختر دراسة من Imaging لعرضها داخل عارض الأشعة الذكي (OHIF)
-      </div>
-
-      <Button asChild>
-        <Link to="/imaging">Go to Imaging Orders</Link>
-      </Button>
-    </div>
-  ) : (
-    <div className="space-y-4 p-4">
-      <div className="flex items-center justify-between">
-        <div className="text-sm">
-          Study UID:
-          <span className="font-mono ml-2">{studyId}</span>
-        </div>
-
-        <Button
-          variant="outline"
-          onClick={() =>
-            window.open(
-              `http://localhost:3001/viewer?StudyInstanceUIDs=${encodeURIComponent(
-                studyId
-              )}`,
-              "_blank"
-            )
-          }
-        >
-          Open in Full OHIF Viewer
-        </Button>
-      </div>
-
-      <div className="rounded-xl border overflow-hidden h-[75vh]">
-        <iframe
-          title="OHIF Viewer"
-          className="w-full h-full"
-          src={`http://localhost:3001/viewer?StudyInstanceUIDs=${encodeURIComponent(
-            studyId
-          )}`}
-        />
-      </div>
-    </div>
-  )}
-</div>
-
-          <div className="mt-3 text-xs text-muted-foreground">
-            Real integration plan: DICOM MWL → modality acquires → DICOM C-STORE to PACS → DICOMweb to viewer.
+                {studies.length === 0 && (
+                  <tr>
+                    <td style={td} colSpan={7}>
+                      No PACS studies found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
-        </CardContent>
-      </Card>
+
+          {selected && (
+            <div
+              style={{
+                border: "1px solid #374151",
+                borderRadius: "12px",
+                padding: "16px",
+                background: "#111827",
+              }}
+            >
+              <div style={{ fontSize: "20px", fontWeight: 700, marginBottom: "10px" }}>
+                Selected Study
+              </div>
+
+              <div style={{ marginBottom: "8px" }}>
+                <strong>Patient:</strong> {selected.patientName || "-"}
+              </div>
+              <div style={{ marginBottom: "8px" }}>
+                <strong>Patient ID:</strong> {selected.patientId || "-"}
+              </div>
+              <div style={{ marginBottom: "8px" }}>
+                <strong>Modality:</strong> {selected.modality || "-"}
+              </div>
+              <div style={{ marginBottom: "8px" }}>
+                <strong>Date:</strong> {selected.studyDate || "-"}
+              </div>
+              <div style={{ marginBottom: "8px" }}>
+                <strong>Description:</strong> {selected.studyDescription || "-"}
+              </div>
+              <div style={{ marginBottom: "8px", wordBreak: "break-all" }}>
+                <strong>Study UID:</strong> {selected.studyInstanceUID}
+              </div>
+
+              <div style={{ marginTop: "20px" }}>
+                <button
+                  onClick={() => openOhif(selected.studyInstanceUID)}
+                  style={{
+                    padding: "12px 20px",
+                    borderRadius: "10px",
+                    background: "#0ea5e9",
+                    border: "none",
+                    color: "white",
+                    fontSize: "16px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Open Study in OHIF Viewer
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   )
+}
+
+const th: React.CSSProperties = {
+  textAlign: "left",
+  padding: "12px",
+  borderBottom: "1px solid #374151",
+}
+
+const td: React.CSSProperties = {
+  padding: "12px",
+  borderBottom: "1px solid #1f2937",
 }

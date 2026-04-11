@@ -1,30 +1,25 @@
 window.config = {
   routerBasename: '/',
   showStudyList: true,
-
+  extensions: [],
+  modes: [],
   dataSources: [
     {
-      sourceName: 'dicomweb',
+      namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
+      sourceName: 'orthanc',
       configuration: {
         friendlyName: 'Orthanc',
         name: 'orthanc',
-
-        // داخل Docker: خليها orthanc وليس localhost
-        qidoRoot: 'http://orthanc:8042/dicom-web',
-        wadoRoot: 'http://orthanc:8042/dicom-web',
-
-        supportsIncludeField: true,
-        imageRendering: 'wadors',
-        thumbnailRendering: 'wadors',
+        qidoRoot: 'http://127.0.0.1:8042/dicom-web',
+        wadoRoot: 'http://127.0.0.1:8042/dicom-web',
+        wadoUriRoot: 'http://127.0.0.1:8042/wado',
+        staticWado: true,
+        singlepart: 'bulkdata',
         enableStudyLazyLoad: true,
-
-        // ✅ هنا مكان الدالة/البلوك
-        requestOptions: {
-          requestHeaders: {
-            Authorization: 'Basic b3J0aGFuYzp vcnRoYW5j'.replace(' ', ''),
-          },
-        },
-      },
-    },
+        supportsFuzzyMatching: false,
+        supportsWildcard: true
+      }
+    }
   ],
+  defaultDataSourceName: 'orthanc'
 };

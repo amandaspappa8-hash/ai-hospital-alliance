@@ -1,0 +1,274 @@
+import { Routes, Route, Navigate } from "react-router-dom"
+import AppLayout from "./layouts/AppLayout"
+import ProtectedRoute from "./components/auth/ProtectedRoute"
+import SmartPharmacyPage from "./pages/SmartPharmacyPage"
+import DischargeMedicationPage from "./pages/DischargeMedicationPage"
+
+import Login from "./pages/Login"
+import LogoutPage from "./pages/LogoutPage"
+import Dashboard from "./pages/Dashboard"
+import PatientsPage from "./pages/PatientsPage"
+import AppointmentsPage from "./pages/AppointmentsPage"
+import ReportsPage from "./pages/ReportsPage"
+import NotesPage from "./pages/NotesPage"
+import PacsPage from "./pages/PacsPage"
+import PatientProfilePage from "./pages/PatientProfilePage"
+import AIRoutingPage from "./pages/AIRoutingPage"
+import OrdersPage from "./pages/OrdersPage"
+import ClinicalDecisionPage from "./pages/ClinicalDecisionPage"
+import DoctorsPage from "./pages/DoctorsPage"
+import DoctorProfilePage from "./pages/DoctorProfilePage"
+import AdminOverviewPage from "./pages/AdminOverviewPage"
+import SpecialtiesPage from "./pages/SpecialtiesPage"
+import CardiologyPage from "./pages/CardiologyPage"
+import NeurologyPage from "./pages/NeurologyPage"
+import EmergencyPage from "./pages/EmergencyPage"
+import ICUPage from "./pages/ICUPage"
+import RadiologyPage from "./pages/RadiologyPage"
+import PediatricsPage from "./pages/PediatricsPage"
+import NursesPage from "./pages/NursesPage"
+import LabsPage from "./pages/LabsPage"
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/logout" element={<LogoutPage />} />
+      <Route path="/pharmacy" element={<SmartPharmacyPage />} />     
+      <Route path="/discharge-medications" element={<DischargeMedicationPage />} /> 
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <AppLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Navigate to="/dashboard" replace />} />
+
+        <Route
+          path="dashboard"
+          element={
+            <ProtectedRoute routeKey="dashboard">
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="ai-routing"
+          element={
+            <ProtectedRoute routeKey="dashboard">
+              <AIRoutingPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="clinical-decision"
+          element={
+            <ProtectedRoute routeKey="dashboard">
+              <ClinicalDecisionPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="orders"
+          element={
+            <ProtectedRoute routeKey="dashboard">
+              <OrdersPage />
+            </ProtectedRoute>
+          }
+        />
+
+
+
+        <Route
+          path="admin-overview"
+          element={
+            <ProtectedRoute routeKey="dashboard">
+              <AdminOverviewPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="doctors"
+          element={
+            <ProtectedRoute routeKey="dashboard">
+              <DoctorsPage />
+            </ProtectedRoute>
+          }
+        />
+
+
+        <Route
+          path="specialties"
+          element={
+            <ProtectedRoute routeKey="dashboard">
+              <SpecialtiesPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="specialties/cardiology"
+          element={
+            <ProtectedRoute routeKey="dashboard">
+              <CardiologyPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="specialties/neurology"
+          element={
+            <ProtectedRoute routeKey="dashboard">
+              <NeurologyPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="specialties/emergency"
+          element={
+            <ProtectedRoute routeKey="dashboard">
+              <EmergencyPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="specialties/icu"
+          element={
+            <ProtectedRoute routeKey="dashboard">
+              <ICUPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="specialties/radiology"
+          element={
+            <ProtectedRoute routeKey="dashboard">
+              <RadiologyPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="specialties/pediatrics"
+          element={
+            <ProtectedRoute routeKey="dashboard">
+              <PediatricsPage />
+            </ProtectedRoute>
+          }
+        />
+
+
+        <Route
+          path="doctors/:doctorId"
+          element={
+            <ProtectedRoute routeKey="dashboard">
+              <DoctorProfilePage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="patients"
+          element={
+            <ProtectedRoute routeKey="patients">
+              <PatientsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="patient-profile"
+          element={
+            <ProtectedRoute routeKey="patients">
+              <PatientProfilePage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="appointments"
+          element={
+            <ProtectedRoute routeKey="appointments">
+              <AppointmentsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="reports"
+          element={
+            <ProtectedRoute routeKey="reports">
+              <ReportsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="notes"
+          element={
+            <ProtectedRoute routeKey="notes">
+              <NotesPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="pacs"
+          element={
+            <ProtectedRoute routeKey="pacs">
+              <PacsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="labs"
+          element={
+            <ProtectedRoute routeKey="labs">
+              <LabsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="pharmacy"
+          element={
+            <ProtectedRoute routeKey="medications">
+              <SmartPharmacyPage />
+            </ProtectedRoute>
+          }
+        />
+
+       <Route
+         path="nurses"
+         element={
+           <ProtectedRoute routeKey="dashboard">
+              <NursesPage />
+           </ProtectedRoute>
+         }
+       />
+      
+      <Route
+        path="radiology"
+        element={
+           <ProtectedRoute routeKey="dashboard">
+              <RadiologyPage />
+           </ProtectedRoute>
+         }
+       />
+
+      </Route>
+
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    </Routes>
+  )
+}

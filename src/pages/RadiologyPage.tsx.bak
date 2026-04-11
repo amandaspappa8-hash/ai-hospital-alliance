@@ -1,0 +1,298 @@
+import { useEffect, useMemo, useState } from "react"
+import { apiGet, apiPost } from "@/lib/api"
+
+type Patient = {
+  id: string
+  name: string
+  age?: number
+  gender?: string
+  department?: string
+  status?: string
+  condition?: string
+}
+
+type RadiologyOrder = {
+  id: string
+  patientId: string
+  patientName: string
+  section: string
+  studies: string[]
+  priority: string
+  status: string
+  report?: string
+}
+
+export default function RadiologyPage() {
+  const [patients, setPatients] = useState<Patient[]>([])
+  const [selectedPatientId, setSelectedPatientId] = useState("")
+  const [orders, setOrders] = useState<RadiologyOrder[]>([])
+  const [catalog, setCatalog] = useState<Record<string, string[]>>({})
+  const [error, setError] = useState("")
+  const [successMessage, setSuccessMessage] = useState("")
+
+  const [form, setForm] = useState({
+    section: "xray",
+    studies: "",
+    priority: "Routine",
+  })
+
+  useEffect(() => {
+    if (!successMessage) return
+    const t = setTimeout(() => setSuccessMessage(""), 2500)
+    return () => clearTimeout(t)
+  }, [successMessage])
+
+  useEffect(() => {
+    Promise.all([apiGet("/patients"), apiGet("/radiology/catalog"), apiGet("/radiology/orders")])
+      .then(([p, c, o]) => {
+        const patientsList = Array.isArray(p) ? p : []
+        setPatients(patientsList)
+        if (patientsList.length > 0) setSelectedPatientId(patientsList[0].id)
+        setCatalog(c || {})
+        setOrders(Array.isArray(o) ? o : [])
+      })
+      .catch(() => setError("Failed to load radiology data"))
+  }, [])
+
+  const selectedPatient = useMemo(
+    () => patients.find((p) => p.id === selectedPatientId),
+    [patients, selectedPatientId]
+  )
+
+  const filteredOrders = useMemo(
+    () => orders.filter((o) => !selectedPatientId || o.patientId === selectedPatientId),
+    [orders, selectedPatientId]
+  )
+
+  const submitOrder = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedPatient) return
+
+    try {
+      await apiPost("/radiology/orders", {
+        patientId: selectedPatient.id,
+        patientName: selectedPatient.name,
+        section: form.section,
+        studies: form.studies.split(",").map((t) => t.trim()).filter(Boolean),
+        priority: form.priority,
+        status: "Pending",
+      })
+
+      const refreshed = await apiGet("/radiology/orders")
+      setOrders(Array.isArray(refreshed) ? refreshed : [])
+      setForm({
+        section: form.section,
+        studies: "",
+        priority: "Routine",
+      })
+      setSuccessMessage("Radiology order added")
+    } catch {
+      setError("Failed to save radiology order")
+    }
+  }
+
+  return (
+    <div style={pageStyle}>
+      <div style={{ display: "grid", gap: 20 }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: 42, fontWeight: 800 }}>Radiology • NEW UI</h1>
+          <div style={{ marginTop: 8, color: "#cbd5e1" }}>
+            Smart imaging workflow with patient-linked study requests
+          </div>
+        </div>
+
+        {error && <div style={errorStyle}>{error}</div>}
+        {successMessage && <div style={successStyle}>{successMessage}</div>}
+
+        <div style={{ display: "grid", gridTemplateColumns: "1.1fr 2fr", gap: 20 }}>
+          <div style={cardStyle}>
+            <h2 style={titleStyle}>Patients</h2>
+            <div style={{ display: "grid", gap: 14 }}>
+              {patients.map((patient) => (
+                <button
+                  key={patient.id}
+                  onClick={() => setSelectedPatientId(patient.id)}
+                  style={{
+                    ...itemStyle,
+                    textAlign: "left",
+                    cursor: "pointer",
+                    border:
+                      selectedPatientId === patient.id
+                        ? "1px solid rgba(56,189,248,0.95)"
+                        : "1px solid rgba(148,163,184,0.22)",
+                  }}
+                >
+                  <div style={{ fontSize: 18, fontWeight: 800 }}>{patient.name}</div>
+                  <div style={{ marginTop: 6, color: "#cbd5e1" }}>{patient.id}</div>
+                  <div style={{ marginTop: 6, color: "#e2e8f0" }}>
+                    {patient.department ?? "General"} • {patient.condition ?? "-"}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gap: 20 }}>
+            <div style={cardStyle}>
+              <h2 style={titleStyle}>Selected Patient</h2>
+              {selectedPatient ? (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                  <div><strong>Name:</strong> {selectedPatient.name}</div>
+                  <div><strong>ID:</strong> {selectedPatient.id}</div>
+                  <div><strong>Department:</strong> {selectedPatient.department ?? "-"}</div>
+                  <div><strong>Status:</strong> {selectedPatient.status ?? "-"}</div>
+                  <div style={{ gridColumn: "1 / -1" }}><strong>Condition:</strong> {selectedPatient.condition ?? "-"}</div>
+                </div>
+              ) : (
+                <div>No patient selected</div>
+              )}
+            </div>
+
+            <form onSubmit={submitOrder} style={cardStyle}>
+              <h2 style={titleStyle}>Create Imaging Order</h2>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr 1fr", gap: 10 }}>
+                <select
+                  value={form.section}
+                  onChange={(e) => setForm({ ...form, section: e.target.value })}
+                  style={inputStyle}
+                >
+                  {Object.keys(catalog).map((section) => (
+                    <option key={section} value={section}>{section}</option>
+                  ))}
+                </select>
+
+                <input
+                  style={inputStyle}
+                  placeholder="Studies separated by commas"
+                  value={form.studies}
+                  onChange={(e) => setForm({ ...form, studies: e.target.value })}
+                />
+
+                <select
+                  value={form.priority}
+                  onChange={(e) => setForm({ ...form, priority: e.target.value })}
+                  style={inputStyle}
+                >
+                  <option value="Routine">Routine</option>
+                  <option value="Urgent">Urgent</option>
+                </select>
+              </div>
+
+              {catalog[form.section]?.length ? (
+                <div style={{ marginTop: 14, color: "#cbd5e1" }}>
+                  Available: {catalog[form.section].join(" • ")}
+                </div>
+              ) : null}
+
+              <div style={{ marginTop: 14 }}>
+                <button type="submit" style={primaryBtn}>Add Imaging Order</button>
+              </div>
+            </form>
+
+            <div style={cardStyle}>
+              <h2 style={titleStyle}>Radiology Orders</h2>
+              <div style={{ display: "grid", gap: 12 }}>
+                {filteredOrders.length === 0 ? (
+                  <div style={{ color: "#cbd5e1" }}>No radiology orders yet</div>
+                ) : filteredOrders.map((order) => (
+                  <div key={order.id} style={itemStyle}>
+                    <div style={{ fontSize: 18, fontWeight: 800 }}>{order.patientName}</div>
+                    <div style={{ marginTop: 6, color: "#e2e8f0" }}>
+                      {order.studies.join(" • ")}
+                    </div>
+                    <div style={{ marginTop: 8, color: "#cbd5e1" }}>
+                      Section: {order.section} • Priority: {order.priority}
+                    </div>
+                    <div style={{ marginTop: 10 }}>
+                      <span style={badgeStyle(order.status)}>{order.status}</span>
+                    </div>
+                    {order.report ? (
+                      <div style={{ marginTop: 10, color: "#cbd5e1" }}>
+                        Report: {order.report}
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const pageStyle: React.CSSProperties = {
+  minHeight: "100vh",
+  background: "linear-gradient(180deg, #0f172a 0%, #111827 100%)",
+  color: "#f8fafc",
+  padding: 24,
+}
+
+const cardStyle: React.CSSProperties = {
+  background: "linear-gradient(180deg, rgba(30,41,59,0.92), rgba(15,23,42,0.92))",
+  border: "1px solid rgba(96,165,250,0.28)",
+  borderRadius: 24,
+  padding: 22,
+  boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
+}
+
+const itemStyle: React.CSSProperties = {
+  background: "linear-gradient(180deg, rgba(37,99,235,0.18), rgba(15,23,42,0.30))",
+  border: "1px solid rgba(96,165,250,0.26)",
+  borderRadius: 18,
+  padding: 16,
+  boxShadow: "0 8px 18px rgba(0,0,0,0.18)",
+}
+
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  border: "1px solid rgba(148,163,184,0.35)",
+  borderRadius: 14,
+  padding: "12px 14px",
+  background: "rgba(255,255,255,0.08)",
+  color: "#f8fafc",
+  outline: "none",
+}
+
+const primaryBtn: React.CSSProperties = {
+  border: "none",
+  borderRadius: 14,
+  padding: "12px 16px",
+  background: "linear-gradient(135deg, #0ea5e9, #2563eb)",
+  color: "white",
+  fontWeight: 700,
+  cursor: "pointer",
+}
+
+const titleStyle: React.CSSProperties = {
+  marginTop: 0,
+  marginBottom: 16,
+  fontSize: 28,
+}
+
+const errorStyle: React.CSSProperties = {
+  background: "linear-gradient(180deg, rgba(127,29,29,0.5), rgba(69,10,10,0.55))",
+  border: "1px solid rgba(248,113,113,0.45)",
+  color: "#fecaca",
+  borderRadius: 20,
+  padding: 16,
+}
+
+const successStyle: React.CSSProperties = {
+  background: "linear-gradient(180deg, rgba(20,83,45,0.5), rgba(5,46,22,0.55))",
+  border: "1px solid rgba(74,222,128,0.45)",
+  color: "#bbf7d0",
+  borderRadius: 20,
+  padding: 16,
+}
+
+const badgeStyle = (status: string): React.CSSProperties => ({
+  display: "inline-block",
+  padding: "6px 10px",
+  borderRadius: 999,
+  fontSize: 13,
+  fontWeight: 800,
+  background: status === "Completed" ? "#dcfce7" : status === "Processing" ? "#dbeafe" : "#fef3c7",
+  color: status === "Completed" ? "#166534" : status === "Processing" ? "#1d4ed8" : "#92400e",
+})

@@ -1,0 +1,11 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { useState } from "react";
+export default function NursesPage() {
+    const [notes, setNotes] = useState("");
+    const patients = [
+        { id: 1, name: "Ali Hassan", status: "Stable", room: "101" },
+        { id: 2, name: "Sara Omar", status: "Monitoring", room: "102" },
+        { id: 3, name: "Mohamed Salem", status: "Critical", room: "ICU-3" },
+    ];
+    return (_jsxs("div", { className: "p-6 bg-slate-50 min-h-screen", children: [_jsx("h1", { className: "text-3xl font-bold mb-6 text-sky-900", children: "Nursing Station" }), _jsxs("div", { className: "grid md:grid-cols-3 gap-6", children: [_jsxs("div", { className: "rounded-2xl p-5 shadow bg-gradient-to-br from-sky-100 to-pink-100", children: [_jsx("h2", { className: "font-bold text-lg mb-3 text-sky-900", children: "Ward Patients" }), patients.map(p => (_jsxs("div", { className: "bg-white rounded-xl p-3 mb-3 shadow border border-sky-200", children: [_jsx("div", { className: "font-semibold", children: p.name }), _jsxs("div", { className: "text-sm text-gray-500", children: ["Room: ", p.room] }), _jsxs("div", { className: "text-sm mt-1 text-pink-600", children: ["Status: ", p.status] })] }, p.id)))] }), _jsxs("div", { className: "rounded-2xl p-5 shadow bg-gradient-to-br from-sky-50 to-sky-200", children: [_jsx("h2", { className: "font-bold text-lg mb-3 text-sky-900", children: "Vital Monitoring" }), _jsxs("div", { className: "space-y-3", children: [_jsx("div", { className: "bg-white rounded-xl p-3 shadow", children: "BP: 120 / 80" }), _jsx("div", { className: "bg-white rounded-xl p-3 shadow", children: "HR: 78 bpm" }), _jsx("div", { className: "bg-white rounded-xl p-3 shadow", children: "Temp: 37.1 \u00B0C" }), _jsx("div", { className: "bg-white rounded-xl p-3 shadow", children: "SpO\u2082: 96%" })] })] }), _jsxs("div", { className: "rounded-2xl p-5 shadow bg-gradient-to-br from-pink-50 to-sky-100", children: [_jsx("h2", { className: "font-bold text-lg mb-3 text-sky-900", children: "Nursing Notes" }), _jsx("textarea", { className: "w-full h-40 border rounded-xl p-3", placeholder: "Write nursing note...", value: notes, onChange: (e) => setNotes(e.target.value) }), _jsx("button", { className: "mt-3 w-full bg-sky-600 text-white p-2 rounded-xl", children: "Save Note" })] })] })] }));
+}

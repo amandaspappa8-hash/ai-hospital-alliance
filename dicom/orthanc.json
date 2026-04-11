@@ -3,10 +3,11 @@
   "HttpServerEnabled": true,
   "OrthancExplorerEnabled": true,
   "HttpPort": 8042,
-
+  
   "AuthenticationEnabled": false,
-  "RegisteredUsers": { },
+  "RegisteredUsers": {},
   "RemoteAccessAllowed": true,
+  "CorsEnabled": true,
   "WadoEnabled": true,
 
   "DicomWeb": {

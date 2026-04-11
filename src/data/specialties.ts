@@ -1,0 +1,66 @@
+export type SpecialtyRecord = {
+  title: string
+  subtitle: string
+  icon: string
+  route: string
+  doctors: number
+  activeCases: number
+  tone: string
+}
+
+export const specialtiesData: SpecialtyRecord[] = [
+  {
+    title: "Cardiology",
+    subtitle: "Heart center, ECG, chest pain, vascular workflow",
+    icon: "❤️",
+    route: "/specialties/cardiology",
+    doctors: 12,
+    activeCases: 24,
+    tone: "#ffe5e5",
+  },
+  {
+    title: "Neurology",
+    subtitle: "Brain, nerves, stroke assessment and monitoring",
+    icon: "🧠",
+    route: "/specialties/neurology",
+    doctors: 9,
+    activeCases: 17,
+    tone: "#ece8ff",
+  },
+  {
+    title: "Emergency",
+    subtitle: "Triage, urgent workflow, rapid response",
+    icon: "🚑",
+    route: "/specialties/emergency",
+    doctors: 14,
+    activeCases: 41,
+    tone: "#ffe9d6",
+  },
+  {
+    title: "ICU",
+    subtitle: "Critical care, oxygen, ventilation and close monitoring",
+    icon: "🏥",
+    route: "/specialties/icu",
+    doctors: 7,
+    activeCases: 12,
+    tone: "#e0f2fe",
+  },
+  {
+    title: "Radiology",
+    subtitle: "Imaging center, PACS, CT, MRI and X-Ray",
+    icon: "🩻",
+    route: "/specialties/radiology",
+    doctors: 6,
+    activeCases: 29,
+    tone: "#e7f9ef",
+  },
+  {
+    title: "Pediatrics",
+    subtitle: "Children care, growth, fever and outpatient support",
+    icon: "🧒",
+    route: "/specialties/pediatrics",
+    doctors: 10,
+    activeCases: 23,
+    tone: "#fef9c3",
+  },
+]

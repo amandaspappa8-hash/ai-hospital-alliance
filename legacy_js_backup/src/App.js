@@ -1,0 +1,32 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { Routes, Route, Navigate } from "react-router-dom";
+import AppLayout from "./layouts/AppLayout";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
+import Login from "./pages/Login";
+import LogoutPage from "./pages/LogoutPage";
+import Dashboard from "./pages/Dashboard";
+import PatientsPage from "./pages/PatientsPage";
+import AppointmentsPage from "./pages/AppointmentsPage";
+import ReportsPage from "./pages/ReportsPage";
+import NotesPage from "./pages/NotesPage";
+import PacsPage from "./pages/PacsPage";
+import PatientProfilePage from "./pages/PatientProfilePage";
+import AIRoutingPage from "./pages/AIRoutingPage";
+import OrdersPage from "./pages/OrdersPage";
+import LabCatalogPage from "./pages/LabCatalogPage";
+import SmartPharmacyPage from "./pages/SmartPharmacyPage";
+import ClinicalDecisionPage from "./pages/ClinicalDecisionPage";
+import DoctorsPage from "./pages/DoctorsPage";
+import DoctorProfilePage from "./pages/DoctorProfilePage";
+import AdminOverviewPage from "./pages/AdminOverviewPage";
+import SpecialtiesPage from "./pages/SpecialtiesPage";
+import CardiologyPage from "./pages/CardiologyPage";
+import NeurologyPage from "./pages/NeurologyPage";
+import EmergencyPage from "./pages/EmergencyPage";
+import ICUPage from "./pages/ICUPage";
+import RadiologyPage from "./pages/RadiologyPage";
+import PediatricsPage from "./pages/PediatricsPage";
+import NursesPage from "./pages/NursesPage";
+export default function App() {
+    return (_jsxs(Routes, { children: [_jsx(Route, { path: "/login", element: _jsx(Login, {}) }), _jsx(Route, { path: "/logout", element: _jsx(LogoutPage, {}) }), _jsxs(Route, { path: "/", element: _jsx(ProtectedRoute, { children: _jsx(AppLayout, {}) }), children: [_jsx(Route, { index: true, element: _jsx(Navigate, { to: "/dashboard", replace: true }) }), _jsx(Route, { path: "dashboard", element: _jsx(ProtectedRoute, { routeKey: "dashboard", children: _jsx(Dashboard, {}) }) }), _jsx(Route, { path: "ai-routing", element: _jsx(ProtectedRoute, { routeKey: "dashboard", children: _jsx(AIRoutingPage, {}) }) }), _jsx(Route, { path: "clinical-decision", element: _jsx(ProtectedRoute, { routeKey: "dashboard", children: _jsx(ClinicalDecisionPage, {}) }) }), _jsx(Route, { path: "orders", element: _jsx(ProtectedRoute, { routeKey: "dashboard", children: _jsx(OrdersPage, {}) }) }), _jsx(Route, { path: "admin-overview", element: _jsx(ProtectedRoute, { routeKey: "dashboard", children: _jsx(AdminOverviewPage, {}) }) }), _jsx(Route, { path: "doctors", element: _jsx(ProtectedRoute, { routeKey: "dashboard", children: _jsx(DoctorsPage, {}) }) }), _jsx(Route, { path: "specialties", element: _jsx(ProtectedRoute, { routeKey: "dashboard", children: _jsx(SpecialtiesPage, {}) }) }), _jsx(Route, { path: "specialties/cardiology", element: _jsx(ProtectedRoute, { routeKey: "dashboard", children: _jsx(CardiologyPage, {}) }) }), _jsx(Route, { path: "specialties/neurology", element: _jsx(ProtectedRoute, { routeKey: "dashboard", children: _jsx(NeurologyPage, {}) }) }), _jsx(Route, { path: "specialties/emergency", element: _jsx(ProtectedRoute, { routeKey: "dashboard", children: _jsx(EmergencyPage, {}) }) }), _jsx(Route, { path: "specialties/icu", element: _jsx(ProtectedRoute, { routeKey: "dashboard", children: _jsx(ICUPage, {}) }) }), _jsx(Route, { path: "specialties/radiology", element: _jsx(ProtectedRoute, { routeKey: "dashboard", children: _jsx(RadiologyPage, {}) }) }), _jsx(Route, { path: "specialties/pediatrics", element: _jsx(ProtectedRoute, { routeKey: "dashboard", children: _jsx(PediatricsPage, {}) }) }), _jsx(Route, { path: "doctors/:doctorId", element: _jsx(ProtectedRoute, { routeKey: "dashboard", children: _jsx(DoctorProfilePage, {}) }) }), _jsx(Route, { path: "patients", element: _jsx(ProtectedRoute, { routeKey: "patients", children: _jsx(PatientsPage, {}) }) }), _jsx(Route, { path: "patient-profile", element: _jsx(ProtectedRoute, { routeKey: "patients", children: _jsx(PatientProfilePage, {}) }) }), _jsx(Route, { path: "appointments", element: _jsx(ProtectedRoute, { routeKey: "appointments", children: _jsx(AppointmentsPage, {}) }) }), _jsx(Route, { path: "reports", element: _jsx(ProtectedRoute, { routeKey: "reports", children: _jsx(ReportsPage, {}) }) }), _jsx(Route, { path: "notes", element: _jsx(ProtectedRoute, { routeKey: "notes", children: _jsx(NotesPage, {}) }) }), _jsx(Route, { path: "pacs", element: _jsx(ProtectedRoute, { routeKey: "pacs", children: _jsx(PacsPage, {}) }) }), _jsx(Route, { path: "labs", element: _jsx(ProtectedRoute, { routeKey: "labs", children: _jsx(LabCatalogPage, {}) }) }), _jsx(Route, { path: "pharmacy", element: _jsx(ProtectedRoute, { routeKey: "medications", children: _jsx(SmartPharmacyPage, {}) }) }), _jsx(Route, { path: "nurses", element: _jsx(ProtectedRoute, { routeKey: "dashboard", children: _jsx(NursesPage, {}) }) }), _jsx(Route, { path: "radiology", element: _jsx(ProtectedRoute, { routeKey: "dashboard", children: _jsx(RadiologyPage, {}) }) })] }), _jsx(Route, { path: "*", element: _jsx(Navigate, { to: "/dashboard", replace: true }) })] }));
+}

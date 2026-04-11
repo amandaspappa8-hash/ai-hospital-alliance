@@ -1,200 +1,279 @@
-import { useMemo, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
+import { useEffect, useMemo, useState } from "react"
+import { useSearchParams } from "react-router-dom"
+import { apiGet, apiPost } from "@/lib/api"
 
-type ApptStatus = "upcoming" | "completed" | "cancelled"
-
-type Appt = {
+type Appointment = {
   id: string
   patient: string
-  doctor: string
   department: string
-  date: string // YYYY-MM-DD
-  time: string // HH:mm
-  status: ApptStatus
+  doctor: string
+  time: string
+  status: string
 }
 
-const APPTS: Appt[] = [
-  { id: "A-9001", patient: "Sarah Jones", doctor: "Dr. Priscilla", department: "Cardiology", date: "2026-02-15", time: "10:30", status: "upcoming" },
-  { id: "A-9002", patient: "John Smith", doctor: "Dr. Cooper", department: "Neurology", date: "2026-02-15", time: "12:00", status: "upcoming" },
-  { id: "A-8990", patient: "Emily Brown", doctor: "Dr. Lane", department: "Orthopedics", date: "2026-02-12", time: "09:00", status: "completed" },
-  { id: "A-8988", patient: "Patient B", doctor: "Dr. Kumar", department: "ER", date: "2026-02-11", time: "15:15", status: "cancelled" },
-]
-
-function apptBadge(s: ApptStatus) {
-  if (s === "upcoming") return <Badge>Upcoming</Badge>
-  if (s === "completed") return <Badge variant="secondary">Completed</Badge>
-  return <Badge variant="outline">Cancelled</Badge>
+type AppointmentPayload = {
+  patient: string
+  department: string
+  doctor: string
+  time: string
+  status: string
 }
 
 export default function AppointmentsPage() {
-  const [tab, setTab] = useState<"list" | "calendar">("list")
-  const [q, setQ] = useState("")
-  const [status, setStatus] = useState<ApptStatus | "all">("all")
+  const [searchParams] = useSearchParams()
+  const doctorId = searchParams.get("doctorId") ?? ""
+  const doctorName = searchParams.get("doctorName") ?? ""
 
-  const [date, setDate] = useState<Date | undefined>(new Date())
+  const [appointments, setAppointments] = useState<Appointment[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
 
-  const rows = useMemo(() => {
-    const query = q.trim().toLowerCase()
-    return APPTS.filter((a) => {
-      const matchesQuery =
-        !query ||
-        a.patient.toLowerCase().includes(query) ||
-        a.doctor.toLowerCase().includes(query) ||
-        a.id.toLowerCase().includes(query)
+  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [saving, setSaving] = useState(false)
 
-      const matchesStatus = status === "all" ? true : a.status === status
+  const [form, setForm] = useState<AppointmentPayload>({
+    patient: "",
+    department: "",
+    doctor: doctorName || "",
+    time: "",
+    status: "Scheduled",
+  })
 
-      return matchesQuery && matchesStatus
+  useEffect(() => {
+    setLoading(true)
+    setError("")
+
+    apiGet<Appointment[]>("/appointments")
+      .then((data) => {
+        setAppointments(Array.isArray(data) ? data : [])
+      })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : "Failed to load appointments")
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+  }, [])
+
+  useEffect(() => {
+    if (doctorName) {
+      setForm((prev) => ({
+        ...prev,
+        doctor: doctorName,
+      }))
+    }
+  }, [doctorName])
+
+  const filteredAppointments = useMemo(() => {
+    if (!doctorName && !doctorId) return appointments
+
+    return appointments.filter((appointment) => {
+      if (doctorName) {
+        return appointment.doctor.toLowerCase() === doctorName.toLowerCase()
+      }
+      return true
     })
-  }, [q, status])
+  }, [appointments, doctorId, doctorName])
+
+  function handleChange(
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) {
+    const { name, value } = e.target
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }))
+  }
+
+  async function handleCreateAppointment(e: React.FormEvent) {
+    e.preventDefault()
+
+    if (
+      !form.patient.trim() ||
+      !form.department.trim() ||
+      !form.doctor.trim() ||
+      !form.time.trim() ||
+      !form.status.trim()
+    ) {
+      setError("Please fill in all appointment fields.")
+      return
+    }
+
+    try {
+      setSaving(true)
+      setError("")
+
+      const payload: AppointmentPayload = {
+        patient: form.patient.trim(),
+        department: form.department.trim(),
+        doctor: form.doctor.trim(),
+        time: form.time,
+        status: form.status.trim(),
+      }
+
+      const created = await apiPost<Appointment>("/appointments", payload)
+
+      setAppointments((prev) => [created, ...prev])
+
+      setForm({
+        patient: "",
+        department: "",
+        doctor: doctorName || "",
+        time: "",
+        status: "Scheduled",
+      })
+
+      setShowCreateForm(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create appointment")
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
+    <div className="space-y-6 p-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Appointments</h1>
-          <p className="text-sm text-muted-foreground">List + Calendar view, with create dialog.</p>
+          <h1 className="text-2xl font-bold">Appointments</h1>
+          <p className="text-sm text-gray-500">
+            {doctorName
+              ? `Managing appointments for Dr. ${doctorName}`
+              : "Manage all appointments from one page"}
+          </p>
         </div>
 
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button>+ New appointment</Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Create appointment</DialogTitle>
-            </DialogHeader>
-
-            <div className="grid gap-3">
-              <Input placeholder="Patient name" />
-              <Input placeholder="Doctor name" />
-              <div className="grid grid-cols-2 gap-2">
-                <Input placeholder="Date (YYYY-MM-DD)" />
-                <Input placeholder="Time (HH:mm)" />
-              </div>
-
-              <Select defaultValue="upcoming">
-                <SelectTrigger>
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="upcoming">Upcoming</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <div className="flex gap-2 pt-2">
-                <Button className="flex-1">Save</Button>
-                <Button variant="outline" className="flex-1">
-                  Cancel
-                </Button>
-              </div>
-
-              <p className="text-xs text-muted-foreground">
-                Demo UI only — next step: connect API + validation + RBAC.
-              </p>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <button
+          onClick={() => setShowCreateForm((prev) => !prev)}
+          className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+        >
+          {showCreateForm ? "Close Form" : "Create Appointment"}
+        </button>
       </div>
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
-        <TabsList>
-          <TabsTrigger value="list">List</TabsTrigger>
-          <TabsTrigger value="calendar">Calendar</TabsTrigger>
-        </TabsList>
+      {error && (
+        <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-red-700">
+          {error}
+        </div>
+      )}
 
-        <TabsContent value="list" className="mt-4">
-          <Card className="rounded-2xl">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Appointments</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-col gap-3 md:flex-row md:items-center">
-                <div className="flex-1">
-                  <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by patient, doctor, ID..." />
-                </div>
-                <Select value={status} onValueChange={(v) => setStatus(v as any)}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All statuses</SelectItem>
-                    <SelectItem value="upcoming">Upcoming</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="rounded-xl border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[110px]">ID</TableHead>
-                      <TableHead>Patient</TableHead>
-                      <TableHead>Doctor</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Time</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {rows.map((a) => (
-                      <TableRow key={a.id}>
-                        <TableCell className="font-medium">{a.id}</TableCell>
-                        <TableCell>{a.patient}</TableCell>
-                        <TableCell className="text-muted-foreground">{a.doctor}</TableCell>
-                        <TableCell>{a.date}</TableCell>
-                        <TableCell>{a.time}</TableCell>
-                        <TableCell>{apptBadge(a.status)}</TableCell>
-                      </TableRow>
-                    ))}
-                    {rows.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
-                          No results.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="calendar" className="mt-4">
-          <div className="grid gap-4 lg:grid-cols-3">
-            <Card className="rounded-2xl lg:col-span-1">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Pick a date</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Calendar mode="single" selected={date} onSelect={setDate} />
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-2xl lg:col-span-2">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Day schedule</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">
-                Demo: connect selected date to real schedule list + time slots.
-              </CardContent>
-            </Card>
+      {showCreateForm && (
+        <form
+          onSubmit={handleCreateAppointment}
+          className="grid gap-4 rounded-xl border bg-white p-5 shadow-sm md:grid-cols-2"
+        >
+          <div>
+            <label className="mb-1 block text-sm font-medium">Patient Name</label>
+            <input
+              name="patient"
+              value={form.patient}
+              onChange={handleChange}
+              placeholder="Enter patient name"
+              className="w-full rounded-lg border px-3 py-2"
+            />
           </div>
-        </TabsContent>
-      </Tabs>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">Department</label>
+            <input
+              name="department"
+              value={form.department}
+              onChange={handleChange}
+              placeholder="Enter department"
+              className="w-full rounded-lg border px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">Doctor</label>
+            <input
+              name="doctor"
+              value={form.doctor}
+              onChange={handleChange}
+              placeholder="Enter doctor name"
+              className="w-full rounded-lg border px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">Time</label>
+            <input
+              type="datetime-local"
+              name="time"
+              value={form.time}
+              onChange={handleChange}
+              className="w-full rounded-lg border px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">Status</label>
+            <select
+              name="status"
+              value={form.status}
+              onChange={handleChange}
+              className="w-full rounded-lg border px-3 py-2"
+            >
+              <option value="Scheduled">Scheduled</option>
+              <option value="Confirmed">Confirmed</option>
+              <option value="Pending">Pending</option>
+              <option value="Completed">Completed</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+          </div>
+
+          <div className="md:col-span-2 flex gap-3">
+            <button
+              type="submit"
+              disabled={saving}
+              className="rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700 disabled:opacity-60"
+            >
+              {saving ? "Saving..." : "Save Appointment"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowCreateForm(false)}
+              className="rounded-lg border px-4 py-2 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+
+      <div className="rounded-xl border bg-white shadow-sm">
+        {loading ? (
+          <div className="p-6 text-sm text-gray-500">Loading appointments...</div>
+        ) : filteredAppointments.length === 0 ? (
+          <div className="p-6 text-sm text-gray-500">No appointments found.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b bg-gray-50 text-left">
+                  <th className="px-4 py-3">Patient</th>
+                  <th className="px-4 py-3">Department</th>
+                  <th className="px-4 py-3">Doctor</th>
+                  <th className="px-4 py-3">Time</th>
+                  <th className="px-4 py-3">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredAppointments.map((appointment) => (
+                  <tr key={appointment.id} className="border-b last:border-0">
+                    <td className="px-4 py-3">{appointment.patient}</td>
+                    <td className="px-4 py-3">{appointment.department}</td>
+                    <td className="px-4 py-3">{appointment.doctor}</td>
+                    <td className="px-4 py-3">{appointment.time}</td>
+                    <td className="px-4 py-3">{appointment.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

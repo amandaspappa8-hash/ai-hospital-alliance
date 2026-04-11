@@ -1,0 +1,792 @@
+=== API ROUTES ===
+backend/app/main.py.before-missing-endpoints.bak:86:@app.get("/")
+backend/app/main.py.before-missing-endpoints.bak:91:@app.post("/auth/login")
+backend/app/main.py.before-missing-endpoints.bak:108:@app.get("/patients")
+backend/app/main.py.before-missing-endpoints.bak:113:@app.get("/patients/{patient_id}")
+backend/app/main.py.before-missing-endpoints.bak:121:@app.get("/orders/{patient_id}")
+backend/app/main.py.bak.dose-safety:779:@app.get("/")
+backend/app/main.py.bak.dose-safety:784:@app.post("/auth/login")
+backend/app/main.py.bak.dose-safety:801:@app.get("/patients")
+backend/app/main.py.bak.dose-safety:806:@app.get("/patients/{patient_id}")
+backend/app/main.py.bak.dose-safety:814:@app.get("/orders/{patient_id}")
+backend/app/main.py.bak.dose-safety:819:@app.post("/orders/{patient_id}")
+backend/app/main.py.bak.dose-safety:835:@app.get("/notes/{patient_id}")
+backend/app/main.py.bak.dose-safety:840:@app.post("/notes/{patient_id}")
+backend/app/main.py.bak.dose-safety:853:@app.get("/appointments")
+backend/app/main.py.bak.dose-safety:858:@app.post("/appointments")
+backend/app/main.py.bak.dose-safety:872:@app.get("/reports")
+backend/app/main.py.bak.dose-safety:877:@app.get("/doctors/summary")
+backend/app/main.py.bak.dose-safety:882:@app.get("/doctors/by-specialty/{name}")
+backend/app/main.py.bak.dose-safety:888:@app.get("/doctors/{doctor_id}")
+backend/app/main.py.bak.dose-safety:896:@app.get("/doctor-assignments/{doctor_id}")
+backend/app/main.py.bak.dose-safety:901:@app.post("/doctor-assignments/{doctor_id}")
+backend/app/main.py.bak.dose-safety:928:@app.post("/doctor-assignments/{doctor_id}/{assignment_id}/status")
+backend/app/main.py.bak.dose-safety:942:@app.delete("/doctor-assignments/{doctor_id}/{assignment_id}")
+backend/app/main.py.bak.dose-safety:952:@app.get("/specialties/summary")
+backend/app/main.py.bak.dose-safety:957:@app.get("/pacs/studies")
+backend/app/main.py.bak.dose-safety:961:@app.get("/nursing/vitals/{patient_id}")
+backend/app/main.py.bak.dose-safety:966:@app.post("/nursing/vitals/{patient_id}")
+backend/app/main.py.bak.dose-safety:984:@app.get("/nursing/notes/{patient_id}")
+backend/app/main.py.bak.dose-safety:989:@app.post("/nursing/notes/{patient_id}")
+backend/app/main.py.bak.dose-safety:1001:@app.get("/radiology/catalog")
+backend/app/main.py.bak.dose-safety:1006:@app.get("/radiology/orders")
+backend/app/main.py.bak.dose-safety:1011:@app.get("/radiology/orders/{patient_id}")
+backend/app/main.py.bak.dose-safety:1016:@app.post("/radiology/orders")
+backend/app/main.py.bak.dose-safety:1035:@app.post("/radiology/results/{order_id}")
+backend/app/main.py.bak.dose-safety:1047:@app.get("/labs/catalog")
+backend/app/main.py.bak.dose-safety:1052:@app.get("/labs/orders")
+backend/app/main.py.bak.dose-safety:1057:@app.get("/labs/orders/{patient_id}")
+backend/app/main.py.bak.dose-safety:1062:@app.post("/labs/orders")
+backend/app/main.py.bak.dose-safety:1081:@app.post("/labs/results/{order_id}")
+backend/app/main.py.bak.dose-safety:1248:@app.get("/drug-intel/interactions/{patient_id}")
+backend/app/main.py.bak.dose-safety:1257:@app.post("/drug-intel/interactions")
+backend/app/main.py.bak.dose-safety:1264:@app.get("/mar/{patient_id}")
+backend/app/main.py.bak.dose-safety:1269:@app.post("/mar/{patient_id}")
+backend/app/main.py.bak.dose-safety:1290:@app.put("/mar/{patient_id}/{item_id}")
+backend/app/main.py.bak.dose-safety:1305:@app.put("/mar/{patient_id}/{item_id}/status")
+backend/app/main.py.bak.dose-safety:1317:@app.get("/drug-intel/search")
+backend/app/main.py.bak.dose-safety:1345:@app.get("/drug-intel/dailymed")
+backend/app/main.py.bak.dose-safety:1358:@app.delete("/mar/{patient_id}/{item_id}")
+backend/app/main.py.bak.discharge-counseling:779:@app.get("/")
+backend/app/main.py.bak.discharge-counseling:784:@app.post("/auth/login")
+backend/app/main.py.bak.discharge-counseling:801:@app.get("/patients")
+backend/app/main.py.bak.discharge-counseling:806:@app.get("/patients/{patient_id}")
+backend/app/main.py.bak.discharge-counseling:814:@app.get("/orders/{patient_id}")
+backend/app/main.py.bak.discharge-counseling:819:@app.post("/orders/{patient_id}")
+backend/app/main.py.bak.discharge-counseling:835:@app.get("/notes/{patient_id}")
+backend/app/main.py.bak.discharge-counseling:840:@app.post("/notes/{patient_id}")
+backend/app/main.py.bak.discharge-counseling:853:@app.get("/appointments")
+backend/app/main.py.bak.discharge-counseling:858:@app.post("/appointments")
+backend/app/main.py.bak.discharge-counseling:872:@app.get("/reports")
+backend/app/main.py.bak.discharge-counseling:877:@app.get("/doctors/summary")
+backend/app/main.py.bak.discharge-counseling:882:@app.get("/doctors/by-specialty/{name}")
+backend/app/main.py.bak.discharge-counseling:888:@app.get("/doctors/{doctor_id}")
+backend/app/main.py.bak.discharge-counseling:896:@app.get("/doctor-assignments/{doctor_id}")
+backend/app/main.py.bak.discharge-counseling:901:@app.post("/doctor-assignments/{doctor_id}")
+backend/app/main.py.bak.discharge-counseling:928:@app.post("/doctor-assignments/{doctor_id}/{assignment_id}/status")
+backend/app/main.py.bak.discharge-counseling:942:@app.delete("/doctor-assignments/{doctor_id}/{assignment_id}")
+backend/app/main.py.bak.discharge-counseling:952:@app.get("/specialties/summary")
+backend/app/main.py.bak.discharge-counseling:957:@app.get("/pacs/studies")
+backend/app/main.py.bak.discharge-counseling:961:@app.get("/nursing/vitals/{patient_id}")
+backend/app/main.py.bak.discharge-counseling:966:@app.post("/nursing/vitals/{patient_id}")
+backend/app/main.py.bak.discharge-counseling:984:@app.get("/nursing/notes/{patient_id}")
+backend/app/main.py.bak.discharge-counseling:989:@app.post("/nursing/notes/{patient_id}")
+backend/app/main.py.bak.discharge-counseling:1001:@app.get("/radiology/catalog")
+backend/app/main.py.bak.discharge-counseling:1006:@app.get("/radiology/orders")
+backend/app/main.py.bak.discharge-counseling:1011:@app.get("/radiology/orders/{patient_id}")
+backend/app/main.py.bak.discharge-counseling:1016:@app.post("/radiology/orders")
+backend/app/main.py.bak.discharge-counseling:1035:@app.post("/radiology/results/{order_id}")
+backend/app/main.py.bak.discharge-counseling:1047:@app.get("/labs/catalog")
+backend/app/main.py.bak.discharge-counseling:1052:@app.get("/labs/orders")
+backend/app/main.py.bak.discharge-counseling:1057:@app.get("/labs/orders/{patient_id}")
+backend/app/main.py.bak.discharge-counseling:1062:@app.post("/labs/orders")
+backend/app/main.py.bak.discharge-counseling:1081:@app.post("/labs/results/{order_id}")
+backend/app/main.py.bak.discharge-counseling:1205:@app.get("/drug-intel/reconciliation/{patient_id}")
+backend/app/main.py.bak.discharge-counseling:1597:@app.get("/drug-intel/recommendations/{patient_id}")
+backend/app/main.py.bak.discharge-counseling:1606:@app.post("/drug-intel/recommendations")
+backend/app/main.py.bak.discharge-counseling:1613:@app.get("/drug-intel/dose-safety/{patient_id}")
+backend/app/main.py.bak.discharge-counseling:1622:@app.post("/drug-intel/dose-safety")
+backend/app/main.py.bak.discharge-counseling:1629:@app.get("/drug-intel/interactions/{patient_id}")
+backend/app/main.py.bak.discharge-counseling:1638:@app.post("/drug-intel/interactions")
+backend/app/main.py.bak.discharge-counseling:1645:@app.get("/mar/{patient_id}")
+backend/app/main.py.bak.discharge-counseling:1650:@app.post("/mar/{patient_id}")
+backend/app/main.py.bak.discharge-counseling:1673:@app.put("/mar/{patient_id}/{item_id}")
+backend/app/main.py.bak.discharge-counseling:1695:@app.put("/mar/{patient_id}/{item_id}/pharmacist-review")
+backend/app/main.py.bak.discharge-counseling:1706:@app.put("/mar/{patient_id}/{item_id}/status")
+backend/app/main.py.bak.discharge-counseling:1718:@app.get("/drug-intel/search")
+backend/app/main.py.bak.discharge-counseling:1746:@app.get("/drug-intel/dailymed")
+backend/app/main.py.bak.discharge-counseling:1759:@app.delete("/mar/{patient_id}/{item_id}")
+backend/app/api/clinical_orders.py:9:@router.post("/clinical-route-and-create-orders/{patient_id}")
+backend/app/api/clinical_route.py:8:@router.post("/clinical-route", response_model=ClinicalRouteResponse)
+backend/app/main.py.bak.recommendations:779:@app.get("/")
+backend/app/main.py.bak.recommendations:784:@app.post("/auth/login")
+backend/app/main.py.bak.recommendations:801:@app.get("/patients")
+backend/app/main.py.bak.recommendations:806:@app.get("/patients/{patient_id}")
+backend/app/main.py.bak.recommendations:814:@app.get("/orders/{patient_id}")
+backend/app/main.py.bak.recommendations:819:@app.post("/orders/{patient_id}")
+backend/app/main.py.bak.recommendations:835:@app.get("/notes/{patient_id}")
+backend/app/main.py.bak.recommendations:840:@app.post("/notes/{patient_id}")
+backend/app/main.py.bak.recommendations:853:@app.get("/appointments")
+backend/app/main.py.bak.recommendations:858:@app.post("/appointments")
+backend/app/main.py.bak.recommendations:872:@app.get("/reports")
+backend/app/main.py.bak.recommendations:877:@app.get("/doctors/summary")
+backend/app/main.py.bak.recommendations:882:@app.get("/doctors/by-specialty/{name}")
+backend/app/main.py.bak.recommendations:888:@app.get("/doctors/{doctor_id}")
+backend/app/main.py.bak.recommendations:896:@app.get("/doctor-assignments/{doctor_id}")
+backend/app/main.py.bak.recommendations:901:@app.post("/doctor-assignments/{doctor_id}")
+backend/app/main.py.bak.recommendations:928:@app.post("/doctor-assignments/{doctor_id}/{assignment_id}/status")
+backend/app/main.py.bak.recommendations:942:@app.delete("/doctor-assignments/{doctor_id}/{assignment_id}")
+backend/app/main.py.bak.recommendations:952:@app.get("/specialties/summary")
+backend/app/main.py.bak.recommendations:957:@app.get("/pacs/studies")
+backend/app/main.py.bak.recommendations:961:@app.get("/nursing/vitals/{patient_id}")
+backend/app/main.py.bak.recommendations:966:@app.post("/nursing/vitals/{patient_id}")
+backend/app/main.py.bak.recommendations:984:@app.get("/nursing/notes/{patient_id}")
+backend/app/main.py.bak.recommendations:989:@app.post("/nursing/notes/{patient_id}")
+backend/app/main.py.bak.recommendations:1001:@app.get("/radiology/catalog")
+backend/app/main.py.bak.recommendations:1006:@app.get("/radiology/orders")
+backend/app/main.py.bak.recommendations:1011:@app.get("/radiology/orders/{patient_id}")
+backend/app/main.py.bak.recommendations:1016:@app.post("/radiology/orders")
+backend/app/main.py.bak.recommendations:1035:@app.post("/radiology/results/{order_id}")
+backend/app/main.py.bak.recommendations:1047:@app.get("/labs/catalog")
+backend/app/main.py.bak.recommendations:1052:@app.get("/labs/orders")
+backend/app/main.py.bak.recommendations:1057:@app.get("/labs/orders/{patient_id}")
+backend/app/main.py.bak.recommendations:1062:@app.post("/labs/orders")
+backend/app/main.py.bak.recommendations:1081:@app.post("/labs/results/{order_id}")
+backend/app/main.py.bak.recommendations:1366:@app.get("/drug-intel/dose-safety/{patient_id}")
+backend/app/main.py.bak.recommendations:1375:@app.post("/drug-intel/dose-safety")
+backend/app/main.py.bak.recommendations:1382:@app.get("/drug-intel/interactions/{patient_id}")
+backend/app/main.py.bak.recommendations:1391:@app.post("/drug-intel/interactions")
+backend/app/main.py.bak.recommendations:1398:@app.get("/mar/{patient_id}")
+backend/app/main.py.bak.recommendations:1403:@app.post("/mar/{patient_id}")
+backend/app/main.py.bak.recommendations:1424:@app.put("/mar/{patient_id}/{item_id}")
+backend/app/main.py.bak.recommendations:1439:@app.put("/mar/{patient_id}/{item_id}/status")
+backend/app/main.py.bak.recommendations:1451:@app.get("/drug-intel/search")
+backend/app/main.py.bak.recommendations:1479:@app.get("/drug-intel/dailymed")
+backend/app/main.py.bak.recommendations:1492:@app.delete("/mar/{patient_id}/{item_id}")
+backend/app/main.py:779:@app.get("/")
+backend/app/main.py:784:@app.post("/auth/login")
+backend/app/main.py:801:@app.get("/patients")
+backend/app/main.py:806:@app.get("/patients/{patient_id}")
+backend/app/main.py:814:@app.get("/orders/{patient_id}")
+backend/app/main.py:819:@app.post("/orders/{patient_id}")
+backend/app/main.py:835:@app.get("/notes/{patient_id}")
+backend/app/main.py:840:@app.post("/notes/{patient_id}")
+backend/app/main.py:853:@app.get("/appointments")
+backend/app/main.py:858:@app.post("/appointments")
+backend/app/main.py:872:@app.get("/reports")
+backend/app/main.py:877:@app.get("/doctors/summary")
+backend/app/main.py:882:@app.get("/doctors/by-specialty/{name}")
+backend/app/main.py:888:@app.get("/doctors/{doctor_id}")
+backend/app/main.py:896:@app.get("/doctor-assignments/{doctor_id}")
+backend/app/main.py:901:@app.post("/doctor-assignments/{doctor_id}")
+backend/app/main.py:928:@app.post("/doctor-assignments/{doctor_id}/{assignment_id}/status")
+backend/app/main.py:942:@app.delete("/doctor-assignments/{doctor_id}/{assignment_id}")
+backend/app/main.py:952:@app.get("/specialties/summary")
+backend/app/main.py:957:@app.get("/pacs/studies")
+backend/app/main.py:961:@app.get("/nursing/vitals/{patient_id}")
+backend/app/main.py:966:@app.post("/nursing/vitals/{patient_id}")
+backend/app/main.py:984:@app.get("/nursing/notes/{patient_id}")
+backend/app/main.py:989:@app.post("/nursing/notes/{patient_id}")
+backend/app/main.py:1001:@app.get("/radiology/catalog")
+backend/app/main.py:1006:@app.get("/radiology/orders")
+backend/app/main.py:1011:@app.get("/radiology/orders/{patient_id}")
+backend/app/main.py:1016:@app.post("/radiology/orders")
+backend/app/main.py:1035:@app.post("/radiology/results/{order_id}")
+backend/app/main.py:1047:@app.get("/labs/catalog")
+backend/app/main.py:1052:@app.get("/labs/orders")
+backend/app/main.py:1057:@app.get("/labs/orders/{patient_id}")
+backend/app/main.py:1062:@app.post("/labs/orders")
+backend/app/main.py:1081:@app.post("/labs/results/{order_id}")
+backend/app/main.py:1205:@app.get("/drug-intel/reconciliation/{patient_id}")
+backend/app/main.py:1288:@app.get("/drug-intel/discharge-counseling/{patient_id}")
+backend/app/main.py:1681:@app.get("/drug-intel/recommendations/{patient_id}")
+backend/app/main.py:1690:@app.post("/drug-intel/recommendations")
+backend/app/main.py:1697:@app.get("/drug-intel/dose-safety/{patient_id}")
+backend/app/main.py:1706:@app.post("/drug-intel/dose-safety")
+backend/app/main.py:1713:@app.get("/drug-intel/interactions/{patient_id}")
+backend/app/main.py:1722:@app.post("/drug-intel/interactions")
+backend/app/main.py:1729:@app.get("/mar/{patient_id}")
+backend/app/main.py:1734:@app.post("/mar/{patient_id}")
+backend/app/main.py:1757:@app.put("/mar/{patient_id}/{item_id}")
+backend/app/main.py:1779:@app.put("/mar/{patient_id}/{item_id}/pharmacist-review")
+backend/app/main.py:1790:@app.put("/mar/{patient_id}/{item_id}/status")
+backend/app/main.py:1802:@app.get("/drug-intel/search")
+backend/app/main.py:1830:@app.get("/drug-intel/dailymed")
+backend/app/main.py:1843:@app.delete("/mar/{patient_id}/{item_id}")
+backend/app/main.py.bak.pharmacist-review:779:@app.get("/")
+backend/app/main.py.bak.pharmacist-review:784:@app.post("/auth/login")
+backend/app/main.py.bak.pharmacist-review:801:@app.get("/patients")
+backend/app/main.py.bak.pharmacist-review:806:@app.get("/patients/{patient_id}")
+backend/app/main.py.bak.pharmacist-review:814:@app.get("/orders/{patient_id}")
+backend/app/main.py.bak.pharmacist-review:819:@app.post("/orders/{patient_id}")
+backend/app/main.py.bak.pharmacist-review:835:@app.get("/notes/{patient_id}")
+backend/app/main.py.bak.pharmacist-review:840:@app.post("/notes/{patient_id}")
+backend/app/main.py.bak.pharmacist-review:853:@app.get("/appointments")
+backend/app/main.py.bak.pharmacist-review:858:@app.post("/appointments")
+backend/app/main.py.bak.pharmacist-review:872:@app.get("/reports")
+backend/app/main.py.bak.pharmacist-review:877:@app.get("/doctors/summary")
+backend/app/main.py.bak.pharmacist-review:882:@app.get("/doctors/by-specialty/{name}")
+backend/app/main.py.bak.pharmacist-review:888:@app.get("/doctors/{doctor_id}")
+backend/app/main.py.bak.pharmacist-review:896:@app.get("/doctor-assignments/{doctor_id}")
+backend/app/main.py.bak.pharmacist-review:901:@app.post("/doctor-assignments/{doctor_id}")
+backend/app/main.py.bak.pharmacist-review:928:@app.post("/doctor-assignments/{doctor_id}/{assignment_id}/status")
+backend/app/main.py.bak.pharmacist-review:942:@app.delete("/doctor-assignments/{doctor_id}/{assignment_id}")
+backend/app/main.py.bak.pharmacist-review:952:@app.get("/specialties/summary")
+backend/app/main.py.bak.pharmacist-review:957:@app.get("/pacs/studies")
+backend/app/main.py.bak.pharmacist-review:961:@app.get("/nursing/vitals/{patient_id}")
+backend/app/main.py.bak.pharmacist-review:966:@app.post("/nursing/vitals/{patient_id}")
+backend/app/main.py.bak.pharmacist-review:984:@app.get("/nursing/notes/{patient_id}")
+backend/app/main.py.bak.pharmacist-review:989:@app.post("/nursing/notes/{patient_id}")
+backend/app/main.py.bak.pharmacist-review:1001:@app.get("/radiology/catalog")
+backend/app/main.py.bak.pharmacist-review:1006:@app.get("/radiology/orders")
+backend/app/main.py.bak.pharmacist-review:1011:@app.get("/radiology/orders/{patient_id}")
+backend/app/main.py.bak.pharmacist-review:1016:@app.post("/radiology/orders")
+backend/app/main.py.bak.pharmacist-review:1035:@app.post("/radiology/results/{order_id}")
+backend/app/main.py.bak.pharmacist-review:1047:@app.get("/labs/catalog")
+backend/app/main.py.bak.pharmacist-review:1052:@app.get("/labs/orders")
+backend/app/main.py.bak.pharmacist-review:1057:@app.get("/labs/orders/{patient_id}")
+backend/app/main.py.bak.pharmacist-review:1062:@app.post("/labs/orders")
+backend/app/main.py.bak.pharmacist-review:1081:@app.post("/labs/results/{order_id}")
+backend/app/main.py.bak.pharmacist-review:1483:@app.get("/drug-intel/recommendations/{patient_id}")
+backend/app/main.py.bak.pharmacist-review:1492:@app.post("/drug-intel/recommendations")
+backend/app/main.py.bak.pharmacist-review:1499:@app.get("/drug-intel/dose-safety/{patient_id}")
+backend/app/main.py.bak.pharmacist-review:1508:@app.post("/drug-intel/dose-safety")
+backend/app/main.py.bak.pharmacist-review:1515:@app.get("/drug-intel/interactions/{patient_id}")
+backend/app/main.py.bak.pharmacist-review:1524:@app.post("/drug-intel/interactions")
+backend/app/main.py.bak.pharmacist-review:1531:@app.get("/mar/{patient_id}")
+backend/app/main.py.bak.pharmacist-review:1536:@app.post("/mar/{patient_id}")
+backend/app/main.py.bak.pharmacist-review:1557:@app.put("/mar/{patient_id}/{item_id}")
+backend/app/main.py.bak.pharmacist-review:1572:@app.put("/mar/{patient_id}/{item_id}/status")
+backend/app/main.py.bak.pharmacist-review:1584:@app.get("/drug-intel/search")
+backend/app/main.py.bak.pharmacist-review:1612:@app.get("/drug-intel/dailymed")
+backend/app/main.py.bak.pharmacist-review:1625:@app.delete("/mar/{patient_id}/{item_id}")
+backend/app/main.py.bak.interactions:779:@app.get("/")
+backend/app/main.py.bak.interactions:784:@app.post("/auth/login")
+backend/app/main.py.bak.interactions:801:@app.get("/patients")
+backend/app/main.py.bak.interactions:806:@app.get("/patients/{patient_id}")
+backend/app/main.py.bak.interactions:814:@app.get("/orders/{patient_id}")
+backend/app/main.py.bak.interactions:819:@app.post("/orders/{patient_id}")
+backend/app/main.py.bak.interactions:835:@app.get("/notes/{patient_id}")
+backend/app/main.py.bak.interactions:840:@app.post("/notes/{patient_id}")
+backend/app/main.py.bak.interactions:853:@app.get("/appointments")
+backend/app/main.py.bak.interactions:858:@app.post("/appointments")
+backend/app/main.py.bak.interactions:872:@app.get("/reports")
+backend/app/main.py.bak.interactions:877:@app.get("/doctors/summary")
+backend/app/main.py.bak.interactions:882:@app.get("/doctors/by-specialty/{name}")
+backend/app/main.py.bak.interactions:888:@app.get("/doctors/{doctor_id}")
+backend/app/main.py.bak.interactions:896:@app.get("/doctor-assignments/{doctor_id}")
+backend/app/main.py.bak.interactions:901:@app.post("/doctor-assignments/{doctor_id}")
+backend/app/main.py.bak.interactions:928:@app.post("/doctor-assignments/{doctor_id}/{assignment_id}/status")
+backend/app/main.py.bak.interactions:942:@app.delete("/doctor-assignments/{doctor_id}/{assignment_id}")
+backend/app/main.py.bak.interactions:952:@app.get("/specialties/summary")
+
+=== FRONTEND API USAGE ===
+src/pages/RadiologyPage.tsx.bak:2:import { apiGet, apiPost } from "@/lib/api"
+src/pages/RadiologyPage.tsx.bak:46:    Promise.all([apiGet("/patients"), apiGet("/radiology/catalog"), apiGet("/radiology/orders")])
+src/pages/RadiologyPage.tsx.bak:72:      await apiPost("/radiology/orders", {
+src/pages/RadiologyPage.tsx.bak:81:      const refreshed = await apiGet("/radiology/orders")
+src/pages/AppointmentsPage.tsx:3:import { apiGet, apiPost } from "@/lib/api"
+src/pages/AppointmentsPage.tsx:46:    apiGet<Appointment[]>("/appointments")
+src/pages/AppointmentsPage.tsx:114:      const created = await apiPost<Appointment>("/appointments", payload)
+src/pages/LabCatalogPage.js:5:import { apiGet, apiPost } from "@/lib/api";
+src/pages/LabCatalogPage.js:59:                apiGet("/labs/catalog"),
+src/pages/LabCatalogPage.js:60:                apiGet("/patients"),
+src/pages/LabCatalogPage.js:78:            const ordersData = await apiGet(`/labs/orders/${patientId}`);
+src/pages/LabCatalogPage.js:137:            const created = await apiPost("/labs/orders", {
+src/pages/LabCatalogPage.js:168:            const updated = await apiPost(`/labs/results/${selectedOrder.id}`, {
+src/pages/Dashboard.js:3:import { apiGet } from "@/lib/api";
+src/pages/Dashboard.js:15:                    apiGet("/patients"),
+src/pages/Dashboard.js:16:                    apiGet("/appointments"),
+src/pages/Dashboard.js:17:                    apiGet("/reports"),
+src/pages/PatientProfilePage.tsx.bak.autofix-pacs:3:import { apiGet, apiPost } from "@/lib/api"
+src/pages/PatientProfilePage.tsx.bak.autofix-pacs:141:      const notesData = await apiGet<Note[]>(`/notes/${selected.id}`)
+src/pages/PatientProfilePage.tsx.bak.autofix-pacs:142:      const ordersData = await apiGet<Order[]>(`/orders/${selected.id}`)
+src/pages/PatientProfilePage.tsx.bak.autofix-pacs:143:      const currentLabOrders = await apiGet<LabOrder[]>(`/labs/orders/${selected.id}`)
+src/pages/PatientProfilePage.tsx.bak.autofix-pacs:144:      const currentRadiologyOrders = await apiGet<RadiologyOrder[]>(`/radiology/orders/${selected.id}`)
+src/pages/PatientProfilePage.tsx.bak.autofix-pacs:239:    apiGet<Patient[]>("/patients")
+src/pages/PatientProfilePage.tsx.bak.autofix-pacs:283:      apiGet<Note[]>(`/notes/${selected.id}`).catch(() => []),
+src/pages/PatientProfilePage.tsx.bak.autofix-pacs:284:      apiGet<Order[]>(`/orders/${selected.id}`).catch(() => []),
+src/pages/PatientProfilePage.tsx.bak.autofix-pacs:285:      apiGet<LabOrder[]>(`/labs/orders/${selected.id}`).catch(() => []),
+src/pages/PatientProfilePage.tsx.bak.autofix-pacs:286:      apiGet<RadiologyOrder[]>(`/radiology/orders/${selected.id}`).catch(() => []),
+src/pages/PatientProfilePage.tsx.bak.autofix-pacs:287:      apiGet<PacsStudy[]>("/pacs/studies").catch(() => []),
+src/pages/PatientProfilePage.tsx.bak.autofix-pacs:325:      await apiPost(`/notes/${selected.id}`, { text: noteText.trim() })
+src/pages/PatientProfilePage.tsx.bak.autofix-pacs:326:      const data = await apiGet<Note[]>(`/notes/${selected.id}`)
+src/pages/PatientProfilePage.tsx.bak.autofix-pacs:350:      const result = await apiPost<ClinicalOrdersResponse>(
+src/pages/PatientProfilePage.tsx.bak.autofix-pacs:357:      const latestOrders = await apiGet<Order[]>(`/orders/${selected.id}`)
+src/pages/NotesPage.tsx:2:import { apiGet, apiPost } from "@/lib/api"
+src/pages/NotesPage.tsx:12:    apiGet(`/notes/${patientId}`)
+src/pages/NotesPage.tsx:20:    await apiPost(`/notes/${patientId}`, { text })
+src/pages/NotesPage.tsx:21:    const data = await apiGet(`/notes/${patientId}`)
+src/pages/AppointmentsPage.js:4:import { apiGet, apiPost } from "@/lib/api";
+src/pages/AppointmentsPage.js:24:        apiGet("/appointments")
+src/pages/AppointmentsPage.js:80:            const created = await apiPost("/appointments", payload);
+src/pages/LabsPage.tsx:2:import { apiGet, apiPost } from "@/lib/api"
+src/pages/LabsPage.tsx:59:    Promise.all([apiGet("/patients"), apiGet("/labs/catalog"), apiGet("/labs/orders")])
+src/pages/LabsPage.tsx:264:      await apiPost("/labs/orders", {
+src/pages/LabsPage.tsx:273:      const refreshed = await apiGet("/labs/orders")
+src/pages/AIRoutingPage.js:3:import { apiGet, apiPost } from "@/lib/api";
+src/pages/AIRoutingPage.js:18:                const data = await apiGet("/patients");
+src/pages/AIRoutingPage.js:42:            const res = await apiPost(`/ai/clinical-route-and-create-orders/${selectedPatientId}`, {
+src/pages/NursesPage.tsx:3:import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api"
+src/pages/NursesPage.tsx:86:    apiGet("/patients")
+src/pages/NursesPage.tsx:106:      apiGet(`/nursing/vitals/${selectedPatientId}`),
+src/pages/NursesPage.tsx:107:      apiGet(`/nursing/notes/${selectedPatientId}`),
+src/pages/NursesPage.tsx:108:      apiGet(`/mar/${selectedPatientId}`),
+src/pages/NursesPage.tsx:166:      await apiPost(`/nursing/vitals/${selectedPatientId}`, vitalForm)
+src/pages/NursesPage.tsx:167:      const refreshed = await apiGet(`/nursing/vitals/${selectedPatientId}`)
+src/pages/NursesPage.tsx:186:      await apiPost(`/nursing/notes/${selectedPatientId}`, noteForm)
+src/pages/NursesPage.tsx:187:      const refreshed = await apiGet(`/nursing/notes/${selectedPatientId}`)
+src/pages/NursesPage.tsx:200:        await apiPut(`/mar/${selectedPatientId}/${editingMarId}`, marForm)
+src/pages/NursesPage.tsx:202:        await apiPost(`/mar/${selectedPatientId}`, marForm)
+src/pages/NursesPage.tsx:205:      const refreshed = await apiGet(`/mar/${selectedPatientId}`)
+src/pages/NursesPage.tsx:220:      await apiPut(`/mar/${selectedPatientId}/${itemId}/status`, {
+src/pages/NursesPage.tsx:225:      const refreshed = await apiGet(`/mar/${selectedPatientId}`)
+src/pages/NursesPage.tsx:245:          apiPut(`/mar/${selectedPatientId}/${item.id}/status`, {
+src/pages/NursesPage.tsx:252:      const refreshed = await apiGet(`/mar/${selectedPatientId}`)
+src/pages/NursesPage.tsx:278:      await apiDelete(`/mar/${selectedPatientId}/${itemId}`)
+src/pages/NursesPage.tsx:279:      const refreshed = await apiGet(`/mar/${selectedPatientId}`)
+src/pages/ClinicalDecisionPage.tsx:4:import { apiGet, apiPost } from "@/lib/api"
+src/pages/ClinicalDecisionPage.tsx:51:    apiGet("/patients")
+src/pages/ClinicalDecisionPage.tsx:72:    apiGet(`/notes/${selectedPatient.id}`)
+src/pages/ClinicalDecisionPage.tsx:108:      await apiPost(`/notes/${selectedPatient.id}`, { text: aiSummary })
+src/pages/ClinicalDecisionPage.tsx:109:      const data = await apiGet(`/notes/${selectedPatient.id}`)
+src/pages/NursesPage.tsx.bak.2026-03-20-095249:2:import { apiGet, apiPost } from "@/lib/api"
+src/pages/NursesPage.tsx.bak.2026-03-20-095249:50:    apiGet("/patients").then((data) => {
+src/pages/NursesPage.tsx.bak.2026-03-20-095249:60:      apiGet(`/nursing/vitals/${selectedPatientId}`),
+src/pages/NursesPage.tsx.bak.2026-03-20-095249:61:      apiGet(`/nursing/notes/${selectedPatientId}`)
+src/pages/NursesPage.tsx.bak.2026-03-20-095249:70:    await apiPost(`/nursing/vitals/${selectedPatientId}`, vitalForm)
+src/pages/NursesPage.tsx.bak.2026-03-20-095249:71:    const refreshed = await apiGet(`/nursing/vitals/${selectedPatientId}`)
+src/pages/NursesPage.tsx.bak.2026-03-20-095249:77:    await apiPost(`/nursing/notes/${selectedPatientId}`, noteForm)
+src/pages/NursesPage.tsx.bak.2026-03-20-095249:78:    const refreshed = await apiGet(`/nursing/notes/${selectedPatientId}`)
+src/pages/SmartPharmacyPage.tsx.bak.fix:3:import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api"
+src/pages/SmartPharmacyPage.tsx.bak.fix:155:    apiGet<MARItem[]>(`/mar/${patientId}`).then((data) => {
+src/pages/SmartPharmacyPage.tsx.bak.fix:166:    apiGet<InteractionResponse>(`/drug-intel/interactions/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.bak.fix:175:    apiGet<DoseSafetyResponse>(`/drug-intel/dose-safety/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.bak.fix:184:    apiGet<RecommendationResponse>(`/drug-intel/recommendations/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.bak.fix:193:    apiGet<ReconciliationResponse>(`/drug-intel/reconciliation/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.bak.fix:202:    apiGet<DischargeCounselingResponse>(`/drug-intel/discharge-counseling/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.bak.fix:215:    apiPost(`/mar/${patientId}`, {
+src/pages/SmartPharmacyPage.tsx.bak.fix:230:    apiPut(`/mar/${patientId}/${id}/status`, {
+src/pages/SmartPharmacyPage.tsx.bak.fix:237:    apiDelete(`/mar/${patientId}/${id}`).then(load)
+src/pages/SmartPharmacyPage.tsx.bak.fix:242:    apiPut(`/mar/${patientId}/${selectedItemId}/pharmacist-review`, {
+src/pages/SmartPharmacyPage.tsx.bak.fix:255:    apiGet<DrugIntelResponse>(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/OrdersPage.tsx:2:import { apiGet, apiPost } from "@/lib/api"
+src/pages/OrdersPage.tsx:42:      const data = await apiGet<Order[]>(`/orders/${pid}`)
+src/pages/OrdersPage.tsx:93:      await apiPost(`/orders/${patientId}`, {
+src/pages/OrdersPage.tsx:119:          apiPost(`/orders/${patientId}`, {
+src/pages/OrdersPage.tsx:129:          apiPost(`/orders/${patientId}`, {
+src/pages/OrdersPage.tsx:139:          apiPost(`/orders/${patientId}`, {
+src/pages/SmartPharmacyPage.tsx.bak.patientlink:2:import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api"
+src/pages/SmartPharmacyPage.tsx.bak.patientlink:54:    apiGet<MARItem[]>(`/mar/${patientId}`).then((data) => {
+src/pages/SmartPharmacyPage.tsx.bak.patientlink:61:    apiGet<InteractionResponse>(`/drug-intel/interactions/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.bak.patientlink:74:    apiPost(`/mar/${patientId}`, {
+src/pages/SmartPharmacyPage.tsx.bak.patientlink:89:    apiPut(`/mar/${patientId}/${id}/status`, {
+src/pages/SmartPharmacyPage.tsx.bak.patientlink:96:    apiDelete(`/mar/${patientId}/${id}`).then(load)
+src/pages/SmartPharmacyPage.tsx.bak.patientlink:102:    apiGet<DrugIntelResponse>(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/NursesPage.js:4:import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api";
+src/pages/NursesPage.js:45:        apiGet("/patients")
+src/pages/NursesPage.js:64:            apiGet(`/nursing/vitals/${selectedPatientId}`),
+src/pages/NursesPage.js:65:            apiGet(`/nursing/notes/${selectedPatientId}`),
+src/pages/NursesPage.js:66:            apiGet(`/mar/${selectedPatientId}`),
+src/pages/NursesPage.js:114:            await apiPost(`/nursing/vitals/${selectedPatientId}`, vitalForm);
+src/pages/NursesPage.js:115:            const refreshed = await apiGet(`/nursing/vitals/${selectedPatientId}`);
+src/pages/NursesPage.js:134:            await apiPost(`/nursing/notes/${selectedPatientId}`, noteForm);
+src/pages/NursesPage.js:135:            const refreshed = await apiGet(`/nursing/notes/${selectedPatientId}`);
+src/pages/NursesPage.js:148:                await apiPut(`/mar/${selectedPatientId}/${editingMarId}`, marForm);
+src/pages/NursesPage.js:151:                await apiPost(`/mar/${selectedPatientId}`, marForm);
+src/pages/NursesPage.js:153:            const refreshed = await apiGet(`/mar/${selectedPatientId}`);
+src/pages/NursesPage.js:167:            await apiPut(`/mar/${selectedPatientId}/${itemId}/status`, {
+src/pages/NursesPage.js:171:            const refreshed = await apiGet(`/mar/${selectedPatientId}`);
+src/pages/NursesPage.js:188:            await Promise.all(pending.map((item) => apiPut(`/mar/${selectedPatientId}/${item.id}/status`, {
+src/pages/NursesPage.js:192:            const refreshed = await apiGet(`/mar/${selectedPatientId}`);
+src/pages/NursesPage.js:217:            await apiDelete(`/mar/${selectedPatientId}/${itemId}`);
+src/pages/NursesPage.js:218:            const refreshed = await apiGet(`/mar/${selectedPatientId}`);
+src/pages/LabCatalogPage.tsx:4:import { apiGet, apiPost } from "@/lib/api"
+src/pages/LabCatalogPage.tsx:120:        apiGet<LabCatalog>("/labs/catalog"),
+src/pages/LabCatalogPage.tsx:121:        apiGet<Patient[]>("/patients"),
+src/pages/LabCatalogPage.tsx:140:      const ordersData = await apiGet<LabOrder[]>(`/labs/orders/${patientId}`)
+src/pages/LabCatalogPage.tsx:213:      const created = await apiPost<LabOrder>("/labs/orders", {
+src/pages/LabCatalogPage.tsx:247:      const updated = await apiPost<LabOrder>(`/labs/results/${selectedOrder.id}`, {
+src/pages/PatientsPage.tsx:3:import { apiGet } from "@/lib/api"
+src/pages/PatientsPage.tsx:39:        const data = await apiGet<Patient[]>("/patients")
+src/pages/SmartPharmacyPage.tsx.bak.interactions:2:import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api"
+src/pages/SmartPharmacyPage.tsx.bak.interactions:33:    apiGet<MARItem[]>(`/mar/${patientId}`).then(setItems)
+src/pages/SmartPharmacyPage.tsx.bak.interactions:41:    apiPost(`/mar/${patientId}`, {
+src/pages/SmartPharmacyPage.tsx.bak.interactions:56:    apiPut(`/mar/${patientId}/${id}/status`, {
+src/pages/SmartPharmacyPage.tsx.bak.interactions:63:    apiDelete(`/mar/${patientId}/${id}`).then(load)
+src/pages/SmartPharmacyPage.tsx.bak.interactions:69:    apiGet<DrugIntelResponse>(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/PatientProfilePage.tsx.bak.fixpacs:3:import { apiGet, apiPost } from "@/lib/api"
+src/pages/PatientProfilePage.tsx.bak.fixpacs:131:      const notesData = await apiGet<Note[]>(`/notes/${selected.id}`)
+src/pages/PatientProfilePage.tsx.bak.fixpacs:132:      const ordersData = await apiGet<Order[]>(`/orders/${selected.id}`)
+src/pages/PatientProfilePage.tsx.bak.fixpacs:133:      const currentLabOrders = await apiGet<LabOrder[]>(`/labs/orders/${selected.id}`)
+src/pages/PatientProfilePage.tsx.bak.fixpacs:134:      const currentRadiologyOrders = await apiGet<RadiologyOrder[]>(`/radiology/orders/${selected.id}`)
+src/pages/PatientProfilePage.tsx.bak.fixpacs:229:    apiGet<Patient[]>("/patients")
+src/pages/PatientProfilePage.tsx.bak.fixpacs:273:      apiGet<Note[]>(`/notes/${selected.id}`).catch(() => []),
+src/pages/PatientProfilePage.tsx.bak.fixpacs:274:      apiGet<Order[]>(`/orders/${selected.id}`).catch(() => []),
+src/pages/PatientProfilePage.tsx.bak.fixpacs:275:      apiGet<LabOrder[]>(`/labs/orders/${selected.id}`).catch(() => []),
+src/pages/PatientProfilePage.tsx.bak.fixpacs:276:      apiGet<RadiologyOrder[]>(`/radiology/orders/${selected.id}`).catch(() => []),
+src/pages/PatientProfilePage.tsx.bak.fixpacs:314:      await apiPost(`/notes/${selected.id}`, { text: noteText.trim() })
+src/pages/PatientProfilePage.tsx.bak.fixpacs:315:      const data = await apiGet<Note[]>(`/notes/${selected.id}`)
+src/pages/PatientProfilePage.tsx.bak.fixpacs:339:      const result = await apiPost<ClinicalOrdersResponse>(
+src/pages/PatientProfilePage.tsx.bak.fixpacs:346:      const latestOrders = await apiGet<Order[]>(`/orders/${selected.id}`)
+src/pages/ReportsPage.tsx.fixbak:3:import { apiGet } from "@/lib/api"
+src/pages/ReportsPage.tsx.fixbak:32:    apiGet("/patients").then((rows: any) => {
+src/pages/LabsPage.tsx.bak:2:import { apiGet, apiPost } from "@/lib/api"
+src/pages/LabsPage.tsx.bak:59:    Promise.all([apiGet("/patients"), apiGet("/labs/catalog"), apiGet("/labs/orders")])
+src/pages/LabsPage.tsx.bak:264:      await apiPost("/labs/orders", {
+src/pages/LabsPage.tsx.bak:273:      const refreshed = await apiGet("/labs/orders")
+src/pages/AIRoutingPage.tsx:2:import { apiGet, apiPost } from "@/lib/api"
+src/pages/AIRoutingPage.tsx:48:        const data = await apiGet<Patient[]>("/patients")
+src/pages/AIRoutingPage.tsx:73:      const res = await apiPost<ClinicalResult>(
+src/pages/PatientsPage.js:4:import { apiGet } from "@/lib/api";
+src/pages/PatientsPage.js:24:                const data = await apiGet("/patients");
+src/pages/LabsPage.js:3:import { apiGet, apiPost } from "@/lib/api";
+src/pages/LabsPage.js:35:        Promise.all([apiGet("/patients"), apiGet("/labs/catalog"), apiGet("/labs/orders")])
+src/pages/LabsPage.js:211:            await apiPost("/labs/orders", {
+src/pages/LabsPage.js:219:            const refreshed = await apiGet("/labs/orders");
+src/pages/RadiologyPage.tsx.bak2:3:import { apiGet, apiPost } from "@/lib/api"
+src/pages/RadiologyPage.tsx.bak2:55:    Promise.all([apiGet("/patients"), apiGet("/radiology/catalog"), apiGet("/radiology/orders")])
+src/pages/RadiologyPage.tsx.bak2:93:      await apiPost("/radiology/orders", {
+src/pages/RadiologyPage.tsx.bak2:105:      const refreshed = await apiGet("/radiology/orders")
+src/pages/RadiologyPage.js:4:import { apiGet, apiPost } from "@/lib/api";
+src/pages/RadiologyPage.js:31:            apiGet("/patients"),
+src/pages/RadiologyPage.js:32:            apiGet("/radiology/catalog"),
+src/pages/RadiologyPage.js:33:            apiGet("/radiology/orders"),
+src/pages/RadiologyPage.js:34:            apiGet("/pacs/studies"),
+src/pages/RadiologyPage.js:69:            await apiPost("/radiology/orders", {
+src/pages/RadiologyPage.js:81:            const refreshed = await apiGet("/radiology/orders");
+src/pages/SmartPharmacyPage.tsx.bak.errorfix:3:import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api"
+src/pages/SmartPharmacyPage.tsx.bak.errorfix:156:    apiGet<MARItem[]>(`/mar/${patientId}`).then((data) => {
+src/pages/SmartPharmacyPage.tsx.bak.errorfix:167:    apiGet<InteractionResponse>(`/drug-intel/interactions/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.bak.errorfix:176:    apiGet<DoseSafetyResponse>(`/drug-intel/dose-safety/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.bak.errorfix:185:    apiGet<RecommendationResponse>(`/drug-intel/recommendations/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.bak.errorfix:194:    apiGet<ReconciliationResponse>(`/drug-intel/reconciliation/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.bak.errorfix:203:    apiGet<DischargeCounselingResponse>(`/drug-intel/discharge-counseling/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.bak.errorfix:216:    apiPost(`/mar/${patientId}`, {
+src/pages/SmartPharmacyPage.tsx.bak.errorfix:231:    apiPut(`/mar/${patientId}/${id}/status`, {
+src/pages/SmartPharmacyPage.tsx.bak.errorfix:238:    apiDelete(`/mar/${patientId}/${id}`).then(load)
+src/pages/SmartPharmacyPage.tsx.bak.errorfix:243:    apiPut(`/mar/${patientId}/${selectedItemId}/pharmacist-review`, {
+src/pages/SmartPharmacyPage.tsx.bak.errorfix:284:    apiGet<DrugIntelResponse>(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/PatientsPage.tsx.bak.2026-03-20-095249:3:import { apiGet } from "@/lib/api"
+src/pages/PatientsPage.tsx.bak.2026-03-20-095249:38:        const data = await apiGet<Patient[]>("/patients")
+src/pages/PacsPage.js:3:import { apiGet } from "@/lib/api";
+src/pages/PacsPage.js:11:        apiGet("/pacs/studies")
+src/pages/SmartPharmacyPage.js:4:import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api";
+src/pages/SmartPharmacyPage.js:33:        apiGet(`/mar/${patientId}`).then((data) => {
+src/pages/SmartPharmacyPage.js:42:        apiGet(`/drug-intel/interactions/${patientId}`)
+src/pages/SmartPharmacyPage.js:50:        apiGet(`/drug-intel/dose-safety/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.js:58:        apiGet(`/drug-intel/recommendations/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.js:66:        apiGet(`/drug-intel/reconciliation/${patientId}`)
+src/pages/SmartPharmacyPage.js:77:        apiPost(`/mar/${patientId}`, {
+src/pages/SmartPharmacyPage.js:91:        apiPut(`/mar/${patientId}/${id}/status`, {
+src/pages/SmartPharmacyPage.js:97:        apiDelete(`/mar/${patientId}/${id}`).then(load);
+src/pages/SmartPharmacyPage.js:102:        apiPut(`/mar/${patientId}/${selectedItemId}/pharmacist-review`, {
+src/pages/SmartPharmacyPage.js:115:        apiGet(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/PatientProfilePage.tsx:3:import { apiGet, apiPost } from "@/lib/api"
+src/pages/PatientProfilePage.tsx:148:      const notesData = await apiGet<Note[]>(`/notes/${selected.id}`)
+src/pages/PatientProfilePage.tsx:149:      const ordersData = await apiGet<Order[]>(`/orders/${selected.id}`)
+src/pages/PatientProfilePage.tsx:150:      const currentLabOrders = await apiGet<LabOrder[]>(`/labs/orders/${selected.id}`)
+src/pages/PatientProfilePage.tsx:151:      const currentRadiologyOrders = await apiGet<RadiologyOrder[]>(`/radiology/orders/${selected.id}`)
+src/pages/PatientProfilePage.tsx:246:    apiGet<Patient[]>("/patients")
+src/pages/PatientProfilePage.tsx:290:      apiGet<Note[]>(`/notes/${selected.id}`).catch(() => []),
+src/pages/PatientProfilePage.tsx:291:      apiGet<Order[]>(`/orders/${selected.id}`).catch(() => []),
+src/pages/PatientProfilePage.tsx:292:      apiGet<LabOrder[]>(`/labs/orders/${selected.id}`).catch(() => []),
+src/pages/PatientProfilePage.tsx:293:      apiGet<RadiologyOrder[]>(`/radiology/orders/${selected.id}`).catch(() => []),
+src/pages/PatientProfilePage.tsx:294:      apiGet<PacsStudy[]>("/pacs/studies").catch(() => []),
+src/pages/PatientProfilePage.tsx:332:      await apiPost(`/notes/${selected.id}`, { text: noteText.trim() })
+src/pages/PatientProfilePage.tsx:333:      const data = await apiGet<Note[]>(`/notes/${selected.id}`)
+src/pages/PatientProfilePage.tsx:357:      const result = await apiPost<ClinicalOrdersResponse>(
+src/pages/PatientProfilePage.tsx:364:      const latestOrders = await apiGet<Order[]>(`/orders/${selected.id}`)
+src/pages/SmartPharmacyPage.tsx.bak.pharmacist-review:3:import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api"
+src/pages/SmartPharmacyPage.tsx.bak.pharmacist-review:106:    apiGet<MARItem[]>(`/mar/${patientId}`).then((data) => {
+src/pages/SmartPharmacyPage.tsx.bak.pharmacist-review:115:    apiGet<InteractionResponse>(`/drug-intel/interactions/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.bak.pharmacist-review:124:    apiGet<DoseSafetyResponse>(`/drug-intel/dose-safety/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.bak.pharmacist-review:133:    apiGet<RecommendationResponse>(`/drug-intel/recommendations/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.bak.pharmacist-review:146:    apiPost(`/mar/${patientId}`, {
+src/pages/SmartPharmacyPage.tsx.bak.pharmacist-review:161:    apiPut(`/mar/${patientId}/${id}/status`, {
+src/pages/SmartPharmacyPage.tsx.bak.pharmacist-review:168:    apiDelete(`/mar/${patientId}/${id}`).then(load)
+src/pages/SmartPharmacyPage.tsx.bak.pharmacist-review:174:    apiGet<DrugIntelResponse>(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/SmartPharmacyPage.tsx.STABLE.WORKING:3:import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api"
+src/pages/SmartPharmacyPage.tsx.STABLE.WORKING:133:    apiGet<MARItem[]>(`/mar/${patientId}`).then((data) => {
+src/pages/SmartPharmacyPage.tsx.STABLE.WORKING:143:    apiGet<InteractionResponse>(`/drug-intel/interactions/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.STABLE.WORKING:152:    apiGet<DoseSafetyResponse>(`/drug-intel/dose-safety/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.STABLE.WORKING:161:    apiGet<RecommendationResponse>(`/drug-intel/recommendations/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.STABLE.WORKING:170:    apiGet<ReconciliationResponse>(`/drug-intel/reconciliation/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.STABLE.WORKING:183:    apiPost(`/mar/${patientId}`, {
+src/pages/SmartPharmacyPage.tsx.STABLE.WORKING:198:    apiPut(`/mar/${patientId}/${id}/status`, {
+src/pages/SmartPharmacyPage.tsx.STABLE.WORKING:205:    apiDelete(`/mar/${patientId}/${id}`).then(load)
+src/pages/SmartPharmacyPage.tsx.STABLE.WORKING:210:    apiPut(`/mar/${patientId}/${selectedItemId}/pharmacist-review`, {
+src/pages/SmartPharmacyPage.tsx.STABLE.WORKING:223:    apiGet<DrugIntelResponse>(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/Dashboard.tsx:2:import { apiGet } from "@/lib/api"
+src/pages/Dashboard.tsx:33:          apiGet<Patient[]>("/patients"),
+src/pages/Dashboard.tsx:34:          apiGet<Appointment[]>("/appointments"),
+src/pages/Dashboard.tsx:35:          apiGet<Report[]>("/reports"),
+src/pages/ClinicalDecisionPage.tsx.black.bak:4:import { apiGet, apiPost } from "@/lib/api"
+src/pages/ClinicalDecisionPage.tsx.black.bak:64:        const data = await apiGet<Patient[]>("/patients")
+src/pages/ClinicalDecisionPage.tsx.black.bak:92:        const data = await apiGet<Note[]>(`/notes/${selectedPatientId}`)
+src/pages/ClinicalDecisionPage.tsx.black.bak:205:      await apiPost(`/notes/${selectedPatientId}`, {
+src/pages/ClinicalDecisionPage.tsx.black.bak:211:      const refreshed = await apiGet<Note[]>(`/notes/${selectedPatientId}`)
+src/pages/PatientProfilePage.js:4:import { apiGet, apiPost } from "@/lib/api";
+src/pages/PatientProfilePage.js:50:            const notesData = await apiGet(`/notes/${selected.id}`);
+src/pages/PatientProfilePage.js:51:            const ordersData = await apiGet(`/orders/${selected.id}`);
+src/pages/PatientProfilePage.js:52:            const currentLabOrders = await apiGet(`/labs/orders/${selected.id}`);
+src/pages/PatientProfilePage.js:53:            const currentRadiologyOrders = await apiGet(`/radiology/orders/${selected.id}`);
+src/pages/PatientProfilePage.js:124:        apiGet("/patients")
+src/pages/PatientProfilePage.js:161:            apiGet(`/notes/${selected.id}`).catch(() => []),
+src/pages/PatientProfilePage.js:162:            apiGet(`/orders/${selected.id}`).catch(() => []),
+src/pages/PatientProfilePage.js:163:            apiGet(`/labs/orders/${selected.id}`).catch(() => []),
+src/pages/PatientProfilePage.js:164:            apiGet(`/radiology/orders/${selected.id}`).catch(() => []),
+src/pages/PatientProfilePage.js:165:            apiGet("/pacs/studies").catch(() => []),
+src/pages/PatientProfilePage.js:197:            await apiPost(`/notes/${selected.id}`, { text: noteText.trim() });
+src/pages/PatientProfilePage.js:198:            const data = await apiGet(`/notes/${selected.id}`);
+src/pages/PatientProfilePage.js:221:            const result = await apiPost(`/ai/clinical-route-and-create-orders/${selected.id}`, payload);
+src/pages/PatientProfilePage.js:223:            const latestOrders = await apiGet(`/orders/${selected.id}`);
+src/pages/ReportsPage.tsx:4:import { apiGet } from "@/lib/api"
+src/pages/ReportsPage.tsx:228:        const data = await apiGet<Patient[]>("/patients")
+src/pages/ReportsPage.tsx:273:          apiGet<Patient>(`/patients/${selectedPatientId}`),
+src/pages/ReportsPage.tsx:274:          apiGet<Note[]>(`/notes/${selectedPatientId}`),
+src/pages/ReportsPage.tsx:275:          apiGet<Order[]>(`/orders/${selectedPatientId}`),
+src/pages/AdminOverviewPage.js:4:import { apiGet } from "@/lib/api";
+src/pages/AdminOverviewPage.js:25:                    apiGet("/patients"),
+src/pages/AdminOverviewPage.js:26:                    apiGet("/appointments"),
+src/pages/AdminOverviewPage.js:27:                    apiGet("/reports"),
+src/pages/SmartPharmacyPage.tsx.bak.buttons:3:import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api"
+src/pages/SmartPharmacyPage.tsx.bak.buttons:110:    apiGet<MARItem[]>(`/mar/${patientId}`).then((data) => {
+src/pages/SmartPharmacyPage.tsx.bak.buttons:119:    apiGet<InteractionResponse>(`/drug-intel/interactions/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.bak.buttons:128:    apiGet<DoseSafetyResponse>(`/drug-intel/dose-safety/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.bak.buttons:137:    apiGet<RecommendationResponse>(`/drug-intel/recommendations/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.bak.buttons:150:    apiPost(`/mar/${patientId}`, {
+src/pages/SmartPharmacyPage.tsx.bak.buttons:165:    apiPut(`/mar/${patientId}/${id}/status`, {
+src/pages/SmartPharmacyPage.tsx.bak.buttons:172:    apiDelete(`/mar/${patientId}/${id}`).then(load)
+src/pages/SmartPharmacyPage.tsx.bak.buttons:177:    apiPut(`/mar/${patientId}/${selectedItemId}/pharmacist-review`, {
+src/pages/SmartPharmacyPage.tsx.bak.buttons:190:    apiGet<DrugIntelResponse>(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/ReportsPage.js:5:import { apiGet } from "@/lib/api";
+src/pages/ReportsPage.js:161:                const data = await apiGet("/patients");
+src/pages/ReportsPage.js:202:                    apiGet(`/patients/${selectedPatientId}`),
+src/pages/ReportsPage.js:203:                    apiGet(`/notes/${selectedPatientId}`),
+src/pages/ReportsPage.js:204:                    apiGet(`/orders/${selectedPatientId}`),
+src/pages/SmartPharmacyPage.tsx.bak.dose-safety:3:import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api"
+src/pages/SmartPharmacyPage.tsx.bak.dose-safety:56:    apiGet<MARItem[]>(`/mar/${patientId}`).then((data) => {
+src/pages/SmartPharmacyPage.tsx.bak.dose-safety:63:    apiGet<InteractionResponse>(`/drug-intel/interactions/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.bak.dose-safety:76:    apiPost(`/mar/${patientId}`, {
+src/pages/SmartPharmacyPage.tsx.bak.dose-safety:91:    apiPut(`/mar/${patientId}/${id}/status`, {
+src/pages/SmartPharmacyPage.tsx.bak.dose-safety:98:    apiDelete(`/mar/${patientId}/${id}`).then(load)
+src/pages/SmartPharmacyPage.tsx.bak.dose-safety:104:    apiGet<DrugIntelResponse>(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/SmartPharmacyPage.tsx:3:import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api"
+src/pages/SmartPharmacyPage.tsx:133:    apiGet<MARItem[]>(`/mar/${patientId}`).then((data) => {
+src/pages/SmartPharmacyPage.tsx:143:    apiGet<InteractionResponse>(`/drug-intel/interactions/${patientId}`)
+src/pages/SmartPharmacyPage.tsx:152:    apiGet<DoseSafetyResponse>(`/drug-intel/dose-safety/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx:161:    apiGet<RecommendationResponse>(`/drug-intel/recommendations/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx:170:    apiGet<ReconciliationResponse>(`/drug-intel/reconciliation/${patientId}`)
+src/pages/SmartPharmacyPage.tsx:183:    apiPost(`/mar/${patientId}`, {
+src/pages/SmartPharmacyPage.tsx:198:    apiPut(`/mar/${patientId}/${id}/status`, {
+src/pages/SmartPharmacyPage.tsx:205:    apiDelete(`/mar/${patientId}/${id}`).then(load)
+src/pages/SmartPharmacyPage.tsx:210:    apiPut(`/mar/${patientId}/${selectedItemId}/pharmacist-review`, {
+src/pages/SmartPharmacyPage.tsx:223:    apiGet<DrugIntelResponse>(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/PacsPage.tsx:2:import { apiGet } from "@/lib/api"
+src/pages/PacsPage.tsx:22:    apiGet<PacsStudy[]>("/pacs/studies")
+src/pages/ClinicalDecisionPage.js:5:import { apiGet, apiPost } from "@/lib/api";
+src/pages/ClinicalDecisionPage.js:31:        apiGet("/patients")
+src/pages/ClinicalDecisionPage.js:50:        apiGet(`/notes/${selectedPatient.id}`)
+src/pages/ClinicalDecisionPage.js:78:            await apiPost(`/notes/${selectedPatient.id}`, { text: aiSummary });
+src/pages/ClinicalDecisionPage.js:79:            const data = await apiGet(`/notes/${selectedPatient.id}`);
+src/pages/PatientProfilePage.tsx.bak.pacslink:3:import { apiGet, apiPost } from "@/lib/api"
+src/pages/PatientProfilePage.tsx.bak.pacslink:117:      const notesData = await apiGet<Note[]>(`/notes/${selected.id}`)
+src/pages/PatientProfilePage.tsx.bak.pacslink:118:      const ordersData = await apiGet<Order[]>(`/orders/${selected.id}`)
+src/pages/PatientProfilePage.tsx.bak.pacslink:119:      const currentLabOrders = await apiGet<LabOrder[]>(`/labs/orders/${selected.id}`)
+src/pages/PatientProfilePage.tsx.bak.pacslink:120:      const currentRadiologyOrders = await apiGet<RadiologyOrder[]>(`/radiology/orders/${selected.id}`)
+src/pages/PatientProfilePage.tsx.bak.pacslink:215:    apiGet<Patient[]>("/patients")
+src/pages/PatientProfilePage.tsx.bak.pacslink:259:      apiGet<Note[]>(`/notes/${selected.id}`).catch(() => []),
+src/pages/PatientProfilePage.tsx.bak.pacslink:260:      apiGet<Order[]>(`/orders/${selected.id}`).catch(() => []),
+src/pages/PatientProfilePage.tsx.bak.pacslink:261:      apiGet<LabOrder[]>(`/labs/orders/${selected.id}`).catch(() => []),
+src/pages/PatientProfilePage.tsx.bak.pacslink:262:      apiGet<RadiologyOrder[]>(`/radiology/orders/${selected.id}`).catch(() => []),
+src/pages/PatientProfilePage.tsx.bak.pacslink:295:      await apiPost(`/notes/${selected.id}`, { text: noteText.trim() })
+src/pages/PatientProfilePage.tsx.bak.pacslink:296:      const data = await apiGet<Note[]>(`/notes/${selected.id}`)
+src/pages/PatientProfilePage.tsx.bak.pacslink:320:      const result = await apiPost<ClinicalOrdersResponse>(
+src/pages/PatientProfilePage.tsx.bak.pacslink:327:      const latestOrders = await apiGet<Order[]>(`/orders/${selected.id}`)
+src/pages/SmartPharmacyPage.tsx.broken.2026-03-27-143348:3:import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api"
+src/pages/SmartPharmacyPage.tsx.broken.2026-03-27-143348:170:    apiGet<MARItem[]>(`/mar/${patientId}`).then((data) => {
+src/pages/SmartPharmacyPage.tsx.broken.2026-03-27-143348:180:    apiGet<InteractionResponse>(`/drug-intel/interactions/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.broken.2026-03-27-143348:189:    apiGet<DoseSafetyResponse>(`/drug-intel/dose-safety/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.broken.2026-03-27-143348:198:    apiGet<RecommendationResponse>(`/drug-intel/recommendations/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.broken.2026-03-27-143348:207:    apiGet<ReconciliationResponse>(`/drug-intel/reconciliation/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.broken.2026-03-27-143348:220:    apiPost(`/mar/${patientId}`, {
+src/pages/SmartPharmacyPage.tsx.broken.2026-03-27-143348:235:    apiPut(`/mar/${patientId}/${id}/status`, {
+src/pages/SmartPharmacyPage.tsx.broken.2026-03-27-143348:242:    apiDelete(`/mar/${patientId}/${id}`).then(load)
+src/pages/SmartPharmacyPage.tsx.broken.2026-03-27-143348:247:    apiPut(`/mar/${patientId}/${selectedItemId}/pharmacist-review`, {
+src/pages/SmartPharmacyPage.tsx.broken.2026-03-27-143348:260:    apiGet<DrugIntelResponse>(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/ReportsPage.tsx.bak.reports-opt:4:import { apiGet } from "@/lib/api"
+src/pages/ReportsPage.tsx.bak.reports-opt:228:        const data = await apiGet<Patient[]>("/patients")
+src/pages/ReportsPage.tsx.bak.reports-opt:265:            const currentPatient = await apiGet<Patient>(`/patients/${selectedPatientId}`)
+src/pages/ReportsPage.tsx.bak.reports-opt:266:            const currentNotes = await apiGet<Note[]>(`/notes/${selectedPatientId}`)
+src/pages/ReportsPage.tsx.bak.reports-opt:267:            const currentOrders = await apiGet<Order[]>(`/orders/${selectedPatientId}`)
+src/pages/ReportsPage.tsx.bak.reports-opt:304:        const currentPatient = await apiGet<Patient>(`/patients/${selectedPatientId}`)
+src/pages/ReportsPage.tsx.bak.reports-opt:305:        const currentNotes = await apiGet<Note[]>(`/notes/${selectedPatientId}`)
+src/pages/ReportsPage.tsx.bak.reports-opt:306:        const currentOrders = await apiGet<Order[]>(`/orders/${selectedPatientId}`)
+src/pages/SmartPharmacyPage.tsx.stable.pharmacy:3:import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api"
+src/pages/SmartPharmacyPage.tsx.stable.pharmacy:133:    apiGet<MARItem[]>(`/mar/${patientId}`).then((data) => {
+src/pages/SmartPharmacyPage.tsx.stable.pharmacy:143:    apiGet<InteractionResponse>(`/drug-intel/interactions/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.stable.pharmacy:152:    apiGet<DoseSafetyResponse>(`/drug-intel/dose-safety/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.stable.pharmacy:161:    apiGet<RecommendationResponse>(`/drug-intel/recommendations/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.stable.pharmacy:170:    apiGet<ReconciliationResponse>(`/drug-intel/reconciliation/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.stable.pharmacy:183:    apiPost(`/mar/${patientId}`, {
+src/pages/SmartPharmacyPage.tsx.stable.pharmacy:198:    apiPut(`/mar/${patientId}/${id}/status`, {
+src/pages/SmartPharmacyPage.tsx.stable.pharmacy:205:    apiDelete(`/mar/${patientId}/${id}`).then(load)
+src/pages/SmartPharmacyPage.tsx.stable.pharmacy:210:    apiPut(`/mar/${patientId}/${selectedItemId}/pharmacist-review`, {
+src/pages/SmartPharmacyPage.tsx.stable.pharmacy:223:    apiGet<DrugIntelResponse>(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/RadiologyPage.tsx:3:import { apiGet, apiPost } from "@/lib/api"
+src/pages/RadiologyPage.tsx:67:      apiGet("/patients"),
+src/pages/RadiologyPage.tsx:68:      apiGet("/radiology/catalog"),
+src/pages/RadiologyPage.tsx:69:      apiGet("/radiology/orders"),
+src/pages/RadiologyPage.tsx:70:      apiGet("/pacs/studies"),
+src/pages/RadiologyPage.tsx:120:      await apiPost("/radiology/orders", {
+src/pages/RadiologyPage.tsx:133:      const refreshed = await apiGet("/radiology/orders")
+
+=== AI USAGE ===
+src/pages/PatientProfilePage.tsx.bak.autofix-pacs:351:        `/ai/clinical-route-and-create-orders/${selected.id}`,
+src/pages/AIRoutingPage.js:42:            const res = await apiPost(`/ai/clinical-route-and-create-orders/${selectedPatientId}`, {
+src/pages/SmartPharmacyPage.tsx.bak.fix:166:    apiGet<InteractionResponse>(`/drug-intel/interactions/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.bak.fix:175:    apiGet<DoseSafetyResponse>(`/drug-intel/dose-safety/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.bak.fix:184:    apiGet<RecommendationResponse>(`/drug-intel/recommendations/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.bak.fix:193:    apiGet<ReconciliationResponse>(`/drug-intel/reconciliation/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.bak.fix:202:    apiGet<DischargeCounselingResponse>(`/drug-intel/discharge-counseling/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.bak.fix:255:    apiGet<DrugIntelResponse>(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/SmartPharmacyPage.tsx.bak.patientlink:61:    apiGet<InteractionResponse>(`/drug-intel/interactions/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.bak.patientlink:102:    apiGet<DrugIntelResponse>(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/SmartPharmacyPage.tsx.bak.interactions:69:    apiGet<DrugIntelResponse>(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/PatientProfilePage.tsx.bak.fixpacs:340:        `/ai/clinical-route-and-create-orders/${selected.id}`,
+src/pages/AIRoutingPage.tsx:74:        `/ai/clinical-route-and-create-orders/${selectedPatientId}`,
+src/pages/SmartPharmacyPage.tsx.bak.errorfix:167:    apiGet<InteractionResponse>(`/drug-intel/interactions/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.bak.errorfix:176:    apiGet<DoseSafetyResponse>(`/drug-intel/dose-safety/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.bak.errorfix:185:    apiGet<RecommendationResponse>(`/drug-intel/recommendations/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.bak.errorfix:194:    apiGet<ReconciliationResponse>(`/drug-intel/reconciliation/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.bak.errorfix:203:    apiGet<DischargeCounselingResponse>(`/drug-intel/discharge-counseling/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.bak.errorfix:284:    apiGet<DrugIntelResponse>(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/SmartPharmacyPage.js:42:        apiGet(`/drug-intel/interactions/${patientId}`)
+src/pages/SmartPharmacyPage.js:50:        apiGet(`/drug-intel/dose-safety/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.js:58:        apiGet(`/drug-intel/recommendations/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.js:66:        apiGet(`/drug-intel/reconciliation/${patientId}`)
+src/pages/SmartPharmacyPage.js:115:        apiGet(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/PatientProfilePage.tsx:358:        `/ai/clinical-route-and-create-orders/${selected.id}`,
+src/pages/SmartPharmacyPage.tsx.bak.pharmacist-review:115:    apiGet<InteractionResponse>(`/drug-intel/interactions/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.bak.pharmacist-review:124:    apiGet<DoseSafetyResponse>(`/drug-intel/dose-safety/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.bak.pharmacist-review:133:    apiGet<RecommendationResponse>(`/drug-intel/recommendations/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.bak.pharmacist-review:174:    apiGet<DrugIntelResponse>(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/SmartPharmacyPage.tsx.STABLE.WORKING:143:    apiGet<InteractionResponse>(`/drug-intel/interactions/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.STABLE.WORKING:152:    apiGet<DoseSafetyResponse>(`/drug-intel/dose-safety/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.STABLE.WORKING:161:    apiGet<RecommendationResponse>(`/drug-intel/recommendations/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.STABLE.WORKING:170:    apiGet<ReconciliationResponse>(`/drug-intel/reconciliation/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.STABLE.WORKING:223:    apiGet<DrugIntelResponse>(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/PatientProfilePage.js:221:            const result = await apiPost(`/ai/clinical-route-and-create-orders/${selected.id}`, payload);
+src/pages/SmartPharmacyPage.tsx.bak.buttons:119:    apiGet<InteractionResponse>(`/drug-intel/interactions/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.bak.buttons:128:    apiGet<DoseSafetyResponse>(`/drug-intel/dose-safety/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.bak.buttons:137:    apiGet<RecommendationResponse>(`/drug-intel/recommendations/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.bak.buttons:190:    apiGet<DrugIntelResponse>(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/SmartPharmacyPage.tsx.bak.dose-safety:63:    apiGet<InteractionResponse>(`/drug-intel/interactions/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.bak.dose-safety:104:    apiGet<DrugIntelResponse>(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/SmartPharmacyPage.tsx:143:    apiGet<InteractionResponse>(`/drug-intel/interactions/${patientId}`)
+src/pages/SmartPharmacyPage.tsx:152:    apiGet<DoseSafetyResponse>(`/drug-intel/dose-safety/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx:161:    apiGet<RecommendationResponse>(`/drug-intel/recommendations/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx:170:    apiGet<ReconciliationResponse>(`/drug-intel/reconciliation/${patientId}`)
+src/pages/SmartPharmacyPage.tsx:223:    apiGet<DrugIntelResponse>(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/PatientProfilePage.tsx.bak.pacslink:321:        `/ai/clinical-route-and-create-orders/${selected.id}`,
+src/pages/SmartPharmacyPage.tsx.broken.2026-03-27-143348:180:    apiGet<InteractionResponse>(`/drug-intel/interactions/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.broken.2026-03-27-143348:189:    apiGet<DoseSafetyResponse>(`/drug-intel/dose-safety/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.broken.2026-03-27-143348:198:    apiGet<RecommendationResponse>(`/drug-intel/recommendations/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.broken.2026-03-27-143348:207:    apiGet<ReconciliationResponse>(`/drug-intel/reconciliation/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.broken.2026-03-27-143348:260:    apiGet<DrugIntelResponse>(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/SmartPharmacyPage.tsx.stable.pharmacy:143:    apiGet<InteractionResponse>(`/drug-intel/interactions/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.stable.pharmacy:152:    apiGet<DoseSafetyResponse>(`/drug-intel/dose-safety/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.stable.pharmacy:161:    apiGet<RecommendationResponse>(`/drug-intel/recommendations/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.stable.pharmacy:170:    apiGet<ReconciliationResponse>(`/drug-intel/reconciliation/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.stable.pharmacy:223:    apiGet<DrugIntelResponse>(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/SmartPharmacyPage.tsx.bak.recommendations:89:    apiGet<InteractionResponse>(`/drug-intel/interactions/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.bak.recommendations:98:    apiGet<DoseSafetyResponse>(`/drug-intel/dose-safety/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.bak.recommendations:139:    apiGet<DrugIntelResponse>(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/SmartPharmacyPage.js.disabled:73:        apiGet(`/drug-intel/interactions/${patientId}`)
+src/pages/SmartPharmacyPage.js.disabled:81:        apiGet(`/drug-intel/dose-safety/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.js.disabled:89:        apiGet(`/drug-intel/recommendations/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.js.disabled:97:        apiGet(`/drug-intel/reconciliation/${patientId}`)
+src/pages/SmartPharmacyPage.js.disabled:146:        apiGet(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/SmartPharmacyPage.tsx.bak.dashboard:80:    apiGet<InteractionResponse>(`/drug-intel/interactions/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.bak.dashboard:89:    apiGet<DoseSafetyResponse>(`/drug-intel/dose-safety/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.bak.dashboard:130:    apiGet<DrugIntelResponse>(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/SmartPharmacyPage.tsx.pre-discharge-recover:143:    apiGet<InteractionResponse>(`/drug-intel/interactions/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.pre-discharge-recover:152:    apiGet<DoseSafetyResponse>(`/drug-intel/dose-safety/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.pre-discharge-recover:161:    apiGet<RecommendationResponse>(`/drug-intel/recommendations/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.pre-discharge-recover:170:    apiGet<ReconciliationResponse>(`/drug-intel/reconciliation/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.pre-discharge-recover:223:    apiGet<DrugIntelResponse>(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/SmartPharmacyPage.tsx.STABLE.WORKING.2:143:    apiGet<InteractionResponse>(`/drug-intel/interactions/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.STABLE.WORKING.2:152:    apiGet<DoseSafetyResponse>(`/drug-intel/dose-safety/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.STABLE.WORKING.2:161:    apiGet<RecommendationResponse>(`/drug-intel/recommendations/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.STABLE.WORKING.2:170:    apiGet<ReconciliationResponse>(`/drug-intel/reconciliation/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.STABLE.WORKING.2:223:    apiGet<DrugIntelResponse>(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/SmartPharmacyPage.tsx.pre-discharge-recover2:143:    apiGet<InteractionResponse>(`/drug-intel/interactions/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.pre-discharge-recover2:152:    apiGet<DoseSafetyResponse>(`/drug-intel/dose-safety/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.pre-discharge-recover2:161:    apiGet<RecommendationResponse>(`/drug-intel/recommendations/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.pre-discharge-recover2:170:    apiGet<ReconciliationResponse>(`/drug-intel/reconciliation/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.pre-discharge-recover2:223:    apiGet<DrugIntelResponse>(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/SmartPharmacyPage.tsx.MILESTONE.CLINICAL_PHARMACY:233:    apiGet<InteractionResponse>(`/drug-intel/interactions/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.MILESTONE.CLINICAL_PHARMACY:242:    apiGet<DoseSafetyResponse>(`/drug-intel/dose-safety/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.MILESTONE.CLINICAL_PHARMACY:251:    apiGet<RecommendationResponse>(`/drug-intel/recommendations/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.MILESTONE.CLINICAL_PHARMACY:260:    apiGet<ReconciliationResponse>(`/drug-intel/reconciliation/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.MILESTONE.CLINICAL_PHARMACY:314:    apiGet<DrugIntelResponse>(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/PatientProfilePage.tsx.bak.openpacs-final:351:        `/ai/clinical-route-and-create-orders/${selected.id}`,
+src/pages/SmartPharmacyPage.tsx.broken.2026-03-26-213832:166:    apiGet<InteractionResponse>(`/drug-intel/interactions/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.broken.2026-03-26-213832:175:    apiGet<DoseSafetyResponse>(`/drug-intel/dose-safety/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.broken.2026-03-26-213832:184:    apiGet<RecommendationResponse>(`/drug-intel/recommendations/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.broken.2026-03-26-213832:193:    apiGet<ReconciliationResponse>(`/drug-intel/reconciliation/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.broken.2026-03-26-213832:202:    apiGet<DischargeCounselingResponse>(`/drug-intel/discharge-counseling/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.broken.2026-03-26-213832:255:    apiGet<DrugIntelResponse>(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/SmartPharmacyPage.tsx.bak.reconciliation:119:    apiGet<InteractionResponse>(`/drug-intel/interactions/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.bak.reconciliation:128:    apiGet<DoseSafetyResponse>(`/drug-intel/dose-safety/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.bak.reconciliation:137:    apiGet<RecommendationResponse>(`/drug-intel/recommendations/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.bak.reconciliation:190:    apiGet<DrugIntelResponse>(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/_js_disabled/AIRoutingPage.js:42:            const res = await apiPost(`/ai/clinical-route-and-create-orders/${selectedPatientId}`, {
+src/pages/_js_disabled/SmartPharmacyPage.js:42:        apiGet(`/drug-intel/interactions/${patientId}`)
+src/pages/_js_disabled/SmartPharmacyPage.js:50:        apiGet(`/drug-intel/dose-safety/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/_js_disabled/SmartPharmacyPage.js:58:        apiGet(`/drug-intel/recommendations/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/_js_disabled/SmartPharmacyPage.js:66:        apiGet(`/drug-intel/reconciliation/${patientId}`)
+src/pages/_js_disabled/SmartPharmacyPage.js:115:        apiGet(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/_js_disabled/PatientProfilePage.js:221:            const result = await apiPost(`/ai/clinical-route-and-create-orders/${selected.id}`, payload);
+src/pages/SmartPharmacyPage.tsx.before-discharge:143:    apiGet<InteractionResponse>(`/drug-intel/interactions/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.before-discharge:152:    apiGet<DoseSafetyResponse>(`/drug-intel/dose-safety/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.before-discharge:161:    apiGet<RecommendationResponse>(`/drug-intel/recommendations/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.before-discharge:170:    apiGet<ReconciliationResponse>(`/drug-intel/reconciliation/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.before-discharge:223:    apiGet<DrugIntelResponse>(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/PatientProfilePage.tsx.bak.patientlink:358:        `/ai/clinical-route-and-create-orders/${selected.id}`,
+src/pages/SmartPharmacyPage.tsx.bak.discharge-counseling:143:    apiGet<InteractionResponse>(`/drug-intel/interactions/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.bak.discharge-counseling:152:    apiGet<DoseSafetyResponse>(`/drug-intel/dose-safety/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.bak.discharge-counseling:161:    apiGet<RecommendationResponse>(`/drug-intel/recommendations/${patientId}?age=${encodeURIComponent(patientAge || "45")}`)
+src/pages/SmartPharmacyPage.tsx.bak.discharge-counseling:170:    apiGet<ReconciliationResponse>(`/drug-intel/reconciliation/${patientId}`)
+src/pages/SmartPharmacyPage.tsx.bak.discharge-counseling:223:    apiGet<DrugIntelResponse>(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+src/pages/SmartPharmacyPage.tsx.bak.drugui:69:    apiGet<DrugIntelResponse>(`/drug-intel/search?q=${encodeURIComponent(search.trim())}`)
+backend/app/main.py.bak.dose-safety:1248:@app.get("/drug-intel/interactions/{patient_id}")
+backend/app/main.py.bak.dose-safety:1257:@app.post("/drug-intel/interactions")
+backend/app/main.py.bak.dose-safety:1317:@app.get("/drug-intel/search")
+backend/app/main.py.bak.dose-safety:1345:@app.get("/drug-intel/dailymed")
+backend/app/main.py.bak.discharge-counseling:1205:@app.get("/drug-intel/reconciliation/{patient_id}")
+backend/app/main.py.bak.discharge-counseling:1597:@app.get("/drug-intel/recommendations/{patient_id}")
+backend/app/main.py.bak.discharge-counseling:1606:@app.post("/drug-intel/recommendations")
+backend/app/main.py.bak.discharge-counseling:1613:@app.get("/drug-intel/dose-safety/{patient_id}")
+backend/app/main.py.bak.discharge-counseling:1622:@app.post("/drug-intel/dose-safety")
+backend/app/main.py.bak.discharge-counseling:1629:@app.get("/drug-intel/interactions/{patient_id}")
+backend/app/main.py.bak.discharge-counseling:1638:@app.post("/drug-intel/interactions")
+backend/app/main.py.bak.discharge-counseling:1718:@app.get("/drug-intel/search")
+backend/app/main.py.bak.discharge-counseling:1746:@app.get("/drug-intel/dailymed")
+backend/app/api/clinical_orders.py:9:@router.post("/clinical-route-and-create-orders/{patient_id}")
+backend/app/api/clinical_route.py:8:@router.post("/clinical-route", response_model=ClinicalRouteResponse)
+backend/app/main.py.bak.recommendations:1366:@app.get("/drug-intel/dose-safety/{patient_id}")
+backend/app/main.py.bak.recommendations:1375:@app.post("/drug-intel/dose-safety")
+backend/app/main.py.bak.recommendations:1382:@app.get("/drug-intel/interactions/{patient_id}")
+backend/app/main.py.bak.recommendations:1391:@app.post("/drug-intel/interactions")
+backend/app/main.py.bak.recommendations:1451:@app.get("/drug-intel/search")
+backend/app/main.py.bak.recommendations:1479:@app.get("/drug-intel/dailymed")
+backend/app/main.py:1205:@app.get("/drug-intel/reconciliation/{patient_id}")
+backend/app/main.py:1288:@app.get("/drug-intel/discharge-counseling/{patient_id}")
+backend/app/main.py:1681:@app.get("/drug-intel/recommendations/{patient_id}")
+backend/app/main.py:1690:@app.post("/drug-intel/recommendations")
+backend/app/main.py:1697:@app.get("/drug-intel/dose-safety/{patient_id}")
+backend/app/main.py:1706:@app.post("/drug-intel/dose-safety")
+backend/app/main.py:1713:@app.get("/drug-intel/interactions/{patient_id}")
+backend/app/main.py:1722:@app.post("/drug-intel/interactions")
+backend/app/main.py:1802:@app.get("/drug-intel/search")
+backend/app/main.py:1830:@app.get("/drug-intel/dailymed")
+backend/app/main.py.bak.pharmacist-review:1483:@app.get("/drug-intel/recommendations/{patient_id}")
+backend/app/main.py.bak.pharmacist-review:1492:@app.post("/drug-intel/recommendations")
+backend/app/main.py.bak.pharmacist-review:1499:@app.get("/drug-intel/dose-safety/{patient_id}")
+backend/app/main.py.bak.pharmacist-review:1508:@app.post("/drug-intel/dose-safety")
+backend/app/main.py.bak.pharmacist-review:1515:@app.get("/drug-intel/interactions/{patient_id}")
+backend/app/main.py.bak.pharmacist-review:1524:@app.post("/drug-intel/interactions")
+backend/app/main.py.bak.pharmacist-review:1584:@app.get("/drug-intel/search")
+backend/app/main.py.bak.pharmacist-review:1612:@app.get("/drug-intel/dailymed")
+backend/app/main.py.bak.interactions:1200:@app.get("/drug-intel/search")
+backend/app/main.py.bak.interactions:1228:@app.get("/drug-intel/dailymed")
+backend/app/main.py.bak.reconciliation:1483:@app.get("/drug-intel/recommendations/{patient_id}")
+backend/app/main.py.bak.reconciliation:1492:@app.post("/drug-intel/recommendations")
+backend/app/main.py.bak.reconciliation:1499:@app.get("/drug-intel/dose-safety/{patient_id}")
+backend/app/main.py.bak.reconciliation:1508:@app.post("/drug-intel/dose-safety")
+backend/app/main.py.bak.reconciliation:1515:@app.get("/drug-intel/interactions/{patient_id}")
+backend/app/main.py.bak.reconciliation:1524:@app.post("/drug-intel/interactions")
+backend/app/main.py.bak.reconciliation:1604:@app.get("/drug-intel/search")
+backend/app/main.py.bak.reconciliation:1632:@app.get("/drug-intel/dailymed")

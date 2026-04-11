@@ -1,0 +1,14 @@
+from typing import Protocol, Any
+
+class NursingRepositoryContract(Protocol):
+    def list_vitals(self, patient_id: str) -> list[dict[str, Any]]:
+        ...
+
+    def create_vital(self, patient_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        ...
+
+    def list_notes(self, patient_id: str) -> list[dict[str, Any]]:
+        ...
+
+    def create_note(self, patient_id: str, text: str) -> dict[str, Any]:
+        ...
