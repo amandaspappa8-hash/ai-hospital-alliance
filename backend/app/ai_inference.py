@@ -1,30 +1,83 @@
+from pathlib import Path
 import torch
-import torchvision
-from torchvision import transforms
+import torch.nn as nn
 from PIL import Image
+from torchvision import transforms
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-model = torchvision.models.resnet18()
-model.fc = torch.nn.Linear(model.fc.in_features, 2)
-model.load_state_dict(torch.load("backend/app/model.pth", map_location=device))
-model.to(device)
-model.eval()
+class SimpleCNN(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.features = nn.Sequential(
+            nn.Conv2d(3, 16, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+
+            nn.Conv2d(16, 32, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+
+            nn.Conv2d(32, 64, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.AdaptiveAvgPool2d((1, 1)),
+        )
+        self.classifier = nn.Linear(64, 2)
+
+    def forward(self, x):
+        x = self.features(x)
+        x = x.view(x.size(0), -1)
+        return self.classifier(x)
+
+model = SimpleCNN().to(device)
+MODEL_PATH = Path("backend/app/model.pth")
+MODEL_LOADED = False
+
+if MODEL_PATH.exists():
+    try:
+        state = torch.load(str(MODEL_PATH), map_location=device)
+        model.load_state_dict(state)
+        model.eval()
+        MODEL_LOADED = True
+        print(f"[AI] Model loaded successfully from {MODEL_PATH}")
+    except Exception as e:
+        print(f"[AI] Failed to load model: {e}")
+else:
+    print(f"[AI] Warning: model file not found at {MODEL_PATH}. AI image inference disabled.")
 
 transform = transforms.Compose([
-    transforms.Resize((224,224)),
-    transforms.ToTensor()
+    transforms.Resize((128, 128)),
+    transforms.ToTensor(),
 ])
 
-def predict_image(path):
-    img = Image.open(path).convert("RGB")
-    img = transform(img).unsqueeze(0).to(device)
+CLASS_NAMES = ["Normal", "Abnormal"]
 
-    with torch.no_grad():
-        out = model(img)
-        prob = torch.softmax(out, dim=1)[0]
+def predict_image(image_path: str):
+    if not MODEL_LOADED:
+        return {
+            "success": False,
+            "error": "Model file not available",
+            "details": f"Missing model at {MODEL_PATH}"
+        }
 
-    return {
-        "normal": float(prob[0]),
-        "abnormal": float(prob[1])
-    }
+    try:
+        image = Image.open(image_path).convert("RGB")
+        image = transform(image).unsqueeze(0).to(device)
+
+        with torch.no_grad():
+            outputs = model(image)
+            probs = torch.softmax(outputs, dim=1)
+            pred = torch.argmax(probs, dim=1).item()
+            confidence = float(probs[0][pred].item())
+
+        return {
+            "success": True,
+            "prediction": CLASS_NAMES[pred],
+            "confidence": round(confidence, 4)
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": "Prediction failed",
+            "details": str(e)
+        }

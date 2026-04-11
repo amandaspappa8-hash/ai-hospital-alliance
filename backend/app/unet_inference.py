@@ -1,22 +1,76 @@
+from pathlib import Path
 import torch
-import numpy as np
+import torch.nn as nn
 from PIL import Image
-from backend.app.unet_model import get_model
+from torchvision import transforms
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-model = get_model()
-model.load_state_dict(torch.load("backend/app/unet.pth", map_location=device))
-model.eval()
+class SimpleUNet(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.encoder = nn.Sequential(
+            nn.Conv2d(3, 16, 3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(16, 32, 3, padding=1),
+            nn.ReLU(),
+        )
+        self.decoder = nn.Sequential(
+            nn.Conv2d(32, 16, 3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(16, 1, 1),
+            nn.Sigmoid(),
+        )
 
-def segment_image(path):
-    img = Image.open(path).convert("L").resize((256,256))
-    img = np.array(img) / 255.0
+    def forward(self, x):
+        x = self.encoder(x)
+        x = self.decoder(x)
+        return x
 
-    x = torch.tensor(img).unsqueeze(0).unsqueeze(0).float().to(device)
+model = SimpleUNet().to(device)
+MODEL_PATH = Path("backend/app/unet.pth")
+MODEL_LOADED = False
 
-    with torch.no_grad():
-        pred = model(x)
-        mask = torch.sigmoid(pred)[0][0].cpu().numpy()
+if MODEL_PATH.exists():
+    try:
+        state = torch.load(str(MODEL_PATH), map_location=device)
+        model.load_state_dict(state)
+        model.eval()
+        MODEL_LOADED = True
+        print(f"[UNET] Model loaded successfully from {MODEL_PATH}")
+    except Exception as e:
+        print(f"[UNET] Failed to load model: {e}")
+else:
+    print(f"[UNET] Warning: model file not found at {MODEL_PATH}. Image segmentation disabled.")
 
-    return mask.tolist()
+transform = transforms.Compose([
+    transforms.Resize((128, 128)),
+    transforms.ToTensor(),
+])
+
+def segment_image(image_path: str):
+    if not MODEL_LOADED:
+        return {
+            "success": False,
+            "error": "UNet model file not available",
+            "details": f"Missing model at {MODEL_PATH}"
+        }
+
+    try:
+        image = Image.open(image_path).convert("RGB")
+        tensor = transform(image).unsqueeze(0).to(device)
+
+        with torch.no_grad():
+            mask = model(tensor)
+
+        return {
+            "success": True,
+            "message": "Segmentation completed",
+            "mask_shape": list(mask.shape)
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": "Segmentation failed",
+            "details": str(e)
+        }
