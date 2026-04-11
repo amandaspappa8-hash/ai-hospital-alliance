@@ -1,0 +1,475 @@
+=== PROJECT AUDIT ===
+
+--- FRONTEND PAGES ---
+src/pages/AdminOverviewPage.js
+src/pages/AdminOverviewPage.tsx
+src/pages/AIRoutingPage.js
+src/pages/AIRoutingPage.tsx
+src/pages/AppointmentsPage.js
+src/pages/AppointmentsPage.tsx
+src/pages/CardiologyPage.js
+src/pages/CardiologyPage.tsx
+src/pages/ClinicalDecisionPage.js
+src/pages/ClinicalDecisionPage.tsx
+src/pages/ClinicalDecisionPage.tsx.black.bak
+src/pages/CtMriPage.js
+src/pages/CtMriPage.tsx
+src/pages/Dashboard.js
+src/pages/Dashboard.tsx
+src/pages/DischargeMedicationPage.js
+src/pages/DischargeMedicationPage.tsx
+src/pages/DoctorProfilePage.js
+src/pages/DoctorProfilePage.tsx
+src/pages/DoctorsPage.js
+src/pages/DoctorsPage.tsx
+src/pages/DrugFormularyPage.js
+src/pages/DrugFormularyPage.tsx
+src/pages/EmergencyPage.js
+src/pages/EmergencyPage.tsx
+src/pages/FileManager.js
+src/pages/FileManager.tsx
+src/pages/Home.js
+src/pages/Home.tsx
+src/pages/ICUPage.js
+src/pages/ICUPage.tsx
+src/pages/ImagingOrdersPage.js
+src/pages/ImagingOrdersPage.tsx
+src/pages/InteractionsPage.js
+src/pages/InteractionsPage.tsx
+src/pages/LabCatalogPage.js
+src/pages/LabCatalogPage.tsx
+src/pages/LabOrdersPage.js
+src/pages/LabOrdersPage.tsx
+src/pages/LabPage.js
+src/pages/LabPage.tsx
+src/pages/LabsPage.js
+src/pages/LabsPage.tsx
+src/pages/LabsPage.tsx.bak
+src/pages/Login.js
+src/pages/Login.tsx
+src/pages/LogoutPage.js
+src/pages/LogoutPage.tsx
+src/pages/MedicationsPage.js
+src/pages/MedicationsPage.tsx
+src/pages/NeurologyPage.js
+src/pages/NeurologyPage.tsx
+src/pages/NotesPage.js
+src/pages/NotesPage.tsx
+src/pages/NursesPage.js
+src/pages/NursesPage.tsx
+src/pages/NursesPage.tsx.bak.2026-03-20-095249
+src/pages/OrdersPage.js
+src/pages/OrdersPage.tsx
+src/pages/OverviewPage.js
+src/pages/OverviewPage.tsx
+src/pages/PacsPage.js
+src/pages/PacsPage.tsx
+src/pages/PacsPage.tsx.bak.realfix
+src/pages/PatientProfilePage.js
+src/pages/PatientProfilePage.tsx
+src/pages/PatientProfilePage.tsx.bak.autofix-pacs
+src/pages/PatientProfilePage.tsx.bak.fixpacs
+src/pages/PatientProfilePage.tsx.bak.openpacs-final
+src/pages/PatientProfilePage.tsx.bak.pacslink
+src/pages/PatientProfilePage.tsx.bak.patientlink
+src/pages/PatientsPage.js
+src/pages/PatientsPage.tsx
+src/pages/PatientsPage.tsx.bak.2026-03-20-095249
+src/pages/PediatricsPage.js
+src/pages/PediatricsPage.tsx
+src/pages/PrescriptionsPage.js
+src/pages/PrescriptionsPage.tsx
+src/pages/RadiologyPage.js
+src/pages/RadiologyPage.tsx
+src/pages/RadiologyPage.tsx.bak
+src/pages/RadiologyPage.tsx.bak2
+src/pages/RadiologyPage.tsx.bak.autopacs
+src/pages/RadiologyPage.tsx.bak.pacslink
+src/pages/ReportsPage.js
+src/pages/ReportsPage.tsx
+src/pages/ReportsPage.tsx.bak.reports-opt
+src/pages/ReportsPage.tsx.fixbak
+src/pages/SettingsPage.js
+src/pages/SettingsPage.tsx
+src/pages/SmartPharmacyPage.js
+src/pages/SmartPharmacyPage.js.disabled
+src/pages/SmartPharmacyPage.tsx
+src/pages/SmartPharmacyPage.tsx.bak.buttons
+src/pages/SmartPharmacyPage.tsx.bak.dashboard
+src/pages/SmartPharmacyPage.tsx.bak.discharge-counseling
+src/pages/SmartPharmacyPage.tsx.bak.dose-safety
+src/pages/SmartPharmacyPage.tsx.bak.drugui
+src/pages/SmartPharmacyPage.tsx.bak.errorfix
+src/pages/SmartPharmacyPage.tsx.bak.fix
+src/pages/SmartPharmacyPage.tsx.bak.interactions
+src/pages/SmartPharmacyPage.tsx.bak.patientlink
+src/pages/SmartPharmacyPage.tsx.bak.pharmacist-review
+src/pages/SmartPharmacyPage.tsx.bak.recommendations
+src/pages/SmartPharmacyPage.tsx.bak.reconciliation
+src/pages/SmartPharmacyPage.tsx.before-discharge
+src/pages/SmartPharmacyPage.tsx.broken.2026-03-26-213832
+src/pages/SmartPharmacyPage.tsx.broken.2026-03-27-143348
+src/pages/SmartPharmacyPage.tsx.MILESTONE.CLINICAL_PHARMACY
+src/pages/SmartPharmacyPage.tsx.pre-discharge-recover
+src/pages/SmartPharmacyPage.tsx.pre-discharge-recover2
+src/pages/SmartPharmacyPage.tsx.stable.pharmacy
+src/pages/SmartPharmacyPage.tsx.STABLE.WORKING
+src/pages/SmartPharmacyPage.tsx.STABLE.WORKING.2
+src/pages/SpecialtiesPage.js
+src/pages/SpecialtiesPage.tsx
+
+--- COMPONENTS ---
+src/components/app/AppSidebar.js
+src/components/app/AppSidebar.tsx
+src/components/app/OverviewWidgets.js
+src/components/app/OverviewWidgets.tsx
+src/components/app/SectionIconBadge.js
+src/components/app/SectionIconBadge.tsx
+src/components/auth/ProtectedRoute.js
+src/components/auth/ProtectedRoute.tsx
+src/components/clinical/DecisionEngineCard.js
+src/components/clinical/DecisionEngineCard.tsx
+src/components/clinical/DigitalSignatureCard.js
+src/components/clinical/DigitalSignatureCard.tsx
+src/components/clinical/SmartOrdersCard.js
+src/components/clinical/SmartOrdersCard.tsx
+src/components/clinical/VisitTimelineCard.js
+src/components/clinical/VisitTimelineCard.tsx
+src/components/PageHeader.js
+src/components/PageHeader.tsx
+src/components/Sidebar.js
+src/components/Sidebar.tsx
+src/components/specialties/SpecialtyDoctorsView.js
+src/components/specialties/SpecialtyDoctorsView.tsx
+src/components/Topbar.js
+src/components/Topbar.tsx
+src/components/ui/avatar.js
+src/components/ui/avatar.tsx
+src/components/ui/badge.js
+src/components/ui/badge.tsx
+src/components/ui/breadcrumb.js
+src/components/ui/breadcrumb.tsx
+src/components/ui/button.js
+src/components/ui/button.tsx
+src/components/ui/calendar.js
+src/components/ui/calendar.tsx
+src/components/ui/card.js
+src/components/ui/card.tsx
+src/components/ui/checkbox.js
+src/components/ui/checkbox.tsx
+src/components/ui/command.js
+src/components/ui/command.tsx
+src/components/ui/dialog.js
+src/components/ui/dialog.tsx
+src/components/ui/dropdown-menu.js
+src/components/ui/dropdown-menu.tsx
+src/components/ui/input.js
+src/components/ui/input.tsx
+src/components/ui/menubar.js
+src/components/ui/menubar.tsx
+src/components/ui/navigation-menu.js
+src/components/ui/navigation-menu.tsx
+src/components/ui/pagination.js
+src/components/ui/pagination.tsx
+src/components/ui/popover.js
+src/components/ui/popover.tsx
+src/components/ui/scroll-area.js
+src/components/ui/scroll-area.tsx
+src/components/ui/select.js
+src/components/ui/select.tsx
+src/components/ui/separator.js
+src/components/ui/separator.tsx
+src/components/ui/sheet.js
+src/components/ui/sheet.tsx
+src/components/ui/sidebar.js
+src/components/ui/sidebar.tsx
+src/components/ui/skeleton.js
+src/components/ui/skeleton.tsx
+src/components/ui/switch.js
+src/components/ui/switch.tsx
+src/components/ui/table.js
+src/components/ui/table.tsx
+src/components/ui/tabs.js
+src/components/ui/tabs.tsx
+src/components/ui/textarea.js
+src/components/ui/textarea.tsx
+src/components/ui/tooltip.js
+src/components/ui/tooltip.tsx
+
+--- BACKEND ROUTES ---
+779:@app.get("/")
+784:@app.post("/auth/login")
+801:@app.get("/patients")
+806:@app.get("/patients/{patient_id}")
+814:@app.get("/orders/{patient_id}")
+819:@app.post("/orders/{patient_id}")
+835:@app.get("/notes/{patient_id}")
+840:@app.post("/notes/{patient_id}")
+853:@app.get("/appointments")
+858:@app.post("/appointments")
+872:@app.get("/reports")
+877:@app.get("/doctors/summary")
+882:@app.get("/doctors/by-specialty/{name}")
+888:@app.get("/doctors/{doctor_id}")
+896:@app.get("/doctor-assignments/{doctor_id}")
+901:@app.post("/doctor-assignments/{doctor_id}")
+928:@app.post("/doctor-assignments/{doctor_id}/{assignment_id}/status")
+942:@app.delete("/doctor-assignments/{doctor_id}/{assignment_id}")
+952:@app.get("/specialties/summary")
+957:@app.get("/pacs/studies")
+961:@app.get("/nursing/vitals/{patient_id}")
+966:@app.post("/nursing/vitals/{patient_id}")
+984:@app.get("/nursing/notes/{patient_id}")
+989:@app.post("/nursing/notes/{patient_id}")
+1001:@app.get("/radiology/catalog")
+1006:@app.get("/radiology/orders")
+1011:@app.get("/radiology/orders/{patient_id}")
+1016:@app.post("/radiology/orders")
+1035:@app.post("/radiology/results/{order_id}")
+1047:@app.get("/labs/catalog")
+1052:@app.get("/labs/orders")
+1057:@app.get("/labs/orders/{patient_id}")
+1062:@app.post("/labs/orders")
+1081:@app.post("/labs/results/{order_id}")
+1093:app.include_router(clinical_route_router)
+1094:app.include_router(clinical_orders_router)
+1205:@app.get("/drug-intel/reconciliation/{patient_id}")
+1288:@app.get("/drug-intel/discharge-counseling/{patient_id}")
+1681:@app.get("/drug-intel/recommendations/{patient_id}")
+1690:@app.post("/drug-intel/recommendations")
+1697:@app.get("/drug-intel/dose-safety/{patient_id}")
+1706:@app.post("/drug-intel/dose-safety")
+1713:@app.get("/drug-intel/interactions/{patient_id}")
+1722:@app.post("/drug-intel/interactions")
+1729:@app.get("/mar/{patient_id}")
+1734:@app.post("/mar/{patient_id}")
+1757:@app.put("/mar/{patient_id}/{item_id}")
+1779:@app.put("/mar/{patient_id}/{item_id}/pharmacist-review")
+1790:@app.put("/mar/{patient_id}/{item_id}/status")
+1802:@app.get("/drug-intel/search")
+1830:@app.get("/drug-intel/dailymed")
+1843:@app.delete("/mar/{patient_id}/{item_id}")
+
+--- AI ROUTES ---
+backend/app/main.py.bak.dose-safety:1248:@app.get("/drug-intel/interactions/{patient_id}")
+backend/app/main.py.bak.dose-safety:1257:@app.post("/drug-intel/interactions")
+backend/app/main.py.bak.dose-safety:1317:@app.get("/drug-intel/search")
+backend/app/main.py.bak.dose-safety:1345:@app.get("/drug-intel/dailymed")
+backend/app/main.py.bak.discharge-counseling:1205:@app.get("/drug-intel/reconciliation/{patient_id}")
+backend/app/main.py.bak.discharge-counseling:1597:@app.get("/drug-intel/recommendations/{patient_id}")
+backend/app/main.py.bak.discharge-counseling:1606:@app.post("/drug-intel/recommendations")
+backend/app/main.py.bak.discharge-counseling:1613:@app.get("/drug-intel/dose-safety/{patient_id}")
+backend/app/main.py.bak.discharge-counseling:1622:@app.post("/drug-intel/dose-safety")
+backend/app/main.py.bak.discharge-counseling:1629:@app.get("/drug-intel/interactions/{patient_id}")
+backend/app/main.py.bak.discharge-counseling:1638:@app.post("/drug-intel/interactions")
+backend/app/main.py.bak.discharge-counseling:1718:@app.get("/drug-intel/search")
+backend/app/main.py.bak.discharge-counseling:1746:@app.get("/drug-intel/dailymed")
+backend/app/api/clinical_orders.py:9:@router.post("/clinical-route-and-create-orders/{patient_id}")
+backend/app/api/clinical_route.py:8:@router.post("/clinical-route", response_model=ClinicalRouteResponse)
+backend/app/main.py.bak.recommendations:1366:@app.get("/drug-intel/dose-safety/{patient_id}")
+backend/app/main.py.bak.recommendations:1375:@app.post("/drug-intel/dose-safety")
+backend/app/main.py.bak.recommendations:1382:@app.get("/drug-intel/interactions/{patient_id}")
+backend/app/main.py.bak.recommendations:1391:@app.post("/drug-intel/interactions")
+backend/app/main.py.bak.recommendations:1451:@app.get("/drug-intel/search")
+backend/app/main.py.bak.recommendations:1479:@app.get("/drug-intel/dailymed")
+backend/app/main.py:1205:@app.get("/drug-intel/reconciliation/{patient_id}")
+backend/app/main.py:1288:@app.get("/drug-intel/discharge-counseling/{patient_id}")
+backend/app/main.py:1681:@app.get("/drug-intel/recommendations/{patient_id}")
+backend/app/main.py:1690:@app.post("/drug-intel/recommendations")
+backend/app/main.py:1697:@app.get("/drug-intel/dose-safety/{patient_id}")
+backend/app/main.py:1706:@app.post("/drug-intel/dose-safety")
+backend/app/main.py:1713:@app.get("/drug-intel/interactions/{patient_id}")
+backend/app/main.py:1722:@app.post("/drug-intel/interactions")
+backend/app/main.py:1802:@app.get("/drug-intel/search")
+backend/app/main.py:1830:@app.get("/drug-intel/dailymed")
+backend/app/main.py.bak.pharmacist-review:1483:@app.get("/drug-intel/recommendations/{patient_id}")
+backend/app/main.py.bak.pharmacist-review:1492:@app.post("/drug-intel/recommendations")
+backend/app/main.py.bak.pharmacist-review:1499:@app.get("/drug-intel/dose-safety/{patient_id}")
+backend/app/main.py.bak.pharmacist-review:1508:@app.post("/drug-intel/dose-safety")
+backend/app/main.py.bak.pharmacist-review:1515:@app.get("/drug-intel/interactions/{patient_id}")
+backend/app/main.py.bak.pharmacist-review:1524:@app.post("/drug-intel/interactions")
+backend/app/main.py.bak.pharmacist-review:1584:@app.get("/drug-intel/search")
+backend/app/main.py.bak.pharmacist-review:1612:@app.get("/drug-intel/dailymed")
+backend/app/main.py.bak.interactions:1200:@app.get("/drug-intel/search")
+backend/app/main.py.bak.interactions:1228:@app.get("/drug-intel/dailymed")
+backend/app/main.py.bak.reconciliation:1483:@app.get("/drug-intel/recommendations/{patient_id}")
+backend/app/main.py.bak.reconciliation:1492:@app.post("/drug-intel/recommendations")
+backend/app/main.py.bak.reconciliation:1499:@app.get("/drug-intel/dose-safety/{patient_id}")
+backend/app/main.py.bak.reconciliation:1508:@app.post("/drug-intel/dose-safety")
+backend/app/main.py.bak.reconciliation:1515:@app.get("/drug-intel/interactions/{patient_id}")
+backend/app/main.py.bak.reconciliation:1524:@app.post("/drug-intel/interactions")
+backend/app/main.py.bak.reconciliation:1604:@app.get("/drug-intel/search")
+backend/app/main.py.bak.reconciliation:1632:@app.get("/drug-intel/dailymed")
+
+--- AUTH / RBAC ---
+src/App.tsx:4:import ProtectedRoute from "./components/auth/ProtectedRoute"
+src/components/auth/ProtectedRoute.tsx:2:import { getToken, getUser } from "@/lib/auth-storage"
+src/components/auth/ProtectedRoute.tsx:3:import { hasAccess, type AppRoute } from "@/lib/rbac"
+src/components/auth/ProtectedRoute.tsx:18:  if (routeKey && !hasAccess(user.role, routeKey)) {
+src/components/auth/ProtectedRoute.js:3:import { getToken, getUser } from "@/lib/auth-storage";
+src/components/auth/ProtectedRoute.js:4:import { hasAccess } from "@/lib/rbac";
+src/components/auth/ProtectedRoute.js:11:    if (routeKey && !hasAccess(user.role, routeKey)) {
+src/components/Topbar.js:8:    return (_jsxs("header", { className: "flex items-center justify-between border-b bg-background px-4 py-3 md:px-6", children: [_jsxs("div", { children: [_jsx("h1", { className: "text-lg font-semibold", children: "AI Hospital Alliance" }), _jsx("p", { className: "text-sm text-muted-foreground", children: "Medical-grade hospital workspace" })] }), _jsx("div", { className: "flex items-center gap-3", children: user ? (_jsxs(_Fragment, { children: [_jsxs("div", { className: "hidden text-right sm:block", children: [_jsx("div", { className: "text-sm font-medium", children: user.name }), _jsx("div", { className: "text-xs text-muted-foreground", children: user.username })] }), _jsx(Badge, { variant: "secondary", children: user.role }), _jsx(Link, { to: "/logout", children: _jsx(Button, { variant: "outline", children: "Logout" }) })] })) : (_jsx(Link, { to: "/login", children: _jsx(Button, { children: "Login" }) })) })] }));
+src/components/ui/pagination.js:6:const Pagination = ({ className, ...props }) => (_jsx("nav", { role: "navigation", "aria-label": "pagination", className: cn("mx-auto flex w-full justify-center", className), ...props }));
+src/components/ui/table.js:14:const TableHead = React.forwardRef(({ className, ...props }, ref) => (_jsx("th", { ref: ref, className: cn("h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]", className), ...props })));
+src/components/ui/table.js:16:const TableCell = React.forwardRef(({ className, ...props }, ref) => (_jsx("td", { ref: ref, className: cn("p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]", className), ...props })));
+src/components/ui/badge.tsx:2:import { cva, type VariantProps } from "class-variance-authority"
+src/components/ui/button.tsx:3:import { cva, type VariantProps } from "class-variance-authority"
+src/components/ui/pagination.tsx:9:    role="navigation"
+src/components/ui/sheet.tsx:5:import { cva, type VariantProps } from "class-variance-authority"
+src/components/ui/navigation-menu.tsx:3:import { cva } from "class-variance-authority"
+src/components/ui/badge.js:2:import { cva } from "class-variance-authority";
+src/components/ui/breadcrumb.tsx:66:    role="link"
+src/components/ui/breadcrumb.tsx:81:    role="presentation"
+src/components/ui/breadcrumb.tsx:96:    role="presentation"
+src/components/ui/navigation-menu.js:4:import { cva } from "class-variance-authority";
+src/components/ui/sheet.js:5:import { cva } from "class-variance-authority";
+src/components/ui/breadcrumb.js:17:const BreadcrumbPage = React.forwardRef(({ className, ...props }, ref) => (_jsx("span", { ref: ref, role: "link", "aria-disabled": "true", "aria-current": "page", className: cn("font-normal text-foreground", className), ...props })));
+src/components/ui/breadcrumb.js:19:const BreadcrumbSeparator = ({ children, className, ...props }) => (_jsx("li", { role: "presentation", "aria-hidden": "true", className: cn("[&>svg]:w-3.5 [&>svg]:h-3.5", className), ...props, children: children ?? _jsx(ChevronRight, {}) }));
+src/components/ui/breadcrumb.js:21:const BreadcrumbEllipsis = ({ className, ...props }) => (_jsxs("span", { role: "presentation", "aria-hidden": "true", className: cn("flex h-9 w-9 items-center justify-center", className), ...props, children: [_jsx(MoreHorizontal, { className: "h-4 w-4" }), _jsx("span", { className: "sr-only", children: "More" })] }));
+src/components/ui/button.js:4:import { cva } from "class-variance-authority";
+src/components/ui/sidebar.js:4:import { cva } from "class-variance-authority";
+src/components/ui/table.tsx:76:      "h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+src/components/ui/table.tsx:91:      "p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+src/components/ui/sidebar.tsx:3:import { cva, type VariantProps } from "class-variance-authority"
+src/components/Topbar.tsx:26:            <Badge variant="secondary">{user.role}</Badge>
+src/components/app/AppSidebar.js:5:import { getUser } from "@/lib/auth-storage";
+src/components/app/AppSidebar.js:11:        roles: ["Admin", "Doctor", "Radiology"],
+src/components/app/AppSidebar.js:17:        roles: ["Admin"],
+src/components/app/AppSidebar.js:23:        roles: ["Admin", "Doctor", "Radiology"],
+src/components/app/AppSidebar.js:29:        roles: ["Admin", "Doctor", "Radiology"],
+src/components/app/AppSidebar.js:35:        roles: ["Admin", "Doctor", "Radiology"],
+src/components/app/AppSidebar.js:41:        roles: ["Admin", "Doctor", "Radiology"],
+src/components/app/AppSidebar.js:47:        roles: ["Admin", "Doctor", "Radiology"],
+src/components/app/AppSidebar.js:53:        roles: ["Admin", "Doctor"],
+src/components/app/AppSidebar.js:59:        roles: ["Admin", "Doctor"],
+src/components/app/AppSidebar.js:65:        roles: ["Admin", "Doctor"],
+src/components/app/AppSidebar.js:71:        roles: ["Admin", "Doctor", "Radiology"],
+src/components/app/AppSidebar.js:77:        roles: ["Admin", "Doctor"],
+src/components/app/AppSidebar.js:83:        roles: ["Admin", "Radiology"],
+src/components/app/AppSidebar.js:89:        roles: ["Admin", "Doctor", "Radiology"],
+src/components/app/AppSidebar.js:95:        roles: ["Admin", "Doctor", "Radiology"],
+src/components/app/AppSidebar.js:101:        roles: ["Admin", "Doctor", "Radiology"],
+src/components/app/AppSidebar.js:107:        roles: ["Admin", "Doctor", "Radiology"],
+src/components/app/AppSidebar.js:113:        roles: ["Admin", "Doctor", "Radiology"],
+src/components/app/AppSidebar.js:127:    const role = user?.role;
+src/components/app/AppSidebar.js:143:    const visibleItems = role
+src/components/app/AppSidebar.js:144:        ? items.filter((item) => item.roles.includes(role))
+src/components/app/AppSidebar.js:166:                }, children: [_jsx("div", { style: { fontSize: 13, opacity: 0.7, marginBottom: 6 }, children: "Signed in as" }), _jsx("div", { style: { fontWeight: 700 }, children: user ? user.name : "Guest" }), _jsx("div", { style: { fontSize: 14, color: "#93c5fd", marginTop: 4 }, children: user ? user.role : "No role" })] }), _jsx("nav", { style: { display: "flex", flexDirection: "column", gap: 8 }, children: visibleItems.map((item) => {
+src/components/app/AppSidebar.tsx:27:import { getUser } from "@/lib/auth-storage"
+src/components/app/AppSidebar.tsx:35:  roles: Role[]
+src/components/app/AppSidebar.tsx:43:    roles: ["Admin", "Doctor", "Radiology"],
+src/components/app/AppSidebar.tsx:49:    roles: ["Admin"],
+src/components/app/AppSidebar.tsx:55:    roles: ["Admin", "Doctor", "Radiology"],
+src/components/app/AppSidebar.tsx:61:    roles: ["Admin", "Doctor", "Radiology"],
+src/components/app/AppSidebar.tsx:67:    roles: ["Admin", "Doctor", "Radiology"],
+src/components/app/AppSidebar.tsx:73:    roles: ["Admin", "Doctor", "Radiology"],
+src/components/app/AppSidebar.tsx:79:    roles: ["Admin", "Doctor", "Radiology"],
+src/components/app/AppSidebar.tsx:85:    roles: ["Admin", "Doctor"],
+src/components/app/AppSidebar.tsx:91:    roles: ["Admin", "Doctor"],
+src/components/app/AppSidebar.tsx:97:    roles: ["Admin", "Doctor"],
+src/components/app/AppSidebar.tsx:103:    roles: ["Admin", "Doctor", "Radiology"],
+src/components/app/AppSidebar.tsx:109:    roles: ["Admin", "Doctor"],
+src/components/app/AppSidebar.tsx:115:    roles: ["Admin", "Radiology"],
+src/components/app/AppSidebar.tsx:121:    roles: ["Admin", "Doctor", "Radiology"],
+src/components/app/AppSidebar.tsx:127:    roles: ["Admin", "Doctor", "Radiology"],
+src/components/app/AppSidebar.tsx:133:    roles: ["Admin", "Doctor", "Radiology"],
+src/components/app/AppSidebar.tsx:139:    roles: ["Admin", "Doctor", "Radiology"],
+src/components/app/AppSidebar.tsx:145:    roles: ["Admin", "Doctor", "Radiology"],
+src/components/app/AppSidebar.tsx:161:  const role = user?.role as Role | undefined
+src/components/app/AppSidebar.tsx:180:  const visibleItems = role
+src/components/app/AppSidebar.tsx:181:    ? items.filter((item) => item.roles.includes(role))
+src/components/app/AppSidebar.tsx:230:          {user ? user.role : "No role"}
+src/components/clinical/DigitalSignatureCard.js:3:    return (_jsxs("div", { style: cardStyle, children: [_jsx("h3", { style: titleStyle, children: "Digital Signature" }), _jsx("div", { style: { fontWeight: 700 }, children: signature.doctorName }), _jsx("div", { style: { opacity: 0.8, marginTop: 4 }, children: signature.role }), _jsx("div", { style: { marginTop: 12 }, children: signature.signatureText }), _jsx("div", { style: { marginTop: 8, fontSize: 12, opacity: 0.7 }, children: signature.signedAt })] }));
+src/components/clinical/DigitalSignatureCard.tsx:8:      <div style={{ opacity: 0.8, marginTop: 4 }}>{signature.role}</div>
+src/App.tsx.bak.lazy:3:import ProtectedRoute from "./components/auth/ProtectedRoute"
+src/layouts/AppLayout.js:4:import { getUser } from "@/lib/auth-storage";
+src/layouts/AppLayout.js:75:                                    }, children: [_jsx("div", { style: { color: "#94a3b8", fontSize: 12 }, children: "Current user" }), _jsx("div", { style: { color: "white", fontWeight: 700, marginTop: 2 }, children: user?.name ?? "Guest" }), _jsx("div", { style: { color: "#38bdf8", fontSize: 13, marginTop: 2 }, children: user?.role ?? "No role" })] })] }) }), _jsx("main", { style: { padding: 28, color: "white", flex: 1 }, children: _jsx("div", { style: {
+src/layouts/AppLayout.tsx:3:import { getUser } from "@/lib/auth-storage"
+src/layouts/AppLayout.tsx:91:                {user?.role ?? "No role"}
+src/hooks/use-current-user.ts:1:import { getUser } from "@/lib/auth-storage"
+src/hooks/use-current-user.js:1:import { getUser } from "@/lib/auth-storage";
+src/services/auth.js:3:    return apiPost("/auth/login", { username, password });
+src/services/auth.js:6:    return apiGet(`/auth/me?token=${encodeURIComponent(token)}`);
+src/services/auth.ts:2:import type { AuthUser, LoginResponse } from "@/types/auth"
+src/services/auth.ts:5:  return apiPost<LoginResponse>("/auth/login", { username, password })
+src/services/auth.ts:9:  return apiGet<AuthUser>(`/auth/me?token=${encodeURIComponent(token)}`)
+src/App.js:5:import ProtectedRoute from "./components/auth/ProtectedRoute";
+src/types/auth.ts:6:  role: UserRole
+src/types/clinical.ts:20:  role: string
+src/lib/rbac.ts:1:import type { UserRole } from "@/types/auth"
+src/lib/rbac.ts:22:const rolePermissions: Record<UserRole, AppRoute[]> = {
+src/lib/rbac.ts:65:export function hasAccess(role: UserRole, route: AppRoute) {
+src/lib/rbac.ts:66:  return rolePermissions[role]?.includes(route) ?? false
+src/lib/digitalSignature.js:4:        role: "Clinical Pharmacist",
+src/lib/rbac.js:1:const rolePermissions = {
+src/lib/rbac.js:43:export function hasAccess(role, route) {
+src/lib/rbac.js:44:    return rolePermissions[role]?.includes(route) ?? false;
+src/lib/auth-storage.ts:1:import type { AuthUser } from "@/types/auth"
+src/lib/digitalSignature.ts:6:    role: "Clinical Pharmacist",
+src/App.tsx.bak:3:import ProtectedRoute from "./components/auth/ProtectedRoute"
+src/App.tsx.bak.smartpharmacy-dup:3:import ProtectedRoute from "./components/auth/ProtectedRoute"
+src/pages/Login.js:4:import { clearAuth, getToken, saveAuth } from "@/lib/auth-storage";
+src/pages/Login.js:5:import { login } from "@/services/auth";
+src/pages/ClinicalDecisionPage.tsx.black.bak:5:import { getUser } from "@/lib/auth-storage"
+src/pages/ClinicalDecisionPage.tsx.black.bak:146:    const doctorRole = currentUser?.role ?? "Doctor"
+src/pages/LogoutPage.js:3:import { clearAuth } from "@/lib/auth-storage";
+src/pages/Login.tsx:3:import { clearAuth, getToken, saveAuth } from "@/lib/auth-storage"
+src/pages/Login.tsx:4:import { login } from "@/services/auth"
+src/pages/_js_disabled/Login.js:4:import { clearAuth, getToken, saveAuth } from "@/lib/auth-storage";
+src/pages/_js_disabled/Login.js:5:import { login } from "@/services/auth";
+src/pages/_js_disabled/LogoutPage.js:3:import { clearAuth } from "@/lib/auth-storage";
+src/pages/LogoutPage.tsx:2:import { clearAuth } from "@/lib/auth-storage"
+src/assets/react.svg:1:<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--logos" width="35.93" height="32" preserveAspectRatio="xMidYMid meet" viewBox="0 0 256 228"><path fill="#00D8FF" d="M210.483 73.824a171.49 171.49 0 0 0-8.24-2.597c.465-1.9.893-3.777 1.273-5.621c6.238-30.281 2.16-54.676-11.769-62.708c-13.355-7.7-35.196.329-57.254 19.526a171.23 171.23 0 0 0-6.375 5.848a155.866 155.866 0 0 0-4.241-3.917C100.759 3.829 77.587-4.822 63.673 3.233C50.33 10.957 46.379 33.89 51.995 62.588a170.974 170.974 0 0 0 1.892 8.48c-3.28.932-6.445 1.924-9.474 2.98C17.309 83.498 0 98.307 0 113.668c0 15.865 18.582 31.778 46.812 41.427a145.52 145.52 0 0 0 6.921 2.165a167.467 167.467 0 0 0-2.01 9.138c-5.354 28.2-1.173 50.591 12.134 58.266c13.744 7.926 36.812-.22 59.273-19.855a145.567 145.567 0 0 0 5.342-4.923a168.064 168.064 0 0 0 6.92 6.314c21.758 18.722 43.246 26.282 56.54 18.586c13.731-7.949 18.194-32.003 12.4-61.268a145.016 145.016 0 0 0-1.535-6.842c1.62-.48 3.21-.974 4.76-1.488c29.348-9.723 48.443-25.443 48.443-41.52c0-15.417-17.868-30.326-45.517-39.844Zm-6.365 70.984c-1.4.463-2.836.91-4.3 1.345c-3.24-10.257-7.612-21.163-12.963-32.432c5.106-11 9.31-21.767 12.459-31.957c2.619.758 5.16 1.557 7.61 2.4c23.69 8.156 38.14 20.213 38.14 29.504c0 9.896-15.606 22.743-40.946 31.14Zm-10.514 20.834c2.562 12.94 2.927 24.64 1.23 33.787c-1.524 8.219-4.59 13.698-8.382 15.893c-8.067 4.67-25.32-1.4-43.927-17.412a156.726 156.726 0 0 1-6.437-5.87c7.214-7.889 14.423-17.06 21.459-27.246c12.376-1.098 24.068-2.894 34.671-5.345a134.17 134.17 0 0 1 1.386 6.193ZM87.276 214.515c-7.882 2.783-14.16 2.863-17.955.675c-8.075-4.657-11.432-22.636-6.853-46.752a156.923 156.923 0 0 1 1.869-8.499c10.486 2.32 22.093 3.988 34.498 4.994c7.084 9.967 14.501 19.128 21.976 27.15a134.668 134.668 0 0 1-4.877 4.492c-9.933 8.682-19.886 14.842-28.658 17.94ZM50.35 144.747c-12.483-4.267-22.792-9.812-29.858-15.863c-6.35-5.437-9.555-10.836-9.555-15.216c0-9.322 13.897-21.212 37.076-29.293c2.813-.98 5.757-1.905 8.812-2.773c3.204 10.42 7.406 21.315 12.477 32.332c-5.137 11.18-9.399 22.249-12.634 32.792a134.718 134.718 0 0 1-6.318-1.979Zm12.378-84.26c-4.811-24.587-1.616-43.134 6.425-47.789c8.564-4.958 27.502 2.111 47.463 19.835a144.318 144.318 0 0 1 3.841 3.545c-7.438 7.987-14.787 17.08-21.808 26.988c-12.04 1.116-23.565 2.908-34.161 5.309a160.342 160.342 0 0 1-1.76-7.887Zm110.427 27.268a347.8 347.8 0 0 0-7.785-12.803c8.168 1.033 15.994 2.404 23.343 4.08c-2.206 7.072-4.956 14.465-8.193 22.045a381.151 381.151 0 0 0-7.365-13.322Zm-45.032-43.861c5.044 5.465 10.096 11.566 15.065 18.186a322.04 322.04 0 0 0-30.257-.006c4.974-6.559 10.069-12.652 15.192-18.18ZM82.802 87.83a323.167 323.167 0 0 0-7.227 13.238c-3.184-7.553-5.909-14.98-8.134-22.152c7.304-1.634 15.093-2.97 23.209-3.984a321.524 321.524 0 0 0-7.848 12.897Zm8.081 65.352c-8.385-.936-16.291-2.203-23.593-3.793c2.26-7.3 5.045-14.885 8.298-22.6a321.187 321.187 0 0 0 7.257 13.246c2.594 4.48 5.28 8.868 8.038 13.147Zm37.542 31.03c-5.184-5.592-10.354-11.779-15.403-18.433c4.902.192 9.899.29 14.978.29c5.218 0 10.376-.117 15.453-.343c-4.985 6.774-10.018 12.97-15.028 18.486Zm52.198-57.817c3.422 7.8 6.306 15.345 8.596 22.52c-7.422 1.694-15.436 3.058-23.88 4.071a382.417 382.417 0 0 0 7.859-13.026a347.403 347.403 0 0 0 7.425-13.565Zm-16.898 8.101a358.557 358.557 0 0 1-12.281 19.815a329.4 329.4 0 0 1-23.444.823c-7.967 0-15.716-.248-23.178-.732a310.202 310.202 0 0 1-12.513-19.846h.001a307.41 307.41 0 0 1-10.923-20.627a310.278 310.278 0 0 1 10.89-20.637l-.001.001a307.318 307.318 0 0 1 12.413-19.761c7.613-.576 15.42-.876 23.31-.876H128c7.926 0 15.743.303 23.354.883a329.357 329.357 0 0 1 12.335 19.695a358.489 358.489 0 0 1 11.036 20.54a329.472 329.472 0 0 1-11 20.722Zm22.56-122.124c8.572 4.944 11.906 24.881 6.52 51.026c-.344 1.668-.73 3.367-1.15 5.09c-10.622-2.452-22.155-4.275-34.23-5.408c-7.034-10.017-14.323-19.124-21.64-27.008a160.789 160.789 0 0 1 5.888-5.4c18.9-16.447 36.564-22.941 44.612-18.3ZM128 90.808c12.625 0 22.86 10.235 22.86 22.86s-10.235 22.86-22.86 22.86s-22.86-10.235-22.86-22.86s10.235-22.86 22.86-22.86Z"></path></svg>
+backend/app/main.py.before-missing-endpoints.bak:30:        "role": "Admin",
+backend/app/main.py.before-missing-endpoints.bak:35:        "role": "Doctor",
+backend/app/main.py.before-missing-endpoints.bak:40:        "role": "Radiology",
+backend/app/main.py.before-missing-endpoints.bak:91:@app.post("/auth/login")
+backend/app/main.py.before-missing-endpoints.bak:103:            "role": user["role"],
+backend/app/main.py.bak.dose-safety:37:        "role": "Admin",
+backend/app/main.py.bak.dose-safety:42:        "role": "Doctor",
+backend/app/main.py.bak.dose-safety:47:        "role": "Radiology",
+backend/app/main.py.bak.dose-safety:784:@app.post("/auth/login")
+backend/app/main.py.bak.dose-safety:796:            "role": user["role"],
+backend/app/main.py.bak.discharge-counseling:37:        "role": "Admin",
+backend/app/main.py.bak.discharge-counseling:42:        "role": "Doctor",
+backend/app/main.py.bak.discharge-counseling:47:        "role": "Radiology",
+backend/app/main.py.bak.discharge-counseling:784:@app.post("/auth/login")
+backend/app/main.py.bak.discharge-counseling:796:            "role": user["role"],
+backend/app/main.py.bak.recommendations:37:        "role": "Admin",
+backend/app/main.py.bak.recommendations:42:        "role": "Doctor",
+backend/app/main.py.bak.recommendations:47:        "role": "Radiology",
+backend/app/main.py.bak.recommendations:784:@app.post("/auth/login")
+backend/app/main.py.bak.recommendations:796:            "role": user["role"],
+backend/app/main.py:37:        "role": "Admin",
+backend/app/main.py:42:        "role": "Doctor",
+backend/app/main.py:47:        "role": "Radiology",
+backend/app/main.py:784:@app.post("/auth/login")
+backend/app/main.py:796:            "role": user["role"],
+backend/app/main.py.bak.pharmacist-review:37:        "role": "Admin",
+backend/app/main.py.bak.pharmacist-review:42:        "role": "Doctor",
+backend/app/main.py.bak.pharmacist-review:47:        "role": "Radiology",
+backend/app/main.py.bak.pharmacist-review:784:@app.post("/auth/login")
+backend/app/main.py.bak.pharmacist-review:796:            "role": user["role"],
+backend/app/main.py.bak.interactions:37:        "role": "Admin",
+backend/app/main.py.bak.interactions:42:        "role": "Doctor",
+backend/app/main.py.bak.interactions:47:        "role": "Radiology",
+backend/app/main.py.bak.interactions:784:@app.post("/auth/login")
+backend/app/main.py.bak.interactions:796:            "role": user["role"],
+backend/app/main.py.bak.2026-03-20-095249:30:        "role": "Admin",
+backend/app/main.py.bak.2026-03-20-095249:35:        "role": "Doctor",
+backend/app/main.py.bak.2026-03-20-095249:40:        "role": "Radiology",
+backend/app/main.py.bak.2026-03-20-095249:575:@app.post("/auth/login")
+backend/app/main.py.bak.2026-03-20-095249:587:            "role": user["role"],
+backend/app/main.py.bak.drugintel:34:        "role": "Admin",
+backend/app/main.py.bak.drugintel:39:        "role": "Doctor",
+backend/app/main.py.bak.drugintel:44:        "role": "Radiology",
+backend/app/main.py.bak.drugintel:781:@app.post("/auth/login")
+backend/app/main.py.bak.drugintel:793:            "role": user["role"],
+backend/app/main.py.bak.reconciliation:37:        "role": "Admin",
+backend/app/main.py.bak.reconciliation:42:        "role": "Doctor",
+backend/app/main.py.bak.reconciliation:47:        "role": "Radiology",
+backend/app/main.py.bak.reconciliation:784:@app.post("/auth/login")
+backend/app/main.py.bak.reconciliation:796:            "role": user["role"],
+
+--- APP STATUS ---

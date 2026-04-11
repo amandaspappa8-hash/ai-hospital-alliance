@@ -19,8 +19,9 @@ services:
     volumes:
       - orthanc-db:/var/lib/orthanc/db
       - ./orthanc.json:/etc/orthanc/orthanc.json:ro
+
   ohif:
-    image: orthancteam/orthanc:latest
+    image: ohif/app:latest
     container_name: ohif
     ports:
       - "3005:80"

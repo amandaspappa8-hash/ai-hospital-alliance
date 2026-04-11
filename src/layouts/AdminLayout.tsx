@@ -1,5 +1,6 @@
 import * as React from "react"
 import { useLocation } from "react-router-dom"
+import { LayoutDashboard, Brain, Activity, ClipboardList, Stethoscope, Users, CalendarDays, FileText, HeartPulse } from "lucide-react"
 
 import AppSidebar from "@/components/app/AppSidebar"
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"

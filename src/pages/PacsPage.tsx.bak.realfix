@@ -1,0 +1,212 @@
+import { useEffect, useMemo, useState } from "react"
+
+type DicomStudy = {
+  studyInstanceUID: string
+  patientName: string
+  patientId: string
+  modality: string
+  studyDate: string
+  seriesCount: number
+  instanceCount: number
+  description: string
+}
+
+function readValue(item: any, tag: string) {
+  return item?.[tag]?.Value?.[0]
+}
+
+function readPersonName(item: any, tag: string) {
+  return item?.[tag]?.Value?.[0]?.Alphabetic ?? "-"
+}
+
+function mapStudy(item: any): DicomStudy {
+  return {
+    studyInstanceUID: readValue(item, "0020000D") ?? "",
+    patientName: readPersonName(item, "00100010"),
+    patientId: readValue(item, "00100020") ?? "-",
+    modality: readValue(item, "00080061") ?? "-",
+    studyDate: readValue(item, "00080020") ?? "-",
+    description: readValue(item, "00081030") ?? "No description",
+    seriesCount: Number(readValue(item, "00201206") ?? 0),
+    instanceCount: Number(readValue(item, "00201208") ?? 0),
+  }
+}
+
+export default function PacsPage() {
+  const [studies, setStudies] = useState<DicomStudy[]>([])
+  const [selectedUid, setSelectedUid] = useState("")
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    fetch("http://127.0.0.1:8000/pacs/studies")
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        return res.json()
+      })
+      .then((data) => {
+        const mapped = Array.isArray(data) ? data.map(mapStudy) : []
+        setStudies(mapped)
+        if (mapped.length > 0) {
+          setSelectedUid(mapped[0].studyInstanceUID)
+        }
+      })
+      .catch((err) => {
+        console.error(err)
+        setError("Failed to load PACS studies from Orthanc")
+      })
+      .finally(() => setLoading(false))
+  }, [])
+
+  const selected = useMemo(
+    () => studies.find((s) => s.studyInstanceUID === selectedUid),
+    [studies, selectedUid]
+  )
+
+  return (
+    <div style={{ padding: "24px", color: "white" }}>
+      <h1 style={{ fontSize: "28px", marginBottom: "8px" }}>PACS</h1>
+      <p style={{ opacity: 0.8, marginBottom: "20px" }}>
+        Real Orthanc studies via backend PACS proxy
+      </p>
+
+      {loading && <div>Loading studies...</div>}
+      {error && <div style={{ color: "#fca5a5" }}>{error}</div>}
+
+      {!loading && !error && (
+        <>
+          <div
+            style={{
+              overflowX: "auto",
+              border: "1px solid #374151",
+              borderRadius: "12px",
+              marginBottom: "20px",
+            }}
+          >
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead style={{ background: "#111827" }}>
+                <tr>
+                  <th style={th}>Patient</th>
+                  <th style={th}>Patient ID</th>
+                  <th style={th}>Modality</th>
+                  <th style={th}>Date</th>
+                  <th style={th}>Series</th>
+                  <th style={th}>Instances</th>
+                  <th style={th}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {studies.map((study) => (
+                  <tr key={study.studyInstanceUID}>
+                    <td style={td}>{study.patientName}</td>
+                    <td style={td}>{study.patientId}</td>
+                    <td style={td}>{study.modality}</td>
+                    <td style={td}>{study.studyDate}</td>
+                    <td style={td}>{study.seriesCount}</td>
+                    <td style={td}>{study.instanceCount}</td>
+                    <td style={td}>
+                      <button
+                        onClick={() => setSelectedUid(study.studyInstanceUID)}
+                        style={{
+                          padding: "8px 12px",
+                          borderRadius: "8px",
+                          border: "1px solid #374151",
+                          background:
+                            selectedUid === study.studyInstanceUID ? "#166534" : "#111827",
+                          color: "white",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Open
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+
+                {studies.length === 0 && (
+                  <tr>
+                    <td style={td} colSpan={7}>
+                      No PACS studies found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {selected && (
+            <div
+              style={{
+                border: "1px solid #374151",
+                borderRadius: "12px",
+                padding: "16px",
+                background: "#111827",
+              }}
+            >
+              <div style={{ fontSize: "20px", fontWeight: 700, marginBottom: "10px" }}>
+                Selected Study
+              </div>
+
+              <div style={{ marginBottom: "8px" }}>
+                <strong>Patient:</strong> {selected.patientName}
+              </div>
+              <div style={{ marginBottom: "8px" }}>
+                <strong>Patient ID:</strong> {selected.patientId}
+              </div>
+              <div style={{ marginBottom: "8px" }}>
+                <strong>Modality:</strong> {selected.modality}
+              </div>
+              <div style={{ marginBottom: "8px" }}>
+                <strong>Date:</strong> {selected.studyDate}
+              </div>
+              <div style={{ marginBottom: "8px" }}>
+                <strong>Series:</strong> {selected.seriesCount}
+              </div>
+              <div style={{ marginBottom: "8px" }}>
+                <strong>Instances:</strong> {selected.instanceCount}
+              </div>
+              <div style={{ marginBottom: "8px" }}>
+                <strong>Study UID:</strong> {selected.studyInstanceUID}
+              </div>
+
+              <div style={{ marginTop: "20px" }}>
+                <button
+                  onClick={() =>
+                    window.open(
+                      `http://localhost:3005/viewer?StudyInstanceUIDs=${encodeURIComponent(
+                        selected.studyInstanceUID
+                      )}`,
+                      "_blank"
+                    )
+                  }
+                  style={{
+                    padding: "12px 20px",
+                    borderRadius: "10px",
+                    background: "#0ea5e9",
+                    border: "none",
+                    color: "white",
+                    fontSize: "16px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Open Study in OHIF Viewer
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+const th: React.CSSProperties = {
+  textAlign: "left",
+  padding: "12px",
+  borderBottom: "1px solid #374151",
+}
+
+const td: React.CSSProperties = {
+  padding: "12px",
+  borderBottom: "1px solid #1f2937",
+}

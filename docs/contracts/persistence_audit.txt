@@ -1,0 +1,180 @@
+=== BACKEND IN-MEMORY STORES ===
+22:    allow_origins=[
+29:    allow_methods=["*"],
+30:    allow_headers=["*"],
+33:USERS = {
+51:PATIENTS = [
+108:DOCTOR_ASSIGNMENTS = {
+122:NOTES = {
+134:APPOINTMENTS = [
+157:REPORTS = [
+176:DOCTORS = [
+275:SPECIALTIES_SUMMARY = [
+332:PACS_STUDIES = [
+352:NURSING_VITALS = {
+377:NURSING_NOTES = {
+393:RADIOLOGY_CATALOG = {
+458:RADIOLOGY_ORDERS = [
+484:LAB_CATALOG = {
+675:LAB_ORDERS = [
+822:        ORDERS[patient_id] = []
+824:    new_order = {
+843:        NOTES[patient_id] = []
+845:    new_note = {
+860:    new_appointment = {
+904:        DOCTOR_ASSIGNMENTS[doctor_id] = []
+916:    new_assignment = {
+969:        NURSING_VITALS[patient_id] = []
+971:    new_vital = {
+992:        NURSING_NOTES[patient_id] = []
+994:    new_note = {
+1021:    new_order = {
+1067:    new_order = {
+1097:MED_RECONCILIATION = {
+1142:    missing_on_admission = [med for med in home if med not in admission]
+1143:    missing_on_discharge = [med for med in home if med not in discharge]
+1144:    added_in_hospital = [med for med in admission if med not in home]
+1145:    discharge_only = [med for med in discharge if med not in home]
+1147:    findings = []
+1260:    counseling = []
+1269:    general_points = [
+1294:MAR = {
+1352:NSAID_KEYWORDS = [
+1357:ANTICOAGULANT_KEYWORDS = [
+1361:ANTIPLATELET_KEYWORDS = [
+1365:RENAL_CAUTION_KEYWORDS = [
+1381:    normalized = [_normalize_med_name(m) for m in medications if (m or "").strip()]
+1382:    findings = []
+1384:    seen = {}
+1416:    nsaid_meds = [med for med in normalized if _contains_any(med, NSAID_KEYWORDS)]
+1425:    renal_meds = [med for med in normalized if _contains_any(med, RENAL_CAUTION_KEYWORDS)]
+1454:MAX_DAILY_DOSE_RULES = {
+1464:HEPATIC_CAUTION_KEYWORDS = [
+1468:DUPLICATE_INGREDIENT_GROUPS = {
+1489:    normalized = [_normalize_med_name(m) for m in medications if (m or "").strip()]
+1490:    matches = {}
+1492:        present = []
+1502:    normalized = [_normalize_med_name(m) for m in medications if (m or "").strip()]
+1503:    findings = []
+1573:    normalized = [_normalize_med_name(m) for m in medications if (m or "").strip()]
+1574:    recommendations = []
+1684:    medications = [item.get("medication", "") for item in mar_items]
+1700:    medications = [item.get("medication", "") for item in mar_items]
+1716:    medications = [item.get("medication", "") for item in mar_items]
+1737:        MAR[patient_id] = []
+1741:    new_item = {
+1805:    rxnorm_url = f"https://rxnav.nlm.nih.gov/REST/drugs.json?name={encoded}"
+1808:    rxnorm_data = {}
+1809:    openfda_data = {}
+1812:        with urlopen(Request(rxnorm_url, headers={"User-Agent": "AI-Hospital-Alliance"}), timeout=12) as response:
+1815:        rxnorm_data = {}
+1818:        with urlopen(Request(openfda_url, headers={"User-Agent": "AI-Hospital-Alliance"}), timeout=12) as response:
+1821:        openfda_data = {}
+1833:    dailymed_url = f"https://dailymed.nlm.nih.gov/dailymed/services/v2/spls.json?drug_name={encoded}"
+1836:        with urlopen(Request(dailymed_url, headers={"User-Agent": "AI-Hospital-Alliance"}), timeout=12) as response:
+
+=== CRUD ROUTES ===
+779:@app.get("/")
+784:@app.post("/auth/login")
+801:@app.get("/patients")
+806:@app.get("/patients/{patient_id}")
+814:@app.get("/orders/{patient_id}")
+819:@app.post("/orders/{patient_id}")
+835:@app.get("/notes/{patient_id}")
+840:@app.post("/notes/{patient_id}")
+853:@app.get("/appointments")
+858:@app.post("/appointments")
+872:@app.get("/reports")
+877:@app.get("/doctors/summary")
+882:@app.get("/doctors/by-specialty/{name}")
+888:@app.get("/doctors/{doctor_id}")
+896:@app.get("/doctor-assignments/{doctor_id}")
+901:@app.post("/doctor-assignments/{doctor_id}")
+928:@app.post("/doctor-assignments/{doctor_id}/{assignment_id}/status")
+942:@app.delete("/doctor-assignments/{doctor_id}/{assignment_id}")
+952:@app.get("/specialties/summary")
+957:@app.get("/pacs/studies")
+961:@app.get("/nursing/vitals/{patient_id}")
+966:@app.post("/nursing/vitals/{patient_id}")
+984:@app.get("/nursing/notes/{patient_id}")
+989:@app.post("/nursing/notes/{patient_id}")
+1001:@app.get("/radiology/catalog")
+1006:@app.get("/radiology/orders")
+1011:@app.get("/radiology/orders/{patient_id}")
+1016:@app.post("/radiology/orders")
+1035:@app.post("/radiology/results/{order_id}")
+1047:@app.get("/labs/catalog")
+1052:@app.get("/labs/orders")
+1057:@app.get("/labs/orders/{patient_id}")
+1062:@app.post("/labs/orders")
+1081:@app.post("/labs/results/{order_id}")
+1205:@app.get("/drug-intel/reconciliation/{patient_id}")
+1288:@app.get("/drug-intel/discharge-counseling/{patient_id}")
+1681:@app.get("/drug-intel/recommendations/{patient_id}")
+1690:@app.post("/drug-intel/recommendations")
+1697:@app.get("/drug-intel/dose-safety/{patient_id}")
+1706:@app.post("/drug-intel/dose-safety")
+1713:@app.get("/drug-intel/interactions/{patient_id}")
+1722:@app.post("/drug-intel/interactions")
+1729:@app.get("/mar/{patient_id}")
+1734:@app.post("/mar/{patient_id}")
+1757:@app.put("/mar/{patient_id}/{item_id}")
+1779:@app.put("/mar/{patient_id}/{item_id}/pharmacist-review")
+1790:@app.put("/mar/{patient_id}/{item_id}/status")
+1802:@app.get("/drug-intel/search")
+1830:@app.get("/drug-intel/dailymed")
+1843:@app.delete("/mar/{patient_id}/{item_id}")
+
+=== FRONTEND LOCAL STORAGE USAGE ===
+src/lib/doctorNotes.ts:13:    const raw = localStorage.getItem(keyForDoctor(doctorId))
+src/lib/doctorNotes.ts:32:  localStorage.setItem(keyForDoctor(doctorId), JSON.stringify(next))
+src/lib/doctorNotes.ts:39:  localStorage.setItem(keyForDoctor(doctorId), JSON.stringify(next))
+src/lib/imaging-store.js:5:        const raw = localStorage.getItem(key);
+src/lib/imaging-store.js:15:    localStorage.setItem(key, JSON.stringify(value));
+src/lib/imaging-store.js:51:    localStorage.removeItem(KEY_ORDERS);
+src/lib/imaging-store.js:52:    localStorage.removeItem(KEY_STUDIES);
+src/lib/doctorNotes.js:6:        const raw = localStorage.getItem(keyForDoctor(doctorId));
+src/lib/doctorNotes.js:24:    localStorage.setItem(keyForDoctor(doctorId), JSON.stringify(next));
+src/lib/doctorNotes.js:30:    localStorage.setItem(keyForDoctor(doctorId), JSON.stringify(next));
+src/lib/auth-storage.ts:7:  localStorage.setItem(TOKEN_KEY, token)
+src/lib/auth-storage.ts:8:  localStorage.setItem(USER_KEY, JSON.stringify(user))
+src/lib/auth-storage.ts:12:  return localStorage.getItem(TOKEN_KEY)
+src/lib/auth-storage.ts:16:  const raw = localStorage.getItem(USER_KEY)
+src/lib/auth-storage.ts:27:  localStorage.removeItem(TOKEN_KEY)
+src/lib/auth-storage.ts:28:  localStorage.removeItem(USER_KEY)
+src/lib/auth-storage.js:4:    localStorage.setItem(TOKEN_KEY, token);
+src/lib/auth-storage.js:5:    localStorage.setItem(USER_KEY, JSON.stringify(user));
+src/lib/auth-storage.js:8:    return localStorage.getItem(TOKEN_KEY);
+src/lib/auth-storage.js:11:    const raw = localStorage.getItem(USER_KEY);
+src/lib/auth-storage.js:22:    localStorage.removeItem(TOKEN_KEY);
+src/lib/auth-storage.js:23:    localStorage.removeItem(USER_KEY);
+src/lib/imaging-store.ts:34:    const raw = localStorage.getItem(key)
+src/lib/imaging-store.ts:43:  localStorage.setItem(key, JSON.stringify(value))
+src/lib/imaging-store.ts:85:  localStorage.removeItem(KEY_ORDERS)
+src/lib/imaging-store.ts:86:  localStorage.removeItem(KEY_STUDIES)
+src/i18n/useAppLanguage.js:5:        localStorage.setItem("aiha_language", lang);
+src/i18n/useAppLanguage.ts:7:    localStorage.setItem("aiha_language", lang)
+src/i18n/index.ts:10:const savedLanguage = localStorage.getItem("aiha_language") || "en"
+src/i18n/index.js:8:const savedLanguage = localStorage.getItem("aiha_language") || "en";
+src/pages/PatientProfilePage.tsx.bak.autofix-pacs:216:      localStorage.setItem(`AI_REPORT_DRAFT_${selected.id}`, JSON.stringify(draft))
+src/pages/OrdersPage.tsx:58:    const draft = localStorage.getItem("AI_ORDER_DRAFT")
+src/pages/OrdersPage.tsx:84:        localStorage.removeItem("AI_ORDER_DRAFT")
+src/pages/PatientProfilePage.tsx.bak.fixpacs:206:      localStorage.setItem(`AI_REPORT_DRAFT_${selected.id}`, JSON.stringify(draft))
+src/pages/PatientProfilePage.tsx:223:      localStorage.setItem(`AI_REPORT_DRAFT_${selected.id}`, JSON.stringify(draft))
+src/pages/ClinicalDecisionPage.tsx.black.bak:190:    localStorage.setItem("AI_CLINICAL_SUMMARY", summary)
+src/pages/ClinicalDecisionPage.tsx.black.bak:208:      localStorage.setItem("AI_CLINICAL_SUMMARY", summary)
+src/pages/ClinicalDecisionPage.tsx.black.bak:223:    localStorage.setItem(
+src/pages/ClinicalDecisionPage.tsx.black.bak:451:                localStorage.setItem(
+src/pages/PatientProfilePage.js:105:            localStorage.setItem(`AI_REPORT_DRAFT_${selected.id}`, JSON.stringify(draft));
+src/pages/ReportsPage.tsx:261:        const rawDraft = localStorage.getItem(draftKey)
+src/pages/ReportsPage.js:191:                const rawDraft = localStorage.getItem(draftKey);
+src/pages/PatientProfilePage.tsx.bak.pacslink:192:      localStorage.setItem(`AI_REPORT_DRAFT_${selected.id}`, JSON.stringify(draft))
+src/pages/ReportsPage.tsx.bak.reports-opt:259:        const rawDraft = localStorage.getItem(draftKey)
+src/pages/PatientProfilePage.tsx.bak.openpacs-final:216:      localStorage.setItem(`AI_REPORT_DRAFT_${selected.id}`, JSON.stringify(draft))
+src/pages/_js_disabled/PatientProfilePage.js:105:            localStorage.setItem(`AI_REPORT_DRAFT_${selected.id}`, JSON.stringify(draft));
+src/pages/_js_disabled/ReportsPage.js:191:                const rawDraft = localStorage.getItem(draftKey);
+src/pages/_js_disabled/OrdersPage.js:35:        const draft = localStorage.getItem("AI_ORDER_DRAFT");
+src/pages/_js_disabled/OrdersPage.js:63:                localStorage.removeItem("AI_ORDER_DRAFT");
+src/pages/PatientProfilePage.tsx.bak.patientlink:223:      localStorage.setItem(`AI_REPORT_DRAFT_${selected.id}`, JSON.stringify(draft))
+src/pages/OrdersPage.js:35:        const draft = localStorage.getItem("AI_ORDER_DRAFT");
+src/pages/OrdersPage.js:63:                localStorage.removeItem("AI_ORDER_DRAFT");

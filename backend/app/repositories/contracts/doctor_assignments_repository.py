@@ -1,0 +1,14 @@
+from typing import Protocol, Any
+
+class DoctorAssignmentsRepositoryContract(Protocol):
+    def list_by_doctor(self, doctor_id: str) -> list[dict[str, Any]]:
+        ...
+
+    def create(self, doctor_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        ...
+
+    def update_status(self, doctor_id: str, assignment_id: int, status: str) -> dict[str, Any] | None:
+        ...
+
+    def delete(self, doctor_id: str, assignment_id: int) -> dict[str, Any] | None:
+        ...

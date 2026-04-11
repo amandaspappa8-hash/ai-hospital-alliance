@@ -9,6 +9,19 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    host: "0.0.0.0",
+    port: 5173,
+    proxy: {
+      "/auth": "http://127.0.0.1:8000",
+      "/patients": "http://127.0.0.1:8000",
+      "/orders": "http://127.0.0.1:8000",
+      "/appointments": "http://127.0.0.1:8000",
+      "/notes": "http://127.0.0.1:8000",
+      "/pacs": "http://127.0.0.1:8000",
+      "/ai": "http://127.0.0.1:8000",
+    },
+  },
   build: {
     rollupOptions: {
       output: {

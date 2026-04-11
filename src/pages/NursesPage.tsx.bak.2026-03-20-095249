@@ -1,0 +1,172 @@
+import { useEffect, useMemo, useState } from "react"
+import { apiGet, apiPost } from "@/lib/api"
+
+type Patient = {
+  id: string
+  name: string
+  age?: number
+  gender?: string
+  department?: string
+  status?: string
+  condition?: string
+}
+
+type NursingVital = {
+  id: number
+  temperature: string
+  bloodPressure: string
+  heartRate: string
+  respiratoryRate: string
+  oxygenSaturation: string
+  time: string
+}
+
+type NursingNote = {
+  id: number
+  text: string
+}
+
+export default function NursesPage() {
+  const [patients, setPatients] = useState<Patient[]>([])
+  const [selectedPatientId, setSelectedPatientId] = useState("")
+  const [vitals, setVitals] = useState<NursingVital[]>([])
+  const [notes, setNotes] = useState<NursingNote[]>([])
+  const [error, setError] = useState("")
+
+  const [vitalForm, setVitalForm] = useState({
+    temperature: "",
+    bloodPressure: "",
+    heartRate: "",
+    respiratoryRate: "",
+    oxygenSaturation: "",
+    time: "",
+  })
+
+  const [noteForm, setNoteForm] = useState({
+    text: "",
+  })
+
+  useEffect(() => {
+    apiGet("/patients").then((data) => {
+      setPatients(data || [])
+      if (data?.length) setSelectedPatientId(data[0].id)
+    }).catch(() => setError("Failed to load patients"))
+  }, [])
+
+  useEffect(() => {
+    if (!selectedPatientId) return
+
+    Promise.all([
+      apiGet(`/nursing/vitals/${selectedPatientId}`),
+      apiGet(`/nursing/notes/${selectedPatientId}`)
+    ]).then(([v, n]) => {
+      setVitals(v || [])
+      setNotes(n || [])
+    }).catch(() => setError("Failed to load nursing data"))
+  }, [selectedPatientId])
+
+  const submitVital = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await apiPost(`/nursing/vitals/${selectedPatientId}`, vitalForm)
+    const refreshed = await apiGet(`/nursing/vitals/${selectedPatientId}`)
+    setVitals(refreshed || [])
+  }
+
+  const submitNote = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await apiPost(`/nursing/notes/${selectedPatientId}`, noteForm)
+    const refreshed = await apiGet(`/nursing/notes/${selectedPatientId}`)
+    setNotes(refreshed || [])
+  }
+
+  const selectedPatient = useMemo(
+    () => patients.find(p => p.id === selectedPatientId),
+    [patients, selectedPatientId]
+  )
+
+  return (
+    <div className="p-6 space-y-6">
+      <h1 className="text-2xl font-bold">Nursing Station</h1>
+
+      {error && <div className="text-red-600">{error}</div>}
+
+      <div className="grid lg:grid-cols-3 gap-6">
+        <div className="border rounded-xl p-4">
+          <h2 className="font-semibold mb-3">Patients</h2>
+          {patients.map(p => (
+            <div
+              key={p.id}
+              onClick={() => setSelectedPatientId(p.id)}
+              className="border rounded p-2 mb-2 cursor-pointer"
+            >
+              {p.name}
+            </div>
+          ))}
+        </div>
+
+        <div className="lg:col-span-2 space-y-6">
+
+          <div className="border rounded-xl p-4">
+            <h2 className="font-semibold mb-2">Selected Patient</h2>
+            {selectedPatient && (
+              <div>
+                {selectedPatient.name} — {selectedPatient.condition}
+              </div>
+            )}
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+
+            <form onSubmit={submitVital} className="border rounded-xl p-4 space-y-2">
+              <h3 className="font-semibold">Add Vitals</h3>
+              <input className="border p-2 w-full" placeholder="Temp"
+                onChange={e => setVitalForm({ ...vitalForm, temperature: e.target.value })} />
+              <input className="border p-2 w-full" placeholder="BP"
+                onChange={e => setVitalForm({ ...vitalForm, bloodPressure: e.target.value })} />
+              <input className="border p-2 w-full" placeholder="HR"
+                onChange={e => setVitalForm({ ...vitalForm, heartRate: e.target.value })} />
+              <input className="border p-2 w-full" placeholder="RR"
+                onChange={e => setVitalForm({ ...vitalForm, respiratoryRate: e.target.value })} />
+              <input className="border p-2 w-full" placeholder="SpO2"
+                onChange={e => setVitalForm({ ...vitalForm, oxygenSaturation: e.target.value })} />
+              <input className="border p-2 w-full" placeholder="Time"
+                onChange={e => setVitalForm({ ...vitalForm, time: e.target.value })} />
+              <button className="border px-4 py-2">Save</button>
+            </form>
+
+            <form onSubmit={submitNote} className="border rounded-xl p-4 space-y-2">
+              <h3 className="font-semibold">Add Note</h3>
+              <textarea className="border p-2 w-full"
+                onChange={e => setNoteForm({ text: e.target.value })} />
+              <button className="border px-4 py-2">Save</button>
+            </form>
+
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+
+            <div className="border rounded-xl p-4">
+              <h3 className="font-semibold">Vitals History</h3>
+              {vitals.map(v => (
+                <div key={v.id} className="border p-2 my-2">
+                  {v.temperature}°C — {v.bloodPressure}
+                </div>
+              ))}
+            </div>
+
+            <div className="border rounded-xl p-4">
+              <h3 className="font-semibold">Nursing Notes</h3>
+              {notes.map(n => (
+                <div key={n.id} className="border p-2 my-2">
+                  {n.text}
+                </div>
+              ))}
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+  )
+}
