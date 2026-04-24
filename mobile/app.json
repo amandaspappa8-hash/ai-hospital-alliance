@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "AI Hospital Alliance",
+    "slug": "aiha-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": false,
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-localization"
+    ]
+  }
+}

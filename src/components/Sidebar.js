@@ -1,22 +1,129 @@
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { Link } from "react-router-dom";
-import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { LayoutDashboard, Users, Calendar, FileText, Settings, HeartPulse, } from "lucide-react";
-const nav = [
-    { to: "/overview", label: "Overview", icon: LayoutDashboard },
-    { to: "/patients", label: "Patients", icon: Users, badge: "New" },
-    { to: "/appointments", label: "Appointments", icon: Calendar },
-    { to: "/reports", label: "Reports", icon: FileText },
-    { to: "/settings", label: "Settings", icon: Settings },
+import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
+import { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { getUser, clearAuth } from "@/lib/auth-storage";
+const NAV = [
+    { label: "Dashboard", to: "/dashboard", icon: "⚡", color: "#3b82f6" },
+    { label: "Overview", to: "/overview", icon: "📊", color: "#6366f1" },
+    { label: "Patients", to: "/patients", icon: "🧑‍⚕️", color: "#10b981",
+        children: [
+            { label: "All Patients", to: "/patients" },
+            { label: "Clinical Notes", to: "/notes" },
+            { label: "Orders", to: "/orders" },
+        ]
+    },
+    { label: "Doctors", to: "/doctors", icon: "👨‍⚕️", color: "#06b6d4" },
+    { label: "Appointments", to: "/appointments", icon: "📅", color: "#a855f7" },
+    { label: "Nursing", to: "/nursing", icon: "🩺", color: "#ec4899" },
+    { label: "Radiology", to: "/radiology", icon: "🩻", color: "#f97316",
+        children: [
+            { label: "AI Image Analysis", to: "/radiology" },
+            { label: "Radiology Orders", to: "/radiology/imaging" },
+            { label: "PACS Viewer", to: "/radiology/pacs" },
+            { label: "CT / MRI", to: "/radiology/ct-mri" },
+        ]
+    },
+    { label: "Laboratory", to: "/labs", icon: "🧬", color: "#10b981",
+        children: [
+            { label: "AI Lab Interpreter", to: "/labs" },
+            { label: "Lab Orders", to: "/labs/orders" },
+            { label: "Test Catalog", to: "/labs/catalog" },
+        ]
+    },
+    { label: "Pharmacy", to: "/pharmacy", icon: "💊", color: "#f43f5e",
+        children: [
+            { label: "FDA Drug Search", to: "/pharmacy" },
+            { label: "Medications", to: "/pharmacy/medications" },
+            { label: "Interactions", to: "/pharmacy/interactions" },
+            { label: "Drug Formulary", to: "/pharmacy/formulary" },
+            { label: "Discharge Counseling", to: "/pharmacy/discharge" },
+            { label: "Prescriptions", to: "/pharmacy/prescriptions" },
+        ]
+    },
+    { label: "Specialties", to: "/specialties", icon: "🏥", color: "#8b5cf6",
+        children: [
+            { label: "Cardiology", to: "/specialties/cardiology" },
+            { label: "Neurology", to: "/specialties/neurology" },
+            { label: "Emergency", to: "/specialties/emergency" },
+            { label: "ICU", to: "/specialties/icu" },
+            { label: "Pediatrics", to: "/specialties/pediatrics" },
+        ]
+    },
+    { label: "AI Engine", to: "/ai-routing", icon: "🤖", color: "#6366f1",
+        children: [
+            { label: "AI Routing", to: "/ai-routing" },
+            { label: "Clinical Decision AI", to: "/ai/clinical" },
+        ]
+    },
+    { label: "Reports", to: "/reports", icon: "📄", color: "#f59e0b" },
+    { label: "File Manager", to: "/files", icon: "📁", color: "#64748b" },
+    { label: "Settings", to: "/settings", icon: "⚙️", color: "#475569" },
 ];
-export default function Sidebar({ currentPath }) {
-    return (_jsx("aside", { className: "sticky top-0 hidden h-screen w-[280px] shrink-0 border-r bg-card/30 backdrop-blur md:block", children: _jsxs("div", { className: "flex h-full flex-col", children: [_jsx("div", { className: "p-5", children: _jsxs("div", { className: "flex items-center gap-2", children: [_jsx("div", { className: "flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground", children: _jsx(HeartPulse, { className: "h-5 w-5" }) }), _jsxs("div", { className: "leading-tight", children: [_jsx("div", { className: "font-semibold", children: "AI Hospital Alliance" }), _jsx("div", { className: "text-xs text-muted-foreground", children: "Medical-grade UI" })] })] }) }), _jsx(Separator, {}), _jsx("nav", { className: "flex-1 space-y-1 p-3", children: nav.map((item) => {
-                        const active = currentPath === item.to;
-                        const Icon = item.icon;
-                        return (_jsxs(Link, { to: item.to, className: cn("flex items-center justify-between rounded-xl px-3 py-2 text-sm transition", active
-                                ? "bg-primary/10 text-primary"
-                                : "text-muted-foreground hover:bg-muted hover:text-foreground"), children: [_jsxs("span", { className: "flex items-center gap-2", children: [_jsx(Icon, { className: "h-4 w-4" }), item.label] }), item.badge ? _jsx(Badge, { variant: "secondary", children: item.badge }) : null] }, item.to));
-                    }) }), _jsx("div", { className: "p-4 text-xs text-muted-foreground", children: "v0.1 \u2022 Vite + Tailwind + shadcn/ui" })] }) }));
+export default function Sidebar() {
+    const { pathname } = useLocation();
+    const user = getUser();
+    const [expanded, setExpanded] = useState(() => {
+        for (const item of NAV) {
+            if (item.children?.some(c => pathname.startsWith(c.to)))
+                return item.label;
+        }
+        return null;
+    });
+    function isActive(to) {
+        return pathname === to || (to !== "/dashboard" && pathname.startsWith(to + "/"));
+    }
+    return (_jsxs("aside", { style: {
+            width: 250, minHeight: "100vh", flexShrink: 0,
+            background: "linear-gradient(180deg,#060d1f 0%,#0a1428 100%)",
+            borderRight: "1px solid rgba(59,130,246,0.1)",
+            display: "flex", flexDirection: "column",
+            position: "sticky", top: 0, height: "100vh", overflowY: "auto",
+        }, children: [_jsx("div", { style: { padding: "18px 16px 14px", borderBottom: "1px solid rgba(59,130,246,0.1)" }, children: _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 10 }, children: [_jsx("div", { style: {
+                                width: 36, height: 36, borderRadius: 10,
+                                background: "linear-gradient(135deg,#1d4ed8,#7c3aed)",
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                fontSize: 17, boxShadow: "0 0 16px rgba(37,99,235,0.5)",
+                            }, children: "\uD83C\uDFE5" }), _jsxs("div", { children: [_jsx("div", { style: { fontWeight: 900, fontSize: 12, color: "white", letterSpacing: 0.5 }, children: "AI Hospital" }), _jsx("div", { style: { fontSize: 9, color: "#3b82f6", fontWeight: 700, letterSpacing: 2 }, children: "ALLIANCE" })] })] }) }), _jsxs("div", { style: { padding: "10px 16px", borderBottom: "1px solid rgba(255,255,255,0.04)", display: "flex", alignItems: "center", gap: 8 }, children: [_jsx("div", { style: {
+                            width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+                            background: "linear-gradient(135deg,#059669,#10b981)",
+                            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13,
+                        }, children: "\uD83D\uDC64" }), _jsxs("div", { style: { minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 11, fontWeight: 700, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: user?.name ?? "User" }), _jsx("div", { style: { fontSize: 9, color: "#3b82f6", fontWeight: 700 }, children: user?.role })] })] }), _jsx("nav", { style: { flex: 1, padding: "10px 8px", overflowY: "auto" }, children: NAV.map(item => {
+                    const active = isActive(item.to);
+                    const open = expanded === item.label;
+                    return (_jsx("div", { style: { marginBottom: 2 }, children: item.children ? (_jsxs(_Fragment, { children: [_jsxs("div", { onClick: () => setExpanded(open ? null : item.label), style: {
+                                        display: "flex", alignItems: "center", gap: 8,
+                                        padding: "8px 10px", borderRadius: 10, cursor: "pointer",
+                                        background: open || active ? `${item.color}14` : "transparent",
+                                        border: `1px solid ${open || active ? item.color + "30" : "transparent"}`,
+                                        transition: "all 0.15s",
+                                    }, onMouseEnter: e => { if (!open && !active)
+                                        e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }, onMouseLeave: e => { if (!open && !active)
+                                        e.currentTarget.style.background = "transparent"; }, children: [_jsx("span", { style: { fontSize: 15, width: 18, textAlign: "center" }, children: item.icon }), _jsx("span", { style: { fontSize: 12, fontWeight: 600, color: open || active ? item.color : "#94a3b8", flex: 1 }, children: item.label }), _jsx("span", { style: { fontSize: 9, color: "#475569", transition: "transform 0.2s", transform: open ? "rotate(180deg)" : "none", display: "inline-block" }, children: "\u25BC" })] }), open && (_jsx("div", { style: { marginLeft: 18, borderLeft: `1px solid ${item.color}30`, paddingLeft: 10, marginTop: 2, marginBottom: 4 }, children: item.children.map(child => (_jsx(Link, { to: child.to, style: { textDecoration: "none" }, children: _jsx("div", { style: {
+                                                padding: "6px 10px", borderRadius: 8, marginBottom: 1,
+                                                fontSize: 11, fontWeight: 500,
+                                                color: pathname === child.to ? item.color : "#64748b",
+                                                background: pathname === child.to ? `${item.color}12` : "transparent",
+                                                transition: "all 0.15s",
+                                            }, onMouseEnter: e => { if (pathname !== child.to) {
+                                                e.currentTarget.style.color = "#94a3b8";
+                                                e.currentTarget.style.background = "rgba(255,255,255,0.03)";
+                                            } }, onMouseLeave: e => { if (pathname !== child.to) {
+                                                e.currentTarget.style.color = "#64748b";
+                                                e.currentTarget.style.background = "transparent";
+                                            } }, children: child.label }) }, child.to))) }))] })) : (_jsx(Link, { to: item.to, style: { textDecoration: "none" }, children: _jsxs("div", { style: {
+                                    display: "flex", alignItems: "center", gap: 8,
+                                    padding: "8px 10px", borderRadius: 10,
+                                    background: active ? `${item.color}14` : "transparent",
+                                    border: `1px solid ${active ? item.color + "30" : "transparent"}`,
+                                    boxShadow: active ? `0 0 10px ${item.color}18` : "none",
+                                    transition: "all 0.15s",
+                                }, onMouseEnter: e => { if (!active)
+                                    e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }, onMouseLeave: e => { if (!active)
+                                    e.currentTarget.style.background = "transparent"; }, children: [_jsx("span", { style: { fontSize: 15, width: 18, textAlign: "center" }, children: item.icon }), _jsx("span", { style: { fontSize: 12, fontWeight: 600, color: active ? item.color : "#94a3b8", flex: 1 }, children: item.label }), active && _jsx("div", { style: { width: 5, height: 5, borderRadius: "50%", background: item.color, boxShadow: `0 0 6px ${item.color}` } })] }) })) }, item.label));
+                }) }), _jsx("div", { style: { padding: "10px 8px", borderTop: "1px solid rgba(255,255,255,0.04)" }, children: _jsx("button", { onClick: () => { clearAuth(); window.location.href = "/login"; }, style: {
+                        width: "100%", padding: "9px 10px", borderRadius: 10, fontSize: 12, fontWeight: 700,
+                        background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)",
+                        color: "#f87171", cursor: "pointer", textAlign: "left",
+                        display: "flex", alignItems: "center", gap: 8,
+                    }, children: "\uD83D\uDEAA Logout" }) })] }));
 }

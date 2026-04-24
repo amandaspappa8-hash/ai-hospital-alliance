@@ -1,678 +1,202 @@
-import { useEffect, useMemo, useState } from "react"
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts"
+import { useEffect, useState } from "react"
 import { apiGet } from "@/lib/api"
-import { getDoctorsSummary, type DoctorRecord } from "@/lib/doctors"
-import { getSpecialtiesSummary, type SpecialtyRecord } from "@/lib/specialties"
-import { getDoctorAssignments } from "@/lib/doctorAssignments"
+import { getUser } from "@/lib/auth-storage"
 
-type Patient = {
-  id: string
-  name: string
-}
-
-type Appointment = {
-  id: string
-  patient: string
-  department: string
-  doctor: string
-  time: string
-  status: string
-}
-
-type Report = {
-  id: string
-  title: string
-  status: string
-}
+type Patient = { id: string; name: string; department: string; status: string; condition: string; gender: string; age: number }
+type Doctor = { id: string; name: string; specialty: string; status: string; rating: number; patients_count: number }
+type Appointment = { id: string; status: string; department: string }
 
 export default function AdminOverviewPage() {
-  const [doctors, setDoctors] = useState<DoctorRecord[]>([])
-  const [specialties, setSpecialties] = useState<SpecialtyRecord[]>([])
-  const [patientsCount, setPatientsCount] = useState(0)
+  const user = getUser()
+  const [patients, setPatients] = useState<Patient[]>([])
+  const [doctors, setDoctors] = useState<Doctor[]>([])
   const [appointments, setAppointments] = useState<Appointment[]>([])
-  const [reports, setReports] = useState<Report[]>([])
-  const [assignedPatientsCount, setAssignedPatientsCount] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
 
   useEffect(() => {
-    async function loadOverview() {
-      try {
-        setLoading(true)
-        setError("")
-
-        const [doctorsData, specialtiesData, patientsData, appointmentsData, reportsData] =
-          await Promise.all([
-            getDoctorsSummary(),
-            getSpecialtiesSummary(),
-            apiGet<Patient[]>("/patients"),
-            apiGet<Appointment[]>("/appointments"),
-            apiGet<Report[]>("/reports"),
-          ])
-
-        setDoctors(doctorsData)
-        setSpecialties(specialtiesData)
-        setPatientsCount(Array.isArray(patientsData) ? patientsData.length : 0)
-        setAppointments(Array.isArray(appointmentsData) ? appointmentsData : [])
-        setReports(Array.isArray(reportsData) ? reportsData : [])
-
-        const assignmentLists = await Promise.all(
-          doctorsData.map((doctor) => getDoctorAssignments(doctor.id))
-        )
-        const totalAssigned = assignmentLists.reduce(
-          (sum, items) => sum + items.length,
-          0
-        )
-        setAssignedPatientsCount(totalAssigned)
-      } catch (err) {
-        console.error(err)
-        setError("Failed to load admin overview")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadOverview()
+    Promise.all([
+      apiGet<Patient[]>("/patients").catch(() => []),
+      apiGet<Doctor[]>("/doctors/summary").catch(() => []),
+      apiGet<Appointment[]>("/appointments").catch(() => []),
+    ]).then(([p, d, a]) => {
+      setPatients(Array.isArray(p) ? p : [])
+      setDoctors(Array.isArray(d) ? d : [])
+      setAppointments(Array.isArray(a) ? a : [])
+    }).finally(() => setLoading(false))
   }, [])
 
-  const availableDoctors = useMemo(
-    () => doctors.filter((doctor) => doctor.status === "Available").length,
-    [doctors]
-  )
+  // Analytics calculations
+  const deptCount = patients.reduce((a, p) => { a[p.department] = (a[p.department] || 0) + 1; return a }, {} as Record<string, number>)
+  const statusCount = patients.reduce((a, p) => { a[p.status] = (a[p.status] || 0) + 1; return a }, {} as Record<string, number>)
+  const genderCount = patients.reduce((a, p) => { a[p.gender] = (a[p.gender] || 0) + 1; return a }, {} as Record<string, number>)
+  const availDoctors = doctors.filter(d => d.status === "Available").length
+  const avgRating = doctors.length > 0 ? (doctors.reduce((s, d) => s + d.rating, 0) / doctors.length).toFixed(1) : "—"
+  const topDept = Object.entries(deptCount).sort((a, b) => b[1] - a[1])[0]
+  const totalPatients = doctors.reduce((s, d) => s + (d.patients_count || 0), 0)
 
-  const onCallDoctors = useMemo(
-    () => doctors.filter((doctor) => doctor.status === "On Call").length,
-    [doctors]
-  )
+  const DEPT_COLORS: Record<string, string> = {
+    Cardiology: "#ef4444", Emergency: "#f97316", ICU: "#06b6d4",
+    Neurology: "#a855f7", Pediatrics: "#fbbf24", Orthopedics: "#10b981", Radiology: "#3b82f6",
+  }
 
-  const busyDoctors = useMemo(
-    () =>
-      doctors.filter(
-        (doctor) => doctor.status === "In Surgery" || doctor.status === "Offline"
-      ).length,
-    [doctors]
-  )
+  function Bar({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
+    return (
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+          <span style={{ fontSize: 12, color: "#94a3b8" }}>{label}</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color }}>{value}</span>
+        </div>
+        <div style={{ height: 8, borderRadius: 4, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
+          <div style={{ height: "100%", width: `${Math.round((value/max)*100)}%`, background: color, borderRadius: 4, transition: "width 1s ease" }} />
+        </div>
+      </div>
+    )
+  }
 
-  const specialtyBreakdown = useMemo(() => {
-    const map = new Map<string, number>()
-
-    doctors.forEach((doctor) => {
-      map.set(doctor.specialty, (map.get(doctor.specialty) ?? 0) + 1)
+  function DonutChart({ data, colors }: { data: Record<string, number>; colors: Record<string, string> }) {
+    const total = Object.values(data).reduce((s, v) => s + v, 0)
+    if (total === 0) return <div style={{ color: "#64748b", fontSize: 13 }}>No data</div>
+    let cumulative = 0
+    const segments = Object.entries(data).map(([label, value]) => {
+      const pct = (value / total) * 100
+      const start = cumulative
+      cumulative += pct
+      return { label, value, pct, start }
     })
+    const r = 40, cx = 50, cy = 50
+    function describeArc(start: number, end: number) {
+      const s = (start / 100) * 2 * Math.PI - Math.PI / 2
+      const e = (end / 100) * 2 * Math.PI - Math.PI / 2
+      const x1 = cx + r * Math.cos(s), y1 = cy + r * Math.sin(s)
+      const x2 = cx + r * Math.cos(e), y2 = cy + r * Math.sin(e)
+      const large = end - start > 50 ? 1 : 0
+      return `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`
+    }
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <svg width="100" height="100" viewBox="0 0 100 100">
+          {segments.map(seg => (
+            <path key={seg.label} d={describeArc(seg.start, seg.start + seg.pct)} fill={colors[seg.label] ?? "#64748b"} opacity={0.85} />
+          ))}
+          <circle cx={cx} cy={cy} r={22} fill="#0f172a" />
+          <text x={cx} y={cy + 5} textAnchor="middle" fill="white" fontSize="11" fontWeight="700">{total}</text>
+        </svg>
+        <div style={{ flex: 1 }}>
+          {segments.map(seg => (
+            <div key={seg.label} style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, fontSize: 11 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div style={{ width: 8, height: 8, borderRadius: 2, background: colors[seg.label] ?? "#64748b", flexShrink: 0 }} />
+                <span style={{ color: "#94a3b8" }}>{seg.label}</span>
+              </div>
+              <span style={{ color: "white", fontWeight: 700 }}>{seg.value} ({Math.round(seg.pct)}%)</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
-    return Array.from(map.entries())
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count)
-  }, [doctors])
-
-  const doctorStatusData = useMemo(() => {
-    const available = doctors.filter((d) => d.status === "Available").length
-    const onCall = doctors.filter((d) => d.status === "On Call").length
-    const inSurgery = doctors.filter((d) => d.status === "In Surgery").length
-    const offline = doctors.filter((d) => d.status === "Offline").length
-
-    return [
-      { name: "Available", value: available, color: "#22c55e" },
-      { name: "On Call", value: onCall, color: "#f59e0b" },
-      { name: "In Surgery", value: inSurgery, color: "#ef4444" },
-      { name: "Offline", value: offline, color: "#94a3b8" },
-    ]
-  }, [doctors])
-
-  const appointmentsStatusData = useMemo(() => {
-    const map = new Map<string, number>()
-
-    appointments.forEach((item) => {
-      const key = item.status || "Unknown"
-      map.set(key, (map.get(key) ?? 0) + 1)
-    })
-
-    return Array.from(map.entries()).map(([name, value], index) => ({
-      name,
-      value,
-      color: ["#3b82f6", "#f59e0b", "#22c55e", "#94a3b8", "#a855f7"][index % 5],
-    }))
-  }, [appointments])
-
-  const reportsStatusData = useMemo(() => {
-    const map = new Map<string, number>()
-
-    reports.forEach((item) => {
-      const key = item.status || "Unknown"
-      map.set(key, (map.get(key) ?? 0) + 1)
-    })
-
-    return Array.from(map.entries()).map(([name, value], index) => ({
-      name,
-      value,
-      color: ["#8b5cf6", "#06b6d4", "#22c55e", "#f97316", "#94a3b8"][index % 5],
-    }))
-  }, [reports])
-
-  const topSpecialties = useMemo(() => {
-    return [...specialties]
-      .sort((a, b) => b.activeCases - a.activeCases)
-      .slice(0, 4)
-  }, [specialties])
+  const STATUS_COLORS = { Active: "#4ade80", "Under Observation": "#fb923c", Critical: "#f87171", Discharged: "#94a3b8" }
+  const GENDER_COLORS = { Male: "#3b82f6", Female: "#ec4899" }
 
   return (
-    <div style={{ padding: 24, color: "#e5eef8" }}>
+    <div style={{ padding: "24px 28px", fontFamily: "Inter,Arial,sans-serif", color: "white", minHeight: "100vh" }}>
+
       <div style={{ marginBottom: 22 }}>
-        <div style={{ fontSize: 32, fontWeight: 800, marginBottom: 6 }}>
-          Admin Overview
-        </div>
-        <div style={{ opacity: 0.8 }}>
-          Executive hospital summary across doctors, specialties, patients, appointments, and reports
-        </div>
+        <div style={{ fontSize: 11, color: "#6366f1", fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>◈ AI HOSPITAL ALLIANCE — ANALYTICS</div>
+        <h1 style={{ margin: 0, fontSize: 26, fontWeight: 900, color: "white" }}>📊 Hospital Analytics Dashboard</h1>
+        <p style={{ color: "#475569", fontSize: 13, marginTop: 4 }}>Real-time insights · {new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })} · {user?.name}</p>
       </div>
 
-      {error && <div style={{ color: "#fecaca", marginBottom: 16 }}>{error}</div>}
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-          gap: 16,
-          marginBottom: 20,
-        }}
-      >
-        <StatCard title="Doctors" value={loading ? "..." : String(doctors.length)} tone="#17212f" text="#ffffff" />
-        <StatCard title="Specialties" value={loading ? "..." : String(specialties.length)} tone="#e0f2fe" text="#0f172a" />
-        <StatCard title="Patients" value={loading ? "..." : String(patientsCount)} tone="#dcfce7" text="#0f172a" />
-        <StatCard title="Appointments" value={loading ? "..." : String(appointments.length)} tone="#fef3c7" text="#0f172a" />
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-          gap: 16,
-          marginBottom: 24,
-        }}
-      >
-        <StatCard title="Reports" value={loading ? "..." : String(reports.length)} tone="#ede9fe" text="#0f172a" />
-        <StatCard title="Assigned Patients" value={loading ? "..." : String(assignedPatientsCount)} tone="#fee2e2" text="#0f172a" />
-        <StatCard title="Available Doctors" value={loading ? "..." : String(availableDoctors)} tone="#d1fae5" text="#0f172a" />
-        <StatCard title="On Call / Busy" value={loading ? "..." : `${onCallDoctors} / ${busyDoctors}`} tone="#f8fafc" text="#0f172a" />
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1.25fr 1fr",
-          gap: 20,
-          marginBottom: 20,
-        }}
-      >
-        <Panel title="Doctors by Specialty Chart">
-          <div style={{ width: "100%", height: 320 }}>
-            {!loading && specialtyBreakdown.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={specialtyBreakdown}>
-                  <XAxis dataKey="name" tick={{ fill: "#475569", fontSize: 12 }} />
-                  <YAxis tick={{ fill: "#475569", fontSize: 12 }} />
-                  <Tooltip />
-                  <Bar dataKey="count" radius={[8, 8, 0, 0]} fill="#60a5fa" />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <CenteredState loading={loading} emptyText="No chart data available." />
-            )}
-          </div>
-        </Panel>
-
-        <Panel title="Doctor Status Distribution">
-          <div style={{ width: "100%", height: 320 }}>
-            {!loading && doctorStatusData.some((item) => item.value > 0) ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={doctorStatusData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={95}
-                    innerRadius={55}
-                    paddingAngle={3}
-                  >
-                    {doctorStatusData.map((entry) => (
-                      <Cell key={entry.name} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <CenteredState loading={loading} emptyText="No status data available." />
-            )}
-          </div>
-
-          <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
-            {doctorStatusData.map((item) => (
-              <LegendRow key={item.name} color={item.color} name={item.name} value={item.value} />
-            ))}
-          </div>
-        </Panel>
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 20,
-          marginBottom: 20,
-        }}
-      >
-        <Panel title="Appointments Status Breakdown">
-          <div style={{ width: "100%", height: 300 }}>
-            {!loading && appointmentsStatusData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={appointmentsStatusData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={95}
-                    innerRadius={52}
-                    paddingAngle={3}
-                  >
-                    {appointmentsStatusData.map((entry) => (
-                      <Cell key={entry.name} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <CenteredState loading={loading} emptyText="No appointment status data." />
-            )}
-          </div>
-
-          <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
-            {appointmentsStatusData.map((item) => (
-              <LegendRow key={item.name} color={item.color} name={item.name} value={item.value} />
-            ))}
-          </div>
-        </Panel>
-
-        <Panel title="Reports Status Breakdown">
-          <div style={{ width: "100%", height: 300 }}>
-            {!loading && reportsStatusData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={reportsStatusData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={95}
-                    innerRadius={52}
-                    paddingAngle={3}
-                  >
-                    {reportsStatusData.map((entry) => (
-                      <Cell key={entry.name} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <CenteredState loading={loading} emptyText="No report status data." />
-            )}
-          </div>
-
-          <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
-            {reportsStatusData.map((item) => (
-              <LegendRow key={item.name} color={item.color} name={item.name} value={item.value} />
-            ))}
-          </div>
-        </Panel>
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1.2fr 1fr",
-          gap: 20,
-        }}
-      >
-        <div style={{ display: "grid", gap: 20 }}>
-          <Panel title="Doctors by Specialty">
-            {loading ? (
-              <div>Loading...</div>
-            ) : specialtyBreakdown.length === 0 ? (
-              <div>No specialty data found.</div>
-            ) : (
-              <div style={{ display: "grid", gap: 10 }}>
-                {specialtyBreakdown.map((item) => (
-                  <div
-                    key={item.name}
-                    style={{
-                      background: "white",
-                      border: "1px solid #e2e8f0",
-                      borderRadius: 16,
-                      padding: 14,
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      gap: 12,
-                    }}
-                  >
-                    <div style={{ fontWeight: 800 }}>{item.name}</div>
-                    <div
-                      style={{
-                        background: "#eff6ff",
-                        color: "#1d4ed8",
-                        borderRadius: 999,
-                        padding: "6px 10px",
-                        fontWeight: 800,
-                        fontSize: 12,
-                      }}
-                    >
-                      {item.count} doctors
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Panel>
-
-          <Panel title="Top Active Specialties">
-            {loading ? (
-              <div>Loading...</div>
-            ) : topSpecialties.length === 0 ? (
-              <div>No specialty activity found.</div>
-            ) : (
-              <div style={{ display: "grid", gap: 12 }}>
-                {topSpecialties.map((item) => (
-                  <div
-                    key={item.title}
-                    style={{
-                      background: "white",
-                      border: "1px solid #e2e8f0",
-                      borderRadius: 18,
-                      padding: 16,
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        gap: 12,
-                        alignItems: "center",
-                        marginBottom: 8,
-                      }}
-                    >
-                      <div style={{ fontWeight: 800, fontSize: 17 }}>
-                        {item.icon} {item.title}
-                      </div>
-                      <div
-                        style={{
-                          background: "#ecfeff",
-                          color: "#0f766e",
-                          borderRadius: 999,
-                          padding: "6px 10px",
-                          fontWeight: 800,
-                          fontSize: 12,
-                        }}
-                      >
-                        {item.activeCases} active cases
-                      </div>
-                    </div>
-
-                    <div style={{ color: "#64748b", marginBottom: 10 }}>
-                      {item.subtitle}
-                    </div>
-
-                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                      <Badge text={`${item.doctors} doctors`} tone="#eff6ff" color="#1d4ed8" />
-                      <Badge text={item.route} tone="#f8fafc" color="#334155" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Panel>
-        </div>
-
-        <div style={{ display: "grid", gap: 20 }}>
-          <Panel title="System Status">
-            <div style={{ display: "grid", gap: 12 }}>
-              <StatusRow label="Doctors Service" value="Operational" tone="#dcfce7" color="#166534" />
-              <StatusRow label="Specialties Data" value="Synced" tone="#dbeafe" color="#1d4ed8" />
-              <StatusRow label="Appointments" value="Live" tone="#fef3c7" color="#92400e" />
-              <StatusRow label="Reports" value="Available" tone="#ede9fe" color="#6d28d9" />
-              <StatusRow label="Assignments" value="Tracked" tone="#ecfeff" color="#0f766e" />
+      {/* KPI Cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 12, marginBottom: 20 }}>
+        {[
+          { label: "Total Patients",    value: patients.length,   color: "#3b82f6", icon: "🧑‍⚕️" },
+          { label: "Active Doctors",    value: availDoctors,       color: "#10b981", icon: "👨‍⚕️" },
+          { label: "Appointments",      value: appointments.length,color: "#a855f7", icon: "📅" },
+          { label: "Critical Cases",    value: statusCount["Critical"] ?? 0, color: "#ef4444", icon: "⚠️" },
+          { label: "Avg Doctor Rating", value: avgRating,          color: "#f59e0b", icon: "⭐" },
+        ].map(({ label, value, color, icon }) => (
+          <div key={label} style={{ padding: "16px 18px", borderRadius: 16, background: `${color}08`, border: `1px solid ${color}22`, display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ width: 42, height: 42, borderRadius: 12, background: `${color}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>{icon}</div>
+            <div>
+              <div style={{ fontSize: 22, fontWeight: 900, color }}>{value}</div>
+              <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{label}</div>
             </div>
-          </Panel>
+          </div>
+        ))}
+      </div>
 
-          <Panel title="Hospital Snapshot">
-            <div style={{ display: "grid", gap: 12 }}>
-              <SnapshotCard title="Average Appointments per Doctor" value={loading || doctors.length === 0 ? "..." : (appointments.length / doctors.length).toFixed(1)} />
-              <SnapshotCard title="Average Assigned Patients per Doctor" value={loading || doctors.length === 0 ? "..." : (assignedPatientsCount / doctors.length).toFixed(1)} />
-              <SnapshotCard title="Reports per Patient Ratio" value={loading || patientsCount === 0 ? "..." : (reports.length / patientsCount).toFixed(2)} />
-            </div>
-          </Panel>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 16 }}>
+
+        {/* Department Distribution */}
+        <div style={{ background: "linear-gradient(135deg,#0f172a,#1a2540)", border: "1px solid rgba(99,102,241,0.15)", borderRadius: 20, padding: 20 }}>
+          <div style={{ fontWeight: 800, fontSize: 14, color: "white", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ width: 3, height: 16, background: "#6366f1", borderRadius: 2 }} />
+            Patients by Department
+          </div>
+          {loading ? <div style={{ color: "#64748b" }}>Loading...</div> :
+            Object.entries(deptCount).sort((a, b) => b[1] - a[1]).map(([dept, count]) => (
+              <Bar key={dept} label={dept} value={count} max={Math.max(...Object.values(deptCount))} color={DEPT_COLORS[dept] ?? "#64748b"} />
+            ))
+          }
+        </div>
+
+        {/* Patient Status */}
+        <div style={{ background: "linear-gradient(135deg,#0f172a,#1a2540)", border: "1px solid rgba(99,102,241,0.15)", borderRadius: 20, padding: 20 }}>
+          <div style={{ fontWeight: 800, fontSize: 14, color: "white", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ width: 3, height: 16, background: "#10b981", borderRadius: 2 }} />
+            Patient Status
+          </div>
+          {loading ? <div style={{ color: "#64748b" }}>Loading...</div> :
+            <DonutChart data={statusCount} colors={STATUS_COLORS} />
+          }
+          <div style={{ marginTop: 16, fontWeight: 800, fontSize: 13, color: "white", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ width: 3, height: 16, background: "#ec4899", borderRadius: 2 }} />
+            Gender Distribution
+          </div>
+          {loading ? null : <DonutChart data={genderCount} colors={GENDER_COLORS} />}
+        </div>
+
+        {/* Doctor Performance */}
+        <div style={{ background: "linear-gradient(135deg,#0f172a,#1a2540)", border: "1px solid rgba(99,102,241,0.15)", borderRadius: 20, padding: 20 }}>
+          <div style={{ fontWeight: 800, fontSize: 14, color: "white", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ width: 3, height: 16, background: "#f59e0b", borderRadius: 2 }} />
+            Doctor Performance
+          </div>
+          {loading ? <div style={{ color: "#64748b" }}>Loading...</div> :
+            doctors.slice(0, 6).sort((a, b) => b.rating - a.rating).map(d => (
+              <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                <div style={{ width: 30, height: 30, borderRadius: 8, background: "linear-gradient(135deg,#f59e0b,#d97706)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>👨‍⚕️</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.name.replace("Dr. ", "")}</div>
+                  <div style={{ fontSize: 10, color: "#64748b" }}>{d.specialty}</div>
+                </div>
+                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#f59e0b" }}>⭐ {d.rating}</div>
+                  <div style={{ fontSize: 10, color: "#64748b" }}>{d.patients_count}pts</div>
+                </div>
+              </div>
+            ))
+          }
         </div>
       </div>
-    </div>
-  )
-}
 
-function CenteredState({
-  loading,
-  emptyText,
-}: {
-  loading: boolean
-  emptyText: string
-}) {
-  return (
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        color: "#64748b",
-        fontWeight: 600,
-      }}
-    >
-      {loading ? "Loading..." : emptyText}
-    </div>
-  )
-}
-
-function LegendRow({
-  color,
-  name,
-  value,
-}: {
-  color: string
-  name: string
-  value: number
-}) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        gap: 12,
-        alignItems: "center",
-        background: "white",
-        border: "1px solid #e2e8f0",
-        borderRadius: 14,
-        padding: "10px 12px",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <span
-          style={{
-            width: 12,
-            height: 12,
-            borderRadius: 999,
-            background: color,
-            display: "inline-block",
-          }}
-        />
-        <span style={{ fontWeight: 700 }}>{name}</span>
+      {/* Summary insights */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
+        {[
+          { title: "Busiest Department", value: topDept ? `${topDept[0]} (${topDept[1]})` : "—", icon: "🏥", color: "#6366f1" },
+          { title: "Total Patient-Doctor", value: totalPatients, icon: "🤝", color: "#10b981" },
+          { title: "Appointment Rate", value: `${appointments.length} today`, icon: "📅", color: "#a855f7" },
+          { title: "Critical Rate", value: `${patients.length > 0 ? Math.round(((statusCount["Critical"] ?? 0) / patients.length) * 100) : 0}%`, icon: "⚠️", color: "#ef4444" },
+        ].map(({ title, value, icon, color }) => (
+          <div key={title} style={{ padding: "16px 18px", borderRadius: 16, background: "linear-gradient(135deg,#0f172a,#1a2540)", border: `1px solid ${color}22` }}>
+            <div style={{ fontSize: 24, marginBottom: 8 }}>{icon}</div>
+            <div style={{ fontSize: 18, fontWeight: 900, color }}>{value}</div>
+            <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>{title}</div>
+          </div>
+        ))}
       </div>
-      <span style={{ fontWeight: 800 }}>{value}</span>
-    </div>
-  )
-}
-
-function Panel({
-  title,
-  children,
-}: {
-  title: string
-  children: React.ReactNode
-}) {
-  return (
-    <div
-      style={{
-        background: "#f8fafc",
-        color: "#0f172a",
-        borderRadius: 26,
-        padding: 22,
-        boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
-      }}
-    >
-      <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 14 }}>
-        {title}
-      </div>
-      {children}
-    </div>
-  )
-}
-
-function StatCard({
-  title,
-  value,
-  tone,
-  text,
-}: {
-  title: string
-  value: string
-  tone: string
-  text: string
-}) {
-  return (
-    <div
-      style={{
-        background: tone,
-        color: text,
-        borderRadius: 22,
-        padding: 20,
-        minHeight: 118,
-        boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
-      }}
-    >
-      <div style={{ opacity: 0.8, marginBottom: 18 }}>{title}</div>
-      <div style={{ fontSize: 34, fontWeight: 800 }}>{value}</div>
-    </div>
-  )
-}
-
-function Badge({
-  text,
-  tone,
-  color,
-}: {
-  text: string
-  tone: string
-  color: string
-}) {
-  return (
-    <div
-      style={{
-        background: tone,
-        color,
-        borderRadius: 999,
-        padding: "8px 12px",
-        fontWeight: 700,
-        fontSize: 13,
-      }}
-    >
-      {text}
-    </div>
-  )
-}
-
-function StatusRow({
-  label,
-  value,
-  tone,
-  color,
-}: {
-  label: string
-  value: string
-  tone: string
-  color: string
-}) {
-  return (
-    <div
-      style={{
-        background: "white",
-        border: "1px solid #e2e8f0",
-        borderRadius: 16,
-        padding: 14,
-        display: "flex",
-        justifyContent: "space-between",
-        gap: 12,
-        alignItems: "center",
-      }}
-    >
-      <div style={{ fontWeight: 700 }}>{label}</div>
-      <div
-        style={{
-          background: tone,
-          color,
-          borderRadius: 999,
-          padding: "6px 10px",
-          fontWeight: 800,
-          fontSize: 12,
-        }}
-      >
-        {value}
-      </div>
-    </div>
-  )
-}
-
-function SnapshotCard({
-  title,
-  value,
-}: {
-  title: string
-  value: string
-}) {
-  return (
-    <div
-      style={{
-        background: "white",
-        border: "1px solid #e2e8f0",
-        borderRadius: 18,
-        padding: 16,
-      }}
-    >
-      <div style={{ color: "#64748b", marginBottom: 10 }}>{title}</div>
-      <div style={{ fontSize: 28, fontWeight: 800 }}>{value}</div>
     </div>
   )
 }

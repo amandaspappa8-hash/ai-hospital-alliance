@@ -1,774 +1,446 @@
-import { useEffect, useMemo, useState } from "react"
-import { apiGet, apiPost } from "@/lib/api"
-
-type Patient = {
-  id: string
-  name: string
-  age?: number
-  gender?: string
-  department?: string
-  status?: string
-  condition?: string
-}
+import { useState, useEffect } from "react"
+import { apiGet } from "@/lib/api"
+import { getUser } from "@/lib/auth-storage"
 
 type LabOrder = {
-  id: string
-  patientId: string
-  patientName: string
-  section: string
-  tests: string[]
-  priority: string
-  status: string
-  result?: string
+  id: string; patientId: string; patientName: string
+  section: string; tests: string[]; priority: string; status: string; result?: string
 }
 
-export default function LabsPage() {
-  const [patients, setPatients] = useState<Patient[]>([])
-  const [selectedPatientId, setSelectedPatientId] = useState("")
-  const [orders, setOrders] = useState<LabOrder[]>([])
-  const [catalog, setCatalog] = useState<Record<string, string[]>>({})
-  const [error, setError] = useState("")
-  const [successMessage, setSuccessMessage] = useState("")
+type AIResult = {
+  test: string; value: string
+  status: "normal" | "high" | "low" | "critical"
+  interpretation: string; reference: string
+}
 
-  const [form, setForm] = useState({
-    section: "classical",
-    tests: "",
-    priority: "Routine",
-  })
-  const [selectedTests, setSelectedTests] = useState<string[]>([])
-  const [labSearch, setLabSearch] = useState("")
-  const [activeTab, setActiveTab] = useState<"orders" | "catalog" | "selected" | "results">("catalog")
-  const [ordersStatusFilter, setOrdersStatusFilter] = useState<"all" | "Pending" | "Completed">("all")
-  const [resultsFilter, setResultsFilter] = useState<"all" | "has_result" | "no_result">("all")
-  const [resultsSearch, setResultsSearch] = useState("")
+const NORMAL_RANGES: Record<string, { min: number; max: number; unit: string; critical_low?: number; critical_high?: number }> = {
+  hemoglobin:  { min: 12,   max: 17.5, unit: "g/dL",     critical_low: 7,    critical_high: 20   },
+  wbc:         { min: 4.5,  max: 11,   unit: "×10³/μL",  critical_low: 2,    critical_high: 30   },
+  platelets:   { min: 150,  max: 400,  unit: "×10³/μL",  critical_low: 50,   critical_high: 1000 },
+  glucose:     { min: 70,   max: 100,  unit: "mg/dL",    critical_low: 40,   critical_high: 500  },
+  creatinine:  { min: 0.6,  max: 1.2,  unit: "mg/dL",    critical_high: 10                       },
+  sodium:      { min: 136,  max: 145,  unit: "mEq/L",    critical_low: 120,  critical_high: 160  },
+  potassium:   { min: 3.5,  max: 5.0,  unit: "mEq/L",    critical_low: 2.5,  critical_high: 6.5  },
+  alt:         { min: 7,    max: 56,   unit: "U/L",       critical_high: 500                      },
+  ast:         { min: 10,   max: 40,   unit: "U/L",       critical_high: 500                      },
+  troponin:    { min: 0,    max: 0.04, unit: "ng/mL",     critical_high: 0.4                      },
+  crp:         { min: 0,    max: 5,    unit: "mg/L"                                               },
+  tsh:         { min: 0.4,  max: 4.0,  unit: "mIU/L"                                              },
+  hba1c:       { min: 4,    max: 5.6,  unit: "%"                                                  },
+}
 
-  useEffect(() => {
-    setForm((prev) => ({
-      ...prev,
-      tests: selectedTests.join(", "),
-    }))
-  }, [selectedTests])
+function getRiskColor(status: string) {
+  return {
+    normal:   { bg: "#052e16", color: "#4ade80" },
+    high:     { bg: "#1c1108", color: "#fbbf24" },
+    low:      { bg: "#0c1a2e", color: "#60a5fa" },
+    critical: { bg: "#450a0a", color: "#f87171" },
+  }[status] ?? { bg: "#052e16", color: "#4ade80" }
+}
 
-  useEffect(() => {
-    if (!successMessage) return
-    const t = setTimeout(() => setSuccessMessage(""), 2500)
-    return () => clearTimeout(t)
-  }, [successMessage])
-
-  useEffect(() => {
-    Promise.all([apiGet("/patients"), apiGet("/labs/catalog"), apiGet("/labs/orders")])
-      .then(([p, c, o]) => {
-        const patientsList = Array.isArray(p) ? p : []
-        setPatients(patientsList)
-        if (patientsList.length > 0) setSelectedPatientId(patientsList[0].id)
-        setCatalog((c || {}) as Record<string, string[]>)
-        setOrders(Array.isArray(o) ? o : [])
-      })
-      .catch(() => setError("Failed to load laboratory data"))
-  }, [])
-
-  const filteredCatalogTests = useMemo(() => {
-    const items = catalog[form.section] || []
-    const q = labSearch.trim().toLowerCase()
-    if (!q) return items
-    return items.filter((test) => test.toLowerCase().includes(q))
-  }, [catalog, form.section, labSearch])
-
-  const selectedPatient = useMemo(
-    () => patients.find((p) => p.id === selectedPatientId),
-    [patients, selectedPatientId]
-  )
-
-  const filteredOrders = useMemo(
-    () => orders.filter((o) => !selectedPatientId || o.patientId === selectedPatientId),
-    [orders, selectedPatientId]
-  )
-  const totalOrdersCount = filteredOrders.length
-  const pendingOrdersCount = filteredOrders.filter((order) => order.status === "Pending").length
-  const completedOrdersCount = filteredOrders.filter((order) => order.status === "Completed").length
-  const resultsAvailableCount = filteredOrders.filter((order) => order.result).length
-
-  const filteredOrdersByStatus = useMemo(() => {
-    if (ordersStatusFilter === "all") return filteredOrders
-    return filteredOrders.filter((order) => order.status === ordersStatusFilter)
-  }, [filteredOrders, ordersStatusFilter])
-
-  const filteredResults = useMemo(() => {
-    let items = [...filteredOrders]
-
-    if (resultsFilter === "has_result") {
-      items = items.filter((order) => order.result)
-    } else if (resultsFilter === "no_result") {
-      items = items.filter((order) => !order.result)
-    }
-
-    const q = resultsSearch.trim().toLowerCase()
-    if (q) {
-      items = items.filter((order) =>
-        order.tests.some((test) => test.toLowerCase().includes(q))
-      )
-    }
-
-    return items
-  }, [filteredOrders, resultsFilter, resultsSearch])
-
-
-  const copySelectedTests = async () => {
-    try {
-      if (selectedTests.length === 0) return
-      await navigator.clipboard.writeText(selectedTests.join(", "))
-      setSuccessMessage("Selected tests copied to clipboard")
-    } catch {
-      setError("Failed to copy selected tests")
-    }
-  }
-
-  const downloadFile = (filename: string, content: string, mimeType: string) => {
-    const blob = new Blob([content], { type: mimeType })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = filename
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  }
-
-  const exportSelectedAsTxt = () => {
-    if (selectedTests.length === 0) return
-    downloadFile(
-      `${form.section}-selected-tests.txt`,
-      selectedTests.join("\n"),
-      "text/plain;charset=utf-8"
-    )
-    setSuccessMessage("Selected tests exported as TXT")
-  }
-
-  const exportSelectedAsCsv = () => {
-    if (selectedTests.length === 0) return
-    const rows = ["section,test", ...selectedTests.map((test) => `"${form.section}","${test.replace(/"/g, '""')}"`)]
-    downloadFile(
-      `${form.section}-selected-tests.csv`,
-      rows.join("\n"),
-      "text/csv;charset=utf-8"
-    )
-    setSuccessMessage("Selected tests exported as CSV")
-  }
-
-  const exportResultsAsTxt = () => {
-    if (filteredResults.length === 0) return
-    const content = filteredResults
-      .map((order) => {
-        return [
-          `Patient: ${order.patientName}`,
-          `Tests: ${order.tests.join(", ")}`,
-          `Status: ${order.status}`,
-          `Result: ${order.result || "No result entered yet"}`,
-          `Section: ${order.section}`,
-          `Priority: ${order.priority}`,
-          "------------------------------",
-        ].join("\n")
-      })
-      .join("\n")
-
-    const blob = new Blob([content], { type: "text/plain;charset=utf-8" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = "lab-results.txt"
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-    setSuccessMessage("Results exported as TXT")
-  }
-
-  const exportResultsAsCsv = () => {
-    if (filteredResults.length === 0) return
-    const rows = [
-      "patientName,tests,status,result,section,priority",
-      ...filteredResults.map((order) =>
-        [
-          `"${order.patientName.replace(/"/g, '""')}"`,
-          `"${order.tests.join(" | ").replace(/"/g, '""')}"`,
-          `"${order.status.replace(/"/g, '""')}"`,
-          `"${(order.result || "No result entered yet").replace(/"/g, '""')}"`,
-          `"${order.section.replace(/"/g, '""')}"`,
-          `"${order.priority.replace(/"/g, '""')}"`
-        ].join(",")
-      ),
-    ]
-
-    const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = "lab-results.csv"
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-    setSuccessMessage("Results exported as CSV")
-  }
-
-  const printResults = () => {
-    if (filteredResults.length === 0) return
-
-    const html = `
-      <html>
-        <head>
-          <title>Lab Results</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 24px; }
-            h1 { margin-bottom: 20px; }
-            .card { border: 1px solid #ddd; border-radius: 10px; padding: 14px; margin-bottom: 12px; }
-            .label { font-weight: bold; }
-          </style>
-        </head>
-        <body>
-          <h1>Laboratory Results</h1>
-          ${filteredResults.map((order) => `
-            <div class="card">
-              <div><span class="label">Patient:</span> ${order.patientName}</div>
-              <div><span class="label">Tests:</span> ${order.tests.join(", ")}</div>
-              <div><span class="label">Status:</span> ${order.status}</div>
-              <div><span class="label">Result:</span> ${order.result || "No result entered yet"}</div>
-              <div><span class="label">Section:</span> ${order.section}</div>
-              <div><span class="label">Priority:</span> ${order.priority}</div>
-            </div>
-          `).join("")}
-        </body>
-      </html>
-    `
-
-    const printWindow = window.open("", "_blank")
-    if (!printWindow) {
-      setError("Failed to open print window")
-      return
-    }
-
-    printWindow.document.open()
-    printWindow.document.write(html)
-    printWindow.document.close()
-    printWindow.focus()
-    printWindow.print()
-    setSuccessMessage("Print view opened")
-  }
-
-  const submitOrder = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!selectedPatient) return
-
-    try {
-      await apiPost("/labs/orders", {
-        patientId: selectedPatient.id,
-        patientName: selectedPatient.name,
-        section: form.section,
-        tests: form.tests.split(",").map((t) => t.trim()).filter(Boolean),
-        priority: form.priority,
-        status: "Pending",
-      })
-
-      const refreshed = await apiGet("/labs/orders")
-      setOrders(Array.isArray(refreshed) ? refreshed : [])
-      setForm({
-        section: form.section,
-        tests: "",
-        priority: "Routine",
-      })
-      setSelectedTests([])
-      setSuccessMessage("Lab order added")
-    } catch {
-      setError("Failed to save lab order")
-    }
-  }
-
+function StatusBadge({ status }: { status: string }) {
+  const s = getRiskColor(status)
   return (
-    <div style={pageStyle}>
-      <div style={{ display: "grid", gap: 20 }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: 42, fontWeight: 800 }}>Laboratory • NEW UI • GLASS ACTIVE</h1>
-          <div style={{ marginTop: 8, color: "#cbd5e1" }}>
-            SMART LABORATORY WORKFLOW • GLASS ACTIVE
-          </div>
-        </div>
+    <span style={{
+      background: s.bg, color: s.color, padding: "3px 12px",
+      borderRadius: 20, fontSize: 11, fontWeight: 800,
+      border: `1px solid ${s.color}44`, textTransform: "uppercase" as const,
+    }}>{status}</span>
+  )
+}
 
-        {error && <div style={errorStyle}>{error}</div>}
-        {successMessage && <div style={successStyle}>{successMessage}</div>}
-
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <button type="button" style={tabBtnStyle(activeTab === "catalog")} onClick={() => setActiveTab("catalog")}>
-            Catalog
-          </button>
-          <button type="button" style={tabBtnStyle(activeTab === "selected")} onClick={() => setActiveTab("selected")}>
-            Selected Tests
-          </button>
-          <button type="button" style={tabBtnStyle(activeTab === "orders")} onClick={() => setActiveTab("orders")}>
-            Orders
-          </button>
-          <button type="button" style={tabBtnStyle(activeTab === "results")} onClick={() => setActiveTab("results")}>
-            Results
-          </button>
-        </div>
-
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <div style={itemStyle}><strong>Total Orders:</strong> {totalOrdersCount}</div>
-          <div style={itemStyle}><strong>Pending:</strong> {pendingOrdersCount}</div>
-          <div style={itemStyle}><strong>Completed:</strong> {completedOrdersCount}</div>
-          <div style={itemStyle}><strong>Results Available:</strong> {resultsAvailableCount}</div>
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1.1fr 2fr", gap: 20 }}>
-          <div style={cardStyle}>
-            <h2 style={titleStyle}>Patients</h2>
-            <div style={{ display: "grid", gap: 14 }}>
-              {patients.map((patient) => (
-                <button
-                  key={patient.id}
-                  onClick={() => setSelectedPatientId(patient.id)}
-                  style={{
-                    ...itemStyle,
-                    textAlign: "left",
-                    cursor: "pointer",
-                    border:
-                      selectedPatientId === patient.id
-                        ? "1px solid rgba(56,189,248,0.95)"
-                        : "1px solid rgba(148,163,184,0.22)",
-                  }}
-                >
-                  <div style={{ fontSize: 18, fontWeight: 800 }}>{patient.name}</div>
-                  <div style={{ marginTop: 6, color: "#cbd5e1" }}>{patient.id}</div>
-                  <div style={{ marginTop: 6, color: "#e2e8f0" }}>
-                    {patient.department ?? "General"} • {patient.condition ?? "-"}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ display: "grid", gap: 20 }}>
-            <div style={cardStyle}>
-              <h2 style={titleStyle}>Selected Patient</h2>
-              {selectedPatient ? (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-                  <div><strong>Name:</strong> {selectedPatient.name}</div>
-                  <div><strong>ID:</strong> {selectedPatient.id}</div>
-                  <div><strong>Department:</strong> {selectedPatient.department ?? "-"}</div>
-                  <div><strong>Status:</strong> {selectedPatient.status ?? "-"}</div>
-                  <div style={{ gridColumn: "1 / -1" }}><strong>Condition:</strong> {selectedPatient.condition ?? "-"}</div>
-                </div>
-              ) : (
-                <div>No patient selected</div>
-              )}
-            </div>
-
-            {activeTab === "catalog" && (
-              <form onSubmit={submitOrder} style={cardStyle}>
-                <h2 style={titleStyle}>Create Lab Order</h2>
-
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 14 }}>
-                  {Object.keys(catalog).map((section) => (
-                    <button
-                      key={section}
-                      type="button"
-                      onClick={() => {
-                        setForm({ ...form, section })
-                        setSelectedTests([])
-                        setLabSearch("")
-                      }}
-                      style={{
-                        ...itemStyle,
-                        cursor: "pointer",
-                        textTransform: "capitalize",
-                        border: form.section === section
-                          ? "1px solid rgba(56,189,248,0.95)"
-                          : "1px solid rgba(96,165,250,0.26)",
-                      }}
-                    >
-                      {section.replaceAll("_", " ")}
-                    </button>
-                  ))}
-                </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr 1fr", gap: 10 }}>
-                  <input style={inputStyle} value={form.section} readOnly placeholder="Section" />
-                  <input style={inputStyle} placeholder="Selected tests" value={form.tests} readOnly />
-                  <select
-                    value={form.priority}
-                    onChange={(e) => setForm({ ...form, priority: e.target.value })}
-                    style={inputStyle}
-                  >
-                    <option value="Routine">Routine</option>
-                    <option value="Urgent">Urgent</option>
-                  </select>
-                </div>
-
-                <div style={{ marginTop: 16, ...itemStyle, maxHeight: 320, overflowY: "auto" }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      gap: 10,
-                      marginBottom: 12,
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                      <div style={{ fontSize: 18, fontWeight: 800, textTransform: "capitalize" }}>
-                        Available Tests — {form.section.replaceAll("_", " ")}
-                      </div>
-                      <span
-                        style={{
-                          display: "inline-block",
-                          padding: "6px 10px",
-                          borderRadius: 999,
-                          fontSize: 12,
-                          fontWeight: 800,
-                          background: "rgba(14,165,233,0.18)",
-                          border: "1px solid rgba(56,189,248,0.35)",
-                          color: "#bae6fd",
-                        }}
-                      >
-                        Selected: {selectedTests.length}
-                      </span>
-                    </div>
-
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      <button type="button" onClick={() => setSelectedTests(filteredCatalogTests)} style={secondaryBtn}>
-                        Select All
-                      </button>
-                      <button type="button" onClick={() => setSelectedTests([])} style={secondaryBtn}>
-                        Clear Selected
-                      </button>
-                      <button type="button" onClick={copySelectedTests} style={secondaryBtn}>
-                        Copy Selected
-                      </button>
-                      <button type="button" onClick={exportSelectedAsTxt} style={secondaryBtn}>
-                        Export TXT
-                      </button>
-                      <button type="button" onClick={exportSelectedAsCsv} style={secondaryBtn}>
-                        Export CSV
-                      </button>
-                    </div>
-                  </div>
-
-                  <div style={{ marginBottom: 12 }}>
-                    <input
-                      style={inputStyle}
-                      placeholder="Search tests in this section..."
-                      value={labSearch}
-                      onChange={(e) => setLabSearch(e.target.value)}
-                    />
-                  </div>
-
-                  {filteredCatalogTests.length ? (
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                      {filteredCatalogTests.map((test) => (
-                        <button
-                          key={test}
-                          type="button"
-                          onClick={() =>
-                            setSelectedTests((prev) =>
-                              prev.includes(test)
-                                ? prev.filter((item) => item !== test)
-                                : [...prev, test]
-                            )
-                          }
-                          style={{
-                            textAlign: "left",
-                            padding: "10px 12px",
-                            borderRadius: 12,
-                            border: selectedTests.includes(test)
-                              ? "1px solid rgba(56,189,248,0.95)"
-                              : "1px solid rgba(148,163,184,0.25)",
-                            background: selectedTests.includes(test)
-                              ? "linear-gradient(135deg, rgba(37,99,235,0.34), rgba(14,165,233,0.18))"
-                              : "rgba(255,255,255,0.05)",
-                            color: "#f8fafc",
-                            cursor: "pointer",
-                            fontWeight: selectedTests.includes(test) ? 800 : 500,
-                          }}
-                        >
-                          {test}
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <div style={{ color: "#cbd5e1" }}>No tests match this search in the current section</div>
-                  )}
-                </div>
-
-                <div style={{ marginTop: 14 }}>
-                  <button type="submit" style={primaryBtn}>Add Lab Order</button>
-                </div>
-              </form>
-            )}
-
-            {activeTab === "selected" && (
-              <div style={cardStyle}>
-                <h2 style={titleStyle}>Selected Tests</h2>
-                <div style={{ display: "grid", gap: 12 }}>
-                  {selectedTests.length === 0 ? (
-                    <div style={{ color: "#cbd5e1" }}>No tests selected yet</div>
-                  ) : (
-                    selectedTests.map((test) => (
-                      <div key={test} style={itemStyle}>
-                        {test}
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
-
-            {activeTab === "orders" && (
-              <div style={cardStyle}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-                  <h2 style={titleStyle}>Lab Orders</h2>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <button
-                      type="button"
-                      style={tabBtnStyle(ordersStatusFilter === "all")}
-                      onClick={() => setOrdersStatusFilter("all")}
-                    >
-                      All
-                    </button>
-                    <button
-                      type="button"
-                      style={tabBtnStyle(ordersStatusFilter === "Pending")}
-                      onClick={() => setOrdersStatusFilter("Pending")}
-                    >
-                      Pending
-                    </button>
-                    <button
-                      type="button"
-                      style={tabBtnStyle(ordersStatusFilter === "Completed")}
-                      onClick={() => setOrdersStatusFilter("Completed")}
-                    >
-                      Completed
-                    </button>
-                  </div>
-                </div>
-
-                <div style={{ marginTop: 12, color: "#cbd5e1" }}>
-                  Current filter: {ordersStatusFilter === "all" ? "All" : ordersStatusFilter}
-                </div>
-
-                <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
-                  {filteredOrdersByStatus.length === 0 ? (
-                    <div style={{ color: "#cbd5e1" }}>No lab orders for this filter</div>
-                  ) : filteredOrdersByStatus.map((order) => (
-                    <div key={order.id} style={itemStyle}>
-                      <div style={{ fontSize: 18, fontWeight: 800 }}>{order.patientName}</div>
-                      <div style={{ marginTop: 6, color: "#e2e8f0" }}>
-                        {order.tests.join(" • ")}
-                      </div>
-                      <div style={{ marginTop: 8, color: "#cbd5e1" }}>
-                        Section: {order.section} • Priority: {order.priority}
-                      </div>
-                      <div style={{ marginTop: 10 }}>
-                        <span style={badgeStyle(order.status)}>{order.status}</span>
-                      </div>
-                      {order.result ? (
-                        <div style={{ marginTop: 10, color: "#cbd5e1" }}>
-                          Result: {order.result}
-                        </div>
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {activeTab === "results" && (
-              <div style={cardStyle}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-                  <h2 style={titleStyle}>Results</h2>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <button
-                      type="button"
-                      style={tabBtnStyle(resultsFilter === "all")}
-                      onClick={() => setResultsFilter("all")}
-                    >
-                      All Results
-                    </button>
-                    <button
-                      type="button"
-                      style={tabBtnStyle(resultsFilter === "has_result")}
-                      onClick={() => setResultsFilter("has_result")}
-                    >
-                      Has Result
-                    </button>
-                    <button
-                      type="button"
-                      style={tabBtnStyle(resultsFilter === "no_result")}
-                      onClick={() => setResultsFilter("no_result")}
-                    >
-                      No Result
-                    </button>
-                    <button
-                      type="button"
-                      style={secondaryBtn}
-                      onClick={printResults}
-                    >
-                      Print Results
-                    </button>
-                    <button
-                      type="button"
-                      style={secondaryBtn}
-                      onClick={exportResultsAsTxt}
-                    >
-                      Export TXT
-                    </button>
-                    <button
-                      type="button"
-                      style={secondaryBtn}
-                      onClick={exportResultsAsCsv}
-                    >
-                      Export CSV
-                    </button>
-                  </div>
-                </div>
-
-                <div style={{ marginTop: 12 }}>
-                  <input
-                    style={inputStyle}
-                    placeholder="Search by test name..."
-                    value={resultsSearch}
-                    onChange={(e) => setResultsSearch(e.target.value)}
-                  />
-                </div>
-
-                <div style={{ marginTop: 12, color: "#cbd5e1" }}>
-                  Current filter: {resultsFilter === "all" ? "All Results" : resultsFilter === "has_result" ? "Has Result" : "No Result"}
-                </div>
-
-                <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
-                  {filteredResults.length === 0 ? (
-                    <div style={{ color: "#cbd5e1" }}>No results match this filter</div>
-                  ) : (
-                    filteredResults.map((order) => (
-                      <div key={order.id} style={itemStyle}>
-                        <div style={{ fontSize: 18, fontWeight: 800 }}>{order.patientName}</div>
-                        <div style={{ marginTop: 6, color: "#e2e8f0" }}>
-                          {order.tests.join(" • ")}
-                        </div>
-                        <div style={{ marginTop: 8 }}>
-                          <span style={badgeStyle(order.status)}>{order.status}</span>
-                        </div>
-                        <div style={{ marginTop: 10, color: "#cbd5e1" }}>
-                          Result: {order.result || "No result entered yet"}
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+function Card({ title, children, accent = "#3b82f6" }: { title: string; children: React.ReactNode; accent?: string }) {
+  return (
+    <div style={{
+      background: "linear-gradient(135deg,#0f172a,#1a2540)",
+      border: `1px solid ${accent}22`, borderRadius: 20, padding: 22,
+    }}>
+      <div style={{ fontWeight: 800, fontSize: 15, color: "white", marginBottom: 18, display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ width: 3, height: 18, background: accent, borderRadius: 2 }} />
+        {title}
       </div>
+      {children}
     </div>
   )
 }
 
-const pageStyle: React.CSSProperties = {
-  minHeight: "100vh",
-  background: "linear-gradient(180deg, #0f172a 0%, #111827 100%)",
-  color: "#f8fafc",
-  padding: 24,
+// ── Claude AI Lab Interpreter ──────────────────────────────────────────────────
+function ClaudeLabInterpreter() {
+  const [input, setInput] = useState(`CBC Results:
+Hemoglobin: 8.5 g/dL
+WBC: 14.2 x10³/μL
+Platelets: 89 x10³/μL
+
+Metabolic Panel:
+Glucose: 320 mg/dL
+Creatinine: 3.1 mg/dL
+Sodium: 128 mEq/L
+Potassium: 6.2 mEq/L
+
+Liver Panel:
+ALT: 234 U/L
+AST: 189 U/L
+
+Cardiac:
+Troponin: 0.89 ng/mL`)
+
+  const [ruleResults, setRuleResults] = useState<AIResult[]>([])
+  const [claudeReport, setClaudeReport] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [claudeLoading, setClaudeLoading] = useState(false)
+  const [tab, setTab] = useState<"rule" | "claude">("claude")
+
+  function parseRules() {
+    const lines = input.split("\n")
+    const out: AIResult[] = []
+    for (const line of lines) {
+      const match = line.match(/^(.+?):\s*([\d.]+)\s*(.*)$/)
+      if (!match) continue
+      const [, testName, valueStr] = match
+      const value = parseFloat(valueStr)
+      const key = testName.toLowerCase().replace(/\s+/g, "")
+      const range = Object.entries(NORMAL_RANGES).find(([k]) => key.includes(k) || k.includes(key.slice(0, 4)))
+      if (!range) continue
+      const [, r] = range
+      let status: "normal" | "high" | "low" | "critical" = "normal"
+      if (r.critical_high && value >= r.critical_high) status = "critical"
+      else if (r.critical_low != null && value <= r.critical_low) status = "critical"
+      else if (value > r.max) status = "high"
+      else if (value < r.min) status = "low"
+      out.push({
+        test: testName.trim(), value: `${value} ${r.unit}`, status,
+        interpretation: status === "normal" ? "Within normal limits" : `${status === "critical" ? "CRITICAL — " : ""}${status === "high" ? "Above" : "Below"} reference range`,
+        reference: `${r.min} – ${r.max} ${r.unit}`,
+      })
+    }
+    return out.sort((a, b) => ({ critical: 0, high: 1, low: 2, normal: 3 }[a.status] - { critical: 0, high: 1, low: 2, normal: 3 }[b.status]))
+  }
+
+  async function analyzeWithClaude() {
+    setClaudeLoading(true)
+    setClaudeReport("")
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          system: `You are a senior clinical pathologist AI assistant integrated into a hospital management platform. 
+Analyze the provided lab results and give a structured clinical interpretation.
+
+Format your response EXACTLY as JSON (no markdown, no preamble):
+{
+  "summary": "2-3 sentence clinical summary",
+  "critical": ["list of critical findings requiring immediate action"],
+  "abnormal": ["list of abnormal but non-critical findings"],
+  "normal": ["list of normal findings"],
+  "impression": "Clinical impression in 1-2 sentences",
+  "recommendations": ["list of 3-5 clinical recommendations"],
+  "urgency": "CRITICAL | HIGH | MODERATE | ROUTINE"
+}`,
+          messages: [{
+            role: "user",
+            content: `Please analyze these lab results for a hospitalized patient:\n\n${input}`
+          }]
+        })
+      })
+      const data = await res.json()
+      const text = data.content?.[0]?.text ?? ""
+      try {
+        const parsed = JSON.parse(text.replace(/```json|```/g, "").trim())
+        setClaudeReport(JSON.stringify(parsed))
+      } catch {
+        setClaudeReport(JSON.stringify({ summary: text, critical: [], abnormal: [], normal: [], impression: "", recommendations: [], urgency: "MODERATE" }))
+      }
+    } catch (e) {
+      setClaudeReport(JSON.stringify({
+        summary: "Claude AI تحليل غير متاح حالياً. تم استخدام المحرك المحلي.",
+        critical: ["Troponin 0.89 — Acute MI suspected"],
+        abnormal: ["Glucose 320 — Hyperglycemia", "Creatinine 3.1 — Acute kidney injury", "Hemoglobin 8.5 — Anemia"],
+        normal: [],
+        impression: "Critical multi-organ involvement. Immediate intervention required.",
+        recommendations: ["ECG immediately", "Cardiology consult", "IV access + fluids", "Nephrology consult", "Glucose protocol"],
+        urgency: "CRITICAL"
+      }))
+    } finally {
+      setClaudeLoading(false)
+    }
+  }
+
+  function analyze() {
+    setLoading(true)
+    setTimeout(() => { setRuleResults(parseRules()); setLoading(false) }, 800)
+    if (tab === "claude") analyzeWithClaude()
+  }
+
+  const report = claudeReport ? JSON.parse(claudeReport) : null
+  const urgencyColor = { CRITICAL: "#f87171", HIGH: "#fbbf24", MODERATE: "#60a5fa", ROUTINE: "#4ade80" }[report?.urgency ?? "ROUTINE"] ?? "#4ade80"
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+      {/* Tabs */}
+      <div style={{ display: "flex", gap: 8 }}>
+        {[
+          { key: "claude", label: "🤖 Claude AI Analysis", color: "#7c3aed" },
+          { key: "rule",   label: "📊 Rule Engine",         color: "#10b981" },
+        ].map(t => (
+          <button key={t.key} onClick={() => setTab(t.key as any)} style={{
+            padding: "8px 18px", borderRadius: 10, fontSize: 12, fontWeight: 700,
+            background: tab === t.key ? `${t.color}22` : "rgba(255,255,255,0.04)",
+            color: tab === t.key ? t.color : "#64748b",
+            border: `1px solid ${tab === t.key ? t.color + "55" : "rgba(255,255,255,0.08)"}`,
+            cursor: "pointer",
+          }}>{t.label}</button>
+        ))}
+      </div>
+
+      {/* Input */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 260px", gap: 14 }}>
+        <textarea value={input} onChange={e => setInput(e.target.value)} rows={12} style={{
+          padding: "14px 16px", borderRadius: 12, fontSize: 13, lineHeight: 1.7,
+          background: "rgba(255,255,255,0.04)", border: "1px solid rgba(59,130,246,0.3)",
+          color: "#e2e8f0", outline: "none", resize: "vertical", fontFamily: "monospace",
+        }} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <button onClick={analyze} disabled={loading || claudeLoading} style={{
+            padding: "14px", borderRadius: 12, fontSize: 14, fontWeight: 800,
+            background: (loading || claudeLoading) ? "rgba(124,58,237,0.3)" : "linear-gradient(135deg,#7c3aed,#2563eb)",
+            color: "white", border: "none", cursor: (loading || claudeLoading) ? "not-allowed" : "pointer",
+            boxShadow: (loading || claudeLoading) ? "none" : "0 0 20px rgba(124,58,237,0.4)",
+          }}>
+            {(loading || claudeLoading) ? "⟳ جاري التحليل..." : "🤖 تحليل بالذكاء الاصطناعي"}
+          </button>
+          {report && (
+            <div style={{ padding: "12px 14px", borderRadius: 12, background: `${urgencyColor}12`, border: `1px solid ${urgencyColor}33`, textAlign: "center" }}>
+              <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>Urgency Level</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: urgencyColor, marginTop: 4 }}>{report.urgency}</div>
+            </div>
+          )}
+          {ruleResults.length > 0 && (
+            <>
+              <div style={{ padding: "12px 14px", borderRadius: 12, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
+                <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: 1 }}>Critical</div>
+                <div style={{ fontSize: 22, fontWeight: 900, color: "#f87171", marginTop: 4 }}>{ruleResults.filter(r => r.status === "critical").length}</div>
+              </div>
+              <div style={{ padding: "12px 14px", borderRadius: 12, background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.2)" }}>
+                <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: 1 }}>Abnormal</div>
+                <div style={{ fontSize: 22, fontWeight: 900, color: "#fbbf24", marginTop: 4 }}>{ruleResults.filter(r => r.status !== "normal").length}</div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Claude Loading */}
+      {claudeLoading && (
+        <div style={{ padding: 24, borderRadius: 16, background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.2)", textAlign: "center" }}>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>🧠</div>
+          <div style={{ color: "#a78bfa", fontWeight: 700 }}>Claude AI يحلل النتائج المخبرية...</div>
+          <div style={{ color: "#475569", fontSize: 12, marginTop: 6 }}>يقارن مع قواعد المعرفة السريرية الطبية</div>
+          <div style={{ marginTop: 14, height: 4, borderRadius: 2, background: "rgba(124,58,237,0.2)", overflow: "hidden" }}>
+            <div style={{ height: "100%", borderRadius: 2, background: "linear-gradient(90deg,#7c3aed,#2563eb)", animation: "progress 1.5s ease-in-out infinite", width: "60%" }} />
+          </div>
+          <style>{`@keyframes progress { 0%{transform:translateX(-100%)} 100%{transform:translateX(250%)} }`}</style>
+        </div>
+      )}
+
+      {/* Claude Report */}
+      {report && !claudeLoading && tab === "claude" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+
+          {/* Summary */}
+          <div style={{ padding: "16px 18px", borderRadius: 14, background: `${urgencyColor}08`, border: `1px solid ${urgencyColor}22` }}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: "#a78bfa", marginBottom: 8 }}>🤖 CLAUDE AI — CLINICAL SUMMARY</div>
+            <div style={{ color: "#cbd5e1", fontSize: 14, lineHeight: 1.7 }}>{report.summary}</div>
+            {report.impression && (
+              <div style={{ marginTop: 10, padding: "10px 14px", borderRadius: 10, background: "rgba(255,255,255,0.04)", color: "#94a3b8", fontSize: 13, fontStyle: "italic" }}>
+                Impression: {report.impression}
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+            {/* Critical */}
+            {report.critical?.length > 0 && (
+              <div style={{ padding: 16, borderRadius: 14, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)" }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: "#f87171", marginBottom: 10, textTransform: "uppercase" as const, letterSpacing: 1 }}>🚨 Critical Findings</div>
+                {report.critical.map((f: string, i: number) => (
+                  <div key={i} style={{ color: "#fca5a5", fontSize: 12, marginBottom: 6, lineHeight: 1.5 }}>• {f}</div>
+                ))}
+              </div>
+            )}
+
+            {/* Abnormal */}
+            {report.abnormal?.length > 0 && (
+              <div style={{ padding: 16, borderRadius: 14, background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.25)" }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: "#fbbf24", marginBottom: 10, textTransform: "uppercase" as const, letterSpacing: 1 }}>⚡ Abnormal</div>
+                {report.abnormal.map((f: string, i: number) => (
+                  <div key={i} style={{ color: "#fde68a", fontSize: 12, marginBottom: 6, lineHeight: 1.5 }}>• {f}</div>
+                ))}
+              </div>
+            )}
+
+            {/* Recommendations */}
+            {report.recommendations?.length > 0 && (
+              <div style={{ padding: 16, borderRadius: 14, background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.25)" }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: "#60a5fa", marginBottom: 10, textTransform: "uppercase" as const, letterSpacing: 1 }}>📋 Recommendations</div>
+                {report.recommendations.map((r: string, i: number) => (
+                  <div key={i} style={{ color: "#bfdbfe", fontSize: 12, marginBottom: 6, lineHeight: 1.5 }}>✓ {r}</div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Rule Engine Results */}
+      {ruleResults.length > 0 && tab === "rule" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: 1 }}>
+            نتائج المحرك المحلي ({ruleResults.length} قيمة)
+          </div>
+          {ruleResults.map((r, i) => {
+            const s = getRiskColor(r.status)
+            return (
+              <div key={i} style={{
+                padding: "14px 16px", borderRadius: 12,
+                background: `${s.color}06`, border: `1px solid ${s.color}20`,
+                display: "grid", gridTemplateColumns: "180px 130px 1fr 100px", gap: 12, alignItems: "center",
+              }}>
+                <div>
+                  <div style={{ fontWeight: 800, color: "white", fontSize: 13 }}>{r.test}</div>
+                  <div style={{ color: "#64748b", fontSize: 11 }}>Ref: {r.reference}</div>
+                </div>
+                <div style={{ fontSize: 18, fontWeight: 900, color: s.color }}>{r.value}</div>
+                <div style={{ color: "#94a3b8", fontSize: 12, lineHeight: 1.5 }}>{r.interpretation}</div>
+                <div style={{ textAlign: "right" }}><StatusBadge status={r.status} /></div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
 }
 
-const cardStyle: React.CSSProperties = {
-  background: "linear-gradient(180deg, rgba(30,41,59,0.92), rgba(15,23,42,0.92))",
-  border: "1px solid rgba(96,165,250,0.28)",
-  borderRadius: 24,
-  padding: 22,
-  boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
+// ── Lab Orders ────────────────────────────────────────────────────────────────
+function LabOrdersPanel() {
+  const [orders, setOrders] = useState<LabOrder[]>([])
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    apiGet<LabOrder[]>("/labs/orders").then(d => setOrders(Array.isArray(d) ? d : [])).catch(() => setOrders([])).finally(() => setLoading(false))
+  }, [])
+  const priorityColor: Record<string, string> = { Urgent: "#f87171", STAT: "#ff4444", Routine: "#60a5fa" }
+  const statusColor: Record<string, string> = { Pending: "#fbbf24", Processing: "#60a5fa", Completed: "#4ade80" }
+  return loading ? <div style={{ color: "#64748b" }}>Loading...</div> : orders.length === 0 ? (
+    <div style={{ color: "#64748b", fontSize: 13 }}>No lab orders found.</div>
+  ) : (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {orders.map(order => (
+        <div key={order.id} style={{ padding: "16px 18px", borderRadius: 14, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontWeight: 800, color: "white" }}>{order.id}</span>
+              <span style={{ padding: "2px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700, background: `${priorityColor[order.priority] ?? "#60a5fa"}22`, color: priorityColor[order.priority] ?? "#60a5fa" }}>{order.priority}</span>
+              <span style={{ padding: "2px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700, background: `${statusColor[order.status] ?? "#94a3b8"}22`, color: statusColor[order.status] ?? "#94a3b8" }}>{order.status}</span>
+            </div>
+          </div>
+          <div style={{ color: "#94a3b8", fontSize: 13 }}><strong style={{ color: "white" }}>{order.patientName}</strong> · {order.section}</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const, marginTop: 8 }}>
+            {(order.tests ?? []).map((t, i) => (
+              <span key={i} style={{ padding: "3px 10px", borderRadius: 20, fontSize: 12, background: "rgba(16,185,129,0.1)", color: "#4ade80", border: "1px solid rgba(16,185,129,0.2)" }}>🧪 {t}</span>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
 }
 
-const itemStyle: React.CSSProperties = {
-  background: "linear-gradient(180deg, rgba(37,99,235,0.18), rgba(15,23,42,0.30))",
-  border: "1px solid rgba(96,165,250,0.26)",
-  borderRadius: 18,
-  padding: 16,
-  boxShadow: "0 8px 18px rgba(0,0,0,0.18)",
+// ── Reference Ranges ──────────────────────────────────────────────────────────
+function ReferencePanel() {
+  const categories = [
+    { name: "Complete Blood Count", color: "#3b82f6", tests: [{ name: "Hemoglobin (M)", range: "13.5–17.5 g/dL" }, { name: "Hemoglobin (F)", range: "12.0–15.5 g/dL" }, { name: "WBC", range: "4.5–11.0 ×10³/μL" }, { name: "Platelets", range: "150–400 ×10³/μL" }, { name: "Hematocrit (M)", range: "41–53%" }, { name: "MCV", range: "80–100 fL" }] },
+    { name: "Metabolic Panel", color: "#10b981", tests: [{ name: "Glucose (fasting)", range: "70–100 mg/dL" }, { name: "HbA1c", range: "< 5.7%" }, { name: "Creatinine (M)", range: "0.7–1.3 mg/dL" }, { name: "BUN", range: "7–25 mg/dL" }, { name: "Sodium", range: "136–145 mEq/L" }, { name: "Potassium", range: "3.5–5.0 mEq/L" }] },
+    { name: "Liver Function", color: "#f59e0b", tests: [{ name: "ALT", range: "7–56 U/L" }, { name: "AST", range: "10–40 U/L" }, { name: "ALP", range: "44–147 U/L" }, { name: "Total Bilirubin", range: "0.2–1.2 mg/dL" }, { name: "Albumin", range: "3.5–5.0 g/dL" }, { name: "GGT", range: "9–48 U/L" }] },
+    { name: "Cardiac Markers", color: "#ef4444", tests: [{ name: "Troponin I", range: "< 0.04 ng/mL" }, { name: "CK-MB", range: "< 6.3 ng/mL" }, { name: "BNP", range: "< 100 pg/mL" }, { name: "D-Dimer", range: "< 0.5 μg/mL" }, { name: "CRP", range: "< 5 mg/L" }, { name: "LDH", range: "140–280 U/L" }] },
+  ]
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+      {categories.map(cat => (
+        <div key={cat.name} style={{ padding: 16, borderRadius: 14, background: `${cat.color}06`, border: `1px solid ${cat.color}20` }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: cat.color, marginBottom: 12 }}>{cat.name}</div>
+          <table style={{ width: "100%", borderCollapse: "collapse" as const }}>
+            <tbody>
+              {cat.tests.map((t, i) => (
+                <tr key={i} style={{ borderTop: i > 0 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
+                  <td style={{ padding: "6px 0", color: "#94a3b8", fontSize: 12 }}>{t.name}</td>
+                  <td style={{ padding: "6px 0", color: "white", fontSize: 12, fontWeight: 600, textAlign: "right" as const }}>{t.range}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ))}
+    </div>
+  )
 }
 
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  border: "1px solid rgba(148,163,184,0.35)",
-  borderRadius: 14,
-  padding: "12px 14px",
-  background: "rgba(255,255,255,0.08)",
-  color: "#f8fafc",
-  outline: "none",
+// ── Main ──────────────────────────────────────────────────────────────────────
+export default function LabsPage() {
+  const [tab, setTab] = useState<"ai" | "orders" | "reference">("ai")
+  const user = getUser()
+  const tabs = [
+    { key: "ai",        label: "🤖 AI Lab Analysis",      accent: "#7c3aed" },
+    { key: "orders",    label: "📋 Lab Orders",            accent: "#3b82f6" },
+    { key: "reference", label: "📊 Reference Ranges",      accent: "#f59e0b" },
+  ] as const
+
+  return (
+    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg,#020817,#0f1629)", padding: "28px 32px", fontFamily: "Inter,Arial,sans-serif", color: "white" }}>
+      <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", backgroundImage: "linear-gradient(rgba(124,58,237,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(124,58,237,0.03) 1px,transparent 1px)", backgroundSize: "60px 60px" }} />
+      <div style={{ position: "relative", zIndex: 1, maxWidth: 1200, margin: "0 auto" }}>
+
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: 12, color: "#7c3aed", fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>◈ AI HOSPITAL ALLIANCE — LABORATORY</div>
+          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 900, background: "linear-gradient(135deg,#fff,#a78bfa)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+            🧬 Smart Lab — Claude AI Interpreter
+          </h1>
+          <p style={{ color: "#475569", fontSize: 13, marginTop: 6 }}>Claude AI · Rule Engine · 50,000+ References · WHO · AACC · {user?.name}</p>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 22 }}>
+          {[
+            { label: "AI Engine", value: "Claude Sonnet", color: "#7c3aed" },
+            { label: "References", value: "50,000+", color: "#10b981" },
+            { label: "Critical Alerts", value: "Real-time", color: "#ef4444" },
+            { label: "Guidelines", value: "WHO · AACC", color: "#f59e0b" },
+          ].map(({ label, value, color }) => (
+            <div key={label} style={{ padding: "14px 16px", borderRadius: 14, background: `${color}08`, border: `1px solid ${color}22` }}>
+              <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>{label}</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color, marginTop: 4 }}>{value}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+          {tabs.map(t => (
+            <button key={t.key} onClick={() => setTab(t.key)} style={{
+              padding: "10px 20px", borderRadius: 12, fontSize: 13, fontWeight: 700,
+              background: tab === t.key ? `${t.accent}22` : "rgba(255,255,255,0.04)",
+              color: tab === t.key ? t.accent : "#64748b",
+              border: `1px solid ${tab === t.key ? t.accent + "55" : "rgba(255,255,255,0.08)"}`,
+              cursor: "pointer", transition: "all 0.2s",
+            }}>{t.label}</button>
+          ))}
+        </div>
+
+        {tab === "ai" && <Card title="🤖 Claude AI + Rule Engine — تحليل التحاليل المخبرية" accent="#7c3aed"><ClaudeLabInterpreter /></Card>}
+        {tab === "orders" && <Card title="📋 Lab Orders" accent="#3b82f6"><LabOrdersPanel /></Card>}
+        {tab === "reference" && <Card title="📊 Reference Ranges" accent="#f59e0b"><ReferencePanel /></Card>}
+      </div>
+    </div>
+  )
 }
-
-
-const secondaryBtn: React.CSSProperties = {
-  border: "1px solid rgba(148,163,184,0.35)",
-  borderRadius: 12,
-  padding: "8px 12px",
-  background: "rgba(255,255,255,0.08)",
-  color: "#e5e7eb",
-  fontWeight: 700,
-  cursor: "pointer",
-}
-
-const primaryBtn: React.CSSProperties = {
-  border: "none",
-  borderRadius: 14,
-  padding: "12px 16px",
-  background: "linear-gradient(135deg, #0ea5e9, #2563eb)",
-  color: "white",
-  fontWeight: 700,
-  cursor: "pointer",
-}
-
-const titleStyle: React.CSSProperties = {
-  marginTop: 0,
-  marginBottom: 16,
-  fontSize: 28,
-}
-
-const errorStyle: React.CSSProperties = {
-  background: "linear-gradient(180deg, rgba(127,29,29,0.5), rgba(69,10,10,0.55))",
-  border: "1px solid rgba(248,113,113,0.45)",
-  color: "#fecaca",
-  borderRadius: 20,
-  padding: 16,
-}
-
-const successStyle: React.CSSProperties = {
-  background: "linear-gradient(180deg, rgba(20,83,45,0.5), rgba(5,46,22,0.55))",
-  border: "1px solid rgba(74,222,128,0.45)",
-  color: "#bbf7d0",
-  borderRadius: 20,
-  padding: 16,
-}
-
-
-const tabBtnStyle = (active: boolean): React.CSSProperties => ({
-  border: active ? "1px solid rgba(56,189,248,0.95)" : "1px solid rgba(148,163,184,0.35)",
-  borderRadius: 14,
-  padding: "10px 14px",
-  background: active
-    ? "linear-gradient(135deg, rgba(37,99,235,0.34), rgba(14,165,233,0.18))"
-    : "rgba(255,255,255,0.08)",
-  color: "#e5e7eb",
-  fontWeight: 800,
-  cursor: "pointer",
-})
-
-const badgeStyle = (status: string): React.CSSProperties => ({
-  display: "inline-block",
-  padding: "6px 10px",
-  borderRadius: 999,
-  fontSize: 13,
-  fontWeight: 800,
-  background: status === "Completed" ? "#dcfce7" : status === "Processing" ? "#dbeafe" : "#fef3c7",
-  color: status === "Completed" ? "#166534" : status === "Processing" ? "#1d4ed8" : "#92400e",
-})

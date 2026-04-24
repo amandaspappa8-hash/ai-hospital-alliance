@@ -1,0 +1,66 @@
+You are a senior software architect and AI engineer.
+
+Analyze this project carefully before making any changes.
+
+PROJECT CONTEXT:
+This is an AI Hospital Platform with:
+- FastAPI backend (Python)
+- React + Vite web frontend (TypeScript)
+- Expo React Native mobile app (TypeScript)
+
+CORE FEATURES:
+- Patient management system
+- AI Doctor (chat + analysis)
+- Clinical routing system
+- Smart pharmacy & drug intelligence
+- Reports & verification system
+- PACS / radiology integration (DICOM)
+
+GOALS:
+- Make the system production-ready
+- Improve architecture stability
+- Remove duplication and technical debt
+- Ensure AI integration is reliable and scalable
+
+STEP 1 — UNDERSTAND PROJECT STRUCTURE
+Do NOT modify anything yet.
+
+Give me:
+1. Full architecture summary
+2. Backend entry points
+3. Frontend entry points
+4. Mobile entry points
+5. Data flow between frontend, mobile, and backend
+6. AI integration points
+7. Any duplicated logic or conflicting implementations
+
+STEP 2 — RISK ANALYSIS
+Identify:
+- Broken imports
+- Duplicate endpoints
+- Conflicting auth systems
+- Hardcoded data
+- Potential crashes
+- Performance issues
+
+STEP 3 — PRIORITY FIX PLAN
+Create:
+PHASE 1 — Critical fixes
+PHASE 2 — Stability improvements
+PHASE 3 — AI system improvements
+PHASE 4 — Production readiness
+
+STEP 4 — SAFE EDIT RULES
+- NEVER break existing working endpoints
+- DO NOT modify multiple layers at once
+- ALWAYS explain changes before applying them
+- Make small, controlled updates only
+
+STEP 5 — FOCUS MODE
+Start ONLY with:
+backend/app/main.py
+backend/app/services/
+
+Do NOT touch frontend or mobile yet.
+
+Now start with STEP 1 only.

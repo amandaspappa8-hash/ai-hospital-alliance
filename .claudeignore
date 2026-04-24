@@ -1,0 +1,14 @@
+node_modules/
+venv/
+dist/
+build/
+.next/
+coverage/
+__pycache__/
+*.log
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.pdf
+dicom/

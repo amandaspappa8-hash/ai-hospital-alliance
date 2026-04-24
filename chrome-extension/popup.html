@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { width: 320px; background: #0a0f1e; color: white; font-family: Inter, Arial, sans-serif; }
+    .header { padding: 16px; background: linear-gradient(135deg,#1d4ed8,#7c3aed); display: flex; align-items: center; gap: 10px; }
+    .header h1 { font-size: 14px; font-weight: 800; }
+    .header p { font-size: 10px; opacity: 0.8; margin-top: 2px; }
+    .status { padding: 8px 16px; background: rgba(16,185,129,0.1); border-bottom: 1px solid rgba(16,185,129,0.2); display: flex; align-items: center; gap: 6px; font-size: 11px; color: #4ade80; }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    .links { padding: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .link { padding: 10px; border-radius: 10px; text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; transition: all 0.15s; border: 1px solid transparent; }
+    .link:hover { transform: translateY(-1px); }
+    .link .icon { font-size: 20px; }
+    .link .label { font-size: 11px; font-weight: 600; }
+    .search { padding: 0 12px 12px; }
+    .search input { width: 100%; padding: 8px 12px; border-radius: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(59,130,246,0.3); color: white; font-size: 12px; outline: none; }
+    .footer { padding: 8px 12px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: center; }
+    .open-btn { padding: 6px 14px; border-radius: 8px; background: linear-gradient(135deg,#2563eb,#7c3aed); color: white; border: none; font-size: 11px; font-weight: 700; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div style="font-size:24px">🏥</div>
+    <div>
+      <h1>AI Hospital Alliance</h1>
+      <p>Smart Medical Platform</p>
+    </div>
+  </div>
+
+  <div class="status">
+    <div class="dot"></div>
+    System Online — Connected
+  </div>
+
+  <div class="search">
+    <input type="text" placeholder="🔍 Search patients, drugs, studies..." id="searchInput" style="margin-top:10px" />
+  </div>
+
+  <div class="links">
+    <a class="link" href="#" onclick="open('/dashboard')" style="background:rgba(59,130,246,0.1);border-color:rgba(59,130,246,0.2);">
+      <span class="icon">⚡</span><span class="label" style="color:#60a5fa">Dashboard</span>
+    </a>
+    <a class="link" href="#" onclick="open('/patients')" style="background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.2);">
+      <span class="icon">🧑‍⚕️</span><span class="label" style="color:#4ade80">Patients</span>
+    </a>
+    <a class="link" href="#" onclick="open('/pharmacy')" style="background:rgba(244,63,94,0.1);border-color:rgba(244,63,94,0.2);">
+      <span class="icon">💊</span><span class="label" style="color:#fb7185">Pharmacy</span>
+    </a>
+    <a class="link" href="#" onclick="open('/radiology')" style="background:rgba(249,115,22,0.1);border-color:rgba(249,115,22,0.2);">
+      <span class="icon">🩻</span><span class="label" style="color:#fb923c">Radiology</span>
+    </a>
+    <a class="link" href="#" onclick="open('/labs')" style="background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.2);">
+      <span class="icon">🧬</span><span class="label" style="color:#4ade80">Laboratory</span>
+    </a>
+    <a class="link" href="#" onclick="open('/ai-routing')" style="background:rgba(99,102,241,0.1);border-color:rgba(99,102,241,0.2);">
+      <span class="icon">🤖</span><span class="label" style="color:#818cf8">AI Engine</span>
+    </a>
+  </div>
+
+  <div class="footer">
+    <span style="font-size:10px;color:#475569">AI Hospital Alliance v1.0</span>
+    <button class="open-btn" onclick="chrome.tabs.create({url:'http://localhost:5173/dashboard'})">
+      Open Platform →
+    </button>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

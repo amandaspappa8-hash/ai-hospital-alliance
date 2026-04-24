@@ -1,3 +1,6 @@
+import os
+import httpx
+from backend.app import models
 from datetime import datetime
 import json
 import urllib.parse
@@ -5,7 +8,8 @@ from urllib.request import urlopen, Request
 import json
 from urllib.request import urlopen
 from urllib.error import URLError, HTTPError
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect, Request as FastAPIRequest
+from backend.app.services.ai_engine import ask_ai
 from fastapi import Depends, HTTPException, Query
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,6 +31,12 @@ app.add_middleware(
         "http://127.0.0.1:5173",
         "http://localhost:4173",
         "http://127.0.0.1:4173",
+        "http://localhost",
+        "http://localhost:80",
+        "http://127.0.0.1",
+        "http://127.0.0.1:80",
+        "http://192.168.0.106",
+        "http://192.168.0.106:80",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -1937,36 +1947,17 @@ def verify_secure(report_id: str, payload: dict):
         }
 
 
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import rsa, padding
+def sign_data(data: bytes) -> str:
+    import hmac, hashlib
+    key = os.environ.get("SECRET_KEY", "aiha-super-secret-key-2026").encode()
+    return hmac.new(key, data, hashlib.sha256).hexdigest()
 
-# Generate keys (once)
-PRIVATE_KEY = rsa.generate_private_key(
-    public_exponent=65537,
-    key_size=2048
-)
 
-PUBLIC_KEY = PRIVATE_KEY.public_key()
+def verify_signature(data: bytes, signature: str) -> bool:
+    import hmac
+    expected = sign_data(data)
+    return hmac.compare_digest(expected, signature)
 
-def sign_data(data: bytes):
-    signature = PRIVATE_KEY.sign(
-        data,
-        padding.PKCS1v15(),
-        hashes.SHA256()
-    )
-    return signature.hex()
-
-def verify_signature(data: bytes, signature_hex: str):
-    try:
-        PUBLIC_KEY.verify(
-            bytes.fromhex(signature_hex),
-            data,
-            padding.PKCS1v15(),
-            hashes.SHA256()
-        )
-        return True
-    except Exception:
-        return False
 
 @app.post("/sign-report/{report_id}")
 def sign_report(report_id: str, payload: dict):
@@ -1989,7 +1980,7 @@ def verify_report_signature(report_id: str, payload: dict, signature: str):
 
     return {
         "status": "VALID" if valid else "INVALID",
-        "security": "RSA SIGNATURE"
+        "security": "HMAC-SHA256"
     }
 
 
@@ -2125,36 +2116,11 @@ def global_drug_info(drug: str):
         "global_note": "Monitor INR regularly"
     }
 
-from backend.app.db import SessionLocal
+from backend.app.db import SessionLocal, get_db
+from sqlalchemy.orm import Session
 from backend.app.models import User
 from backend.app.auth import verify_password, create_token
 
-@app.post("/auth/login")
-def login(payload: dict):
-    db = SessionLocal()
-
-    user = db.query(User).filter(User.username == payload.get("username")).first()
-
-    if not user:
-        return {"error": "User not found"}
-
-    if not verify_password(payload.get("password"), user.password):
-        return {"error": "Wrong password"}
-
-    token = create_token({
-        "user_id": user.id,
-        "role": user.role,
-        "hospital_id": user.hospital_id
-    })
-
-    return {
-        "access_token": token,
-        "user": {
-            "username": user.username,
-            "role": user.role,
-            "hospital_id": user.hospital_id
-        }
-    }
 
 @app.post("/auth/jwt-login")
 def jwt_login(payload: dict):
@@ -2348,3 +2314,250 @@ def diagnose(payload: dict):
     result = auto_diagnose(mask)
 
     return result
+from backend.app.db import Base, engine
+Base.metadata.create_all(bind=engine)
+
+# ── WebSocket Real-time Alerts ────────────────────────────────────────────────
+import asyncio
+import uuid
+from typing import List
+
+class ConnectionManager:
+    def __init__(self):
+        self.active: List[WebSocket] = []
+
+    async def connect(self, ws: WebSocket):
+        await ws.accept()
+        self.active.append(ws)
+
+    def disconnect(self, ws: WebSocket):
+        if ws in self.active:
+            self.active.remove(ws)
+
+    async def broadcast(self, data: dict):
+        import json
+        msg = json.dumps(data)
+        for ws in self.active.copy():
+            try:
+                await ws.send_text(msg)
+            except Exception:
+                self.active.remove(ws)
+
+ws_manager = ConnectionManager()
+
+@app.websocket("/ws/alerts")
+async def websocket_alerts(websocket: WebSocket):
+    await ws_manager.connect(websocket)
+    try:
+        # Send demo alerts every 30 seconds
+        import random, datetime
+        demo_alerts = [
+            {"type": "patient",  "message": "Patient P-1003 oxygen saturation dropped to 87%", "severity": "critical", "patientId": "P-1003"},
+            {"type": "lab",      "message": "Critical lab result: Troponin 1.2 ng/mL for P-1001", "severity": "critical", "patientId": "P-1001"},
+            {"type": "pharmacy", "message": "Drug interaction detected: Warfarin + Aspirin for P-1001", "severity": "high", "patientId": "P-1001"},
+            {"type": "radiology","message": "AI detected abnormality in CT Chest — P-1002", "severity": "high", "patientId": "P-1002"},
+            {"type": "alert",    "message": "ICU bed capacity at 90% — critical threshold", "severity": "moderate"},
+        ]
+        while True:
+            await asyncio.sleep(30)
+            alert = random.choice(demo_alerts)
+            await ws_manager.broadcast({
+                **alert,
+                "id": str(uuid.uuid4()),
+                "timestamp": datetime.datetime.utcnow().isoformat(),
+            })
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket)
+
+@app.post("/claude/analyze", response_model=None)
+async def claude_analyze(req: FastAPIRequest):
+    body = await req.json()
+    async with httpx.AsyncClient(timeout=30) as client:
+        res = await client.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "Content-Type": "application/json",
+                "anthropic-version": "2023-06-01",
+                "x-api-key": os.environ.get("ANTHROPIC_API_KEY", ""),
+            },
+            json=body
+        )
+    return res.json()
+
+# ── Patient CRUD ──────────────────────────────────────────────────────────────
+
+@app.post("/groq/chat")
+async def groq_chat(req: FastAPIRequest):
+    import httpx
+    body = await req.json()
+    message = body.get("message", "")
+    mode = body.get("mode", "default")
+    language = body.get("language", "en")
+    history = body.get("history", [])
+    
+    prompts = {
+        "triage": "You are an AI medical triage specialist. Assess symptoms: CRITICAL|URGENT|SEMI-URGENT|NON-URGENT.",
+        "lab": "You are an AI lab interpreter. Flag HIGH/LOW/CRITICAL/NORMAL.",
+        "report": "You are an AI medical report generator.",
+        "decision": "You are an AI clinical decision support system.",
+        "default": "You are CareBot, an AI medical assistant.",
+        "cardiology": "You are an expert AI cardiologist (ACC/AHA guidelines).",
+        "neurology": "You are an expert AI neurologist (AAN guidelines).",
+        "emergency": "You are an expert AI emergency physician (ATLS/ACLS).",
+        "pediatrics": "You are an expert AI pediatrician (AAP/WHO).",
+        "pharmacy": "You are an expert AI clinical pharmacist (FDA/USP).",
+    }
+    lang_suffix = {"ar": "\n\nأجب باللغة العربية.", "fr": "\n\nRépondez en français.", "en": ""}
+    system = prompts.get(mode, prompts["default"]) + lang_suffix.get(language, "")
+    
+    messages = [{"role": "system", "content": system}]
+    for m in history[-12:]:
+        if m.get("role") in ("user","assistant"):
+            messages.append({"role": m["role"], "content": m.get("content","")})
+    messages.append({"role": "user", "content": message})
+    
+    import os
+    groq_key = os.environ.get("GROQ_API_KEY", "")
+    if not groq_key:
+        return {"response": "AI unavailable — GROQ_API_KEY not set", "mode": mode}
+    
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        res = await client.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
+            json={"model": "llama-3.3-70b-versatile", "messages": messages, "max_tokens": 1500}
+        )
+        data = res.json()
+        reply = data["choices"][0]["message"]["content"]
+    return {"response": reply, "message": reply, "mode": mode}
+
+
+@app.post("/patients", response_model=None)
+def create_patient(data: dict, db: Session = Depends(get_db)):
+    from backend.app.models import Patient
+    import uuid
+    p = Patient(
+        id=f"P-{str(uuid.uuid4())[:6].upper()}",
+        name=data.get("name",""),
+        age=data.get("age",0),
+        gender=data.get("gender","Male"),
+        phone=data.get("phone",""),
+        condition=data.get("condition",""),
+        department_id=None,
+        hospital_id="H-001",
+        status=data.get("status","Active"),
+    )
+    db.add(p); db.commit(); db.refresh(p)
+    return {"id": p.id, "name": p.name, "status": p.status}
+
+@app.put("/patients/{patient_id}", response_model=None)
+def update_patient(patient_id: str, data: dict, db: Session = Depends(get_db)):
+    from backend.app.models import Patient
+    p = db.query(Patient).filter(Patient.id == patient_id).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    for k, v in data.items():
+        if hasattr(p, k) and k not in ("id","hospital_id"):
+            setattr(p, k, v)
+    db.commit()
+    return {"success": True}
+
+@app.delete("/patients/{patient_id}", response_model=None)
+def delete_patient(patient_id: str, db: Session = Depends(get_db)):
+    from backend.app.models import Patient
+    p = db.query(Patient).filter(Patient.id == patient_id).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    db.delete(p); db.commit()
+    return {"success": True}
+
+# ── FHIR R4 Endpoints ─────────────────────────────────────────────────────────
+from backend.app.fhir import patient_to_fhir, observation_to_fhir, bundle_response
+from backend.app.security import create_access_token, create_refresh_token, verify_refresh_token, check_rate_limit, AuditLogger
+from backend.app.tenant import TenantContext
+
+@app.get("/fhir/R4/Patient", response_model=None)
+def fhir_patients(db: Session = Depends(get_db)):
+    from backend.app.models import Patient
+    patients = db.query(Patient).all()
+    resources = [patient_to_fhir(p) for p in patients]
+    return bundle_response(resources)
+
+@app.get("/fhir/R4/Patient/{patient_id}", response_model=None)
+def fhir_patient(patient_id: str, db: Session = Depends(get_db)):
+    from backend.app.models import Patient
+    p = db.query(Patient).filter(Patient.id == patient_id).first()
+    if not p:
+        raise HTTPException(404, "Patient not found")
+    return patient_to_fhir(p)
+
+@app.get("/fhir/R4/Observation", response_model=None)
+def fhir_observations(patient: str = None, db: Session = Depends(get_db)):
+    from backend.app.models import NursingVital
+    q = db.query(NursingVital)
+    if patient:
+        q = q.filter(NursingVital.patient_id == patient)
+    vitals = q.all()
+    resources = [observation_to_fhir(v, v.patient_id) for v in vitals]
+    return bundle_response(resources)
+
+@app.get("/fhir/R4/metadata", response_model=None)
+def fhir_capability():
+    return {
+        "resourceType": "CapabilityStatement",
+        "status": "active",
+        "kind": "instance",
+        "fhirVersion": "4.0.1",
+        "format": ["json"],
+        "software": {"name": "AI Hospital Alliance FHIR Server", "version": "1.0.0"},
+        "rest": [{"mode": "server", "resource": [
+            {"type": "Patient",     "interaction": [{"code": "read"}, {"code": "search-type"}]},
+            {"type": "Observation", "interaction": [{"code": "read"}, {"code": "search-type"}]},
+        ]}]
+    }
+
+# ── Auth Refresh Token ────────────────────────────────────────────────────────
+@app.post("/auth/refresh", response_model=None)
+def refresh_token(data: dict):
+    token = data.get("refresh_token", "")
+    payload = verify_refresh_token(token)
+    if not payload:
+        raise HTTPException(401, "Invalid or expired refresh token")
+    username = payload.get("sub")
+    new_access = create_access_token({"sub": username})
+    new_refresh = create_refresh_token({"sub": username})
+    return {"access_token": new_access, "refresh_token": new_refresh}
+
+# ── Audit Log endpoint ────────────────────────────────────────────────────────
+@app.get("/audit/logs", response_model=None)
+def get_audit_logs(limit: int = 50, db: Session = Depends(get_db)):
+    try:
+        from backend.app.models import AuditLog
+        logs = db.query(AuditLog).order_by(AuditLog.timestamp.desc()).limit(limit).all()
+        return [{"id": l.id, "user_id": l.user_id, "action": l.action, "resource": l.resource,
+                 "success": l.success, "timestamp": str(l.timestamp), "ip": l.ip_address} for l in logs]
+    except:
+        return []
+
+# ── Multi-tenant info ────────────────────────────────────────────────────────
+@app.get("/tenant/{hospital_id}", response_model=None)
+def get_tenant_info(hospital_id: str):
+    from backend.app.tenant import TENANT_REGISTRY
+    tenant = TENANT_REGISTRY.get(hospital_id)
+    if not tenant:
+        raise HTTPException(404, "Tenant not found")
+    return {"hospital_id": hospital_id, **tenant}
+
+@app.get("/tenants", response_model=None)
+def list_tenants():
+    from backend.app.tenant import TENANT_REGISTRY
+    return [{"id": k, **v} for k, v in TENANT_REGISTRY.items()]
+
+
+# ===== Smart AI Endpoint =====
+@app.post("/ai/smart")
+def smart_ai(payload: dict):
+    msg = payload.get("message", "")
+    provider = payload.get("provider", "auto")
+    return {"reply": ask_ai(msg, provider)}
+

@@ -1,643 +1,514 @@
-import { useEffect, useMemo, useState } from "react"
-import { Beaker, Microscope, Dna } from "lucide-react"
-import SectionIconBadge from "@/components/app/SectionIconBadge"
-import { apiGet, apiPost } from "@/lib/api"
+import { useState } from "react"
+import { getUser } from "@/lib/auth-storage"
 
-type LabStatus = "Pending" | "Processing" | "Completed" | "Abnormal"
-type LabSection = "classical" | "specialized" | "genetics"
+type Test = { name: string; code?: string; turnaround?: string; note?: string }
+type Category = { name: string; icon: string; color: string; tests: Test[] }
 
-type LabCatalog = {
-  classical: string[]
-  specialized: string[]
-  genetics: string[]
-}
-
-type Patient = {
-  id: string
-  name: string
-}
-
-type LabOrder = {
-  id: string
-  patientId: string
-  patientName: string
-  section: LabSection
-  tests: string[]
-  priority: string
-  status: LabStatus | string
-  result?: string
-}
-
-function statusClasses(status: string) {
-  switch (status) {
-    case "Completed":
-      return "bg-emerald-100 text-emerald-700 border border-emerald-200"
-    case "Processing":
-      return "bg-lime-100 text-lime-700 border border-lime-200"
-    case "Pending":
-      return "bg-green-100 text-green-700 border border-green-200"
-    case "Abnormal":
-      return "bg-rose-100 text-rose-700 border border-rose-200"
-    default:
-      return "bg-slate-100 text-slate-700 border border-slate-200"
-  }
-}
-
-function OverviewLikeCard({
-  title,
-  value,
-  selected,
-  onClick,
-  bg,
-  border,
-  icon,
-}: {
-  title: string
-  value: string
-  selected: boolean
-  onClick: () => void
-  bg: string
-  border: string
-  icon: React.ReactNode
-}) {
-  return (
-    <button onClick={onClick} style={{ textAlign: "left", width: "100%" }}>
-      <div
-        style={{
-          background: bg,
-          border: selected ? "2px solid #93c5fd" : `1px solid ${border}`,
-          borderRadius: "28px",
-          padding: "22px",
-          minHeight: "170px",
-          boxShadow: "0 8px 24px rgba(15,23,42,0.10)",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-          transition: "all 0.2s ease",
-        }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-          <div style={{ fontSize: 15, color: "#64748b", fontWeight: 600 }}>{title}</div>
-          {icon}
-        </div>
-        <div style={{ fontSize: 56, fontWeight: 700, lineHeight: 1, color: "#334155" }}>{value}</div>
-      </div>
-    </button>
-  )
-}
+const CATALOG: Category[] = [
+  {
+    name: "Complete Blood Count (CBC)",
+    icon: "🩸", color: "#ef4444",
+    tests: [
+      { name: "CBC with Differential", code: "CBC-DIFF", turnaround: "2h" },
+      { name: "Hemoglobin & Hematocrit", code: "HGB-HCT", turnaround: "1h" },
+      { name: "WBC Count", code: "WBC", turnaround: "1h" },
+      { name: "Platelet Count", code: "PLT", turnaround: "1h" },
+      { name: "RBC Count", code: "RBC", turnaround: "1h" },
+      { name: "Reticulocyte Count", code: "RETIC", turnaround: "3h" },
+      { name: "Peripheral Blood Smear", code: "PBS", turnaround: "4h" },
+      { name: "ESR (Erythrocyte Sedimentation Rate)", code: "ESR", turnaround: "2h" },
+    ]
+  },
+  {
+    name: "Metabolic & Chemistry Panel",
+    icon: "⚗️", color: "#f59e0b",
+    tests: [
+      { name: "Basic Metabolic Panel (BMP)", code: "BMP", turnaround: "2h" },
+      { name: "Comprehensive Metabolic Panel (CMP)", code: "CMP", turnaround: "3h" },
+      { name: "Fasting Blood Glucose", code: "FBG", turnaround: "1h" },
+      { name: "Random Blood Glucose", code: "RBG", turnaround: "30min" },
+      { name: "HbA1c (Glycated Hemoglobin)", code: "HBA1C", turnaround: "4h" },
+      { name: "Urea / BUN", code: "UREA", turnaround: "2h" },
+      { name: "Creatinine + eGFR", code: "CREAT", turnaround: "2h" },
+      { name: "Uric Acid", code: "UA", turnaround: "2h" },
+      { name: "Electrolytes (Na, K, Cl, CO2)", code: "ELEC", turnaround: "1h" },
+      { name: "Calcium (Total & Ionized)", code: "CA", turnaround: "2h" },
+      { name: "Magnesium", code: "MG", turnaround: "2h" },
+      { name: "Phosphorus", code: "PHOS", turnaround: "2h" },
+      { name: "Total Protein & Albumin", code: "TP-ALB", turnaround: "2h" },
+      { name: "C-Reactive Protein (CRP)", code: "CRP", turnaround: "2h" },
+      { name: "Procalcitonin (PCT)", code: "PCT", turnaround: "3h" },
+    ]
+  },
+  {
+    name: "Liver Function Tests (LFT)",
+    icon: "🫀", color: "#f97316",
+    tests: [
+      { name: "ALT (Alanine Aminotransferase)", code: "ALT", turnaround: "2h" },
+      { name: "AST (Aspartate Aminotransferase)", code: "AST", turnaround: "2h" },
+      { name: "ALP (Alkaline Phosphatase)", code: "ALP", turnaround: "2h" },
+      { name: "GGT (Gamma-Glutamyl Transferase)", code: "GGT", turnaround: "2h" },
+      { name: "Total & Direct Bilirubin", code: "BILI", turnaround: "2h" },
+      { name: "Albumin", code: "ALB", turnaround: "2h" },
+      { name: "Total Protein", code: "TP", turnaround: "2h" },
+      { name: "LDH (Lactate Dehydrogenase)", code: "LDH", turnaround: "2h" },
+      { name: "Ammonia", code: "NH3", turnaround: "1h", note: "STAT only" },
+      { name: "Protein Electrophoresis (SPEP)", code: "SPEP", turnaround: "24h" },
+    ]
+  },
+  {
+    name: "Cardiac Markers",
+    icon: "❤️", color: "#dc2626",
+    tests: [
+      { name: "Troponin I / Troponin T (hsTnT)", code: "TROP", turnaround: "1h", note: "High sensitivity" },
+      { name: "CK (Creatine Kinase)", code: "CK", turnaround: "2h" },
+      { name: "CK-MB", code: "CKMB", turnaround: "2h" },
+      { name: "BNP (B-type Natriuretic Peptide)", code: "BNP", turnaround: "1h" },
+      { name: "NT-proBNP", code: "NTBNP", turnaround: "2h" },
+      { name: "Myoglobin", code: "MYO", turnaround: "1h" },
+      { name: "D-Dimer", code: "DDIM", turnaround: "1h" },
+      { name: "Fibrinogen", code: "FIB", turnaround: "3h" },
+      { name: "Homocysteine", code: "HCY", turnaround: "6h" },
+    ]
+  },
+  {
+    name: "Lipid Profile",
+    icon: "🫧", color: "#a855f7",
+    tests: [
+      { name: "Total Cholesterol", code: "CHOL", turnaround: "2h" },
+      { name: "HDL Cholesterol", code: "HDL", turnaround: "2h" },
+      { name: "LDL Cholesterol (direct)", code: "LDL", turnaround: "2h" },
+      { name: "Triglycerides", code: "TRIG", turnaround: "2h" },
+      { name: "VLDL Cholesterol", code: "VLDL", turnaround: "2h" },
+      { name: "Non-HDL Cholesterol", code: "NHDL", turnaround: "2h" },
+      { name: "Apolipoprotein A1 & B", code: "APO", turnaround: "6h" },
+      { name: "Lipoprotein(a) [Lp(a)]", code: "LPA", turnaround: "8h" },
+    ]
+  },
+  {
+    name: "Coagulation & Thrombosis",
+    icon: "🩹", color: "#e11d48",
+    tests: [
+      { name: "PT / INR", code: "PT-INR", turnaround: "1h" },
+      { name: "aPTT", code: "APTT", turnaround: "1h" },
+      { name: "Thrombin Time", code: "TT", turnaround: "2h" },
+      { name: "Anti-Xa Level (Heparin monitoring)", code: "ANTIXA", turnaround: "4h" },
+      { name: "Protein C Activity", code: "PROTC", turnaround: "8h" },
+      { name: "Protein S Activity", code: "PROTS", turnaround: "8h" },
+      { name: "Antithrombin III", code: "AT3", turnaround: "8h" },
+      { name: "Factor V Leiden Mutation", code: "FVL", turnaround: "5 days" },
+      { name: "Prothrombin Gene Mutation (G20210A)", code: "PGM", turnaround: "5 days" },
+      { name: "Lupus Anticoagulant", code: "LA", turnaround: "5 days" },
+      { name: "Antiphospholipid Antibodies", code: "APLA", turnaround: "5 days" },
+      { name: "MTHFR Mutation", code: "MTHFR", turnaround: "5 days" },
+    ]
+  },
+  {
+    name: "Thyroid & Endocrine",
+    icon: "🦋", color: "#06b6d4",
+    tests: [
+      { name: "TSH (Thyroid Stimulating Hormone)", code: "TSH", turnaround: "4h" },
+      { name: "Free T3 (Triiodothyronine)", code: "FT3", turnaround: "4h" },
+      { name: "Free T4 (Thyroxine)", code: "FT4", turnaround: "4h" },
+      { name: "Anti-TPO Antibodies", code: "ANTITPO", turnaround: "6h" },
+      { name: "Anti-Thyroglobulin", code: "ANTITG", turnaround: "6h" },
+      { name: "Cortisol (AM/PM)", code: "CORT", turnaround: "4h" },
+      { name: "ACTH", code: "ACTH", turnaround: "6h" },
+      { name: "Prolactin", code: "PRL", turnaround: "4h" },
+      { name: "Growth Hormone", code: "GH", turnaround: "6h" },
+      { name: "IGF-1 (Somatomedin C)", code: "IGF1", turnaround: "8h" },
+      { name: "PTH (Parathyroid Hormone)", code: "PTH", turnaround: "4h" },
+      { name: "Vitamin D (25-OH)", code: "VITD", turnaround: "6h" },
+      { name: "Aldosterone", code: "ALDO", turnaround: "6h" },
+      { name: "Renin Activity", code: "RENIN", turnaround: "8h" },
+      { name: "Insulin + C-Peptide", code: "INS-CP", turnaround: "6h" },
+    ]
+  },
+  {
+    name: "Reproductive & Sex Hormones",
+    icon: "🧬", color: "#ec4899",
+    tests: [
+      { name: "FSH (Follicle Stimulating Hormone)", code: "FSH", turnaround: "4h" },
+      { name: "LH (Luteinizing Hormone)", code: "LH", turnaround: "4h" },
+      { name: "Estradiol (E2)", code: "E2", turnaround: "4h" },
+      { name: "Progesterone", code: "PROG", turnaround: "4h" },
+      { name: "Total & Free Testosterone", code: "TEST", turnaround: "6h" },
+      { name: "DHEA-Sulfate", code: "DHEAS", turnaround: "6h" },
+      { name: "Beta-hCG (Pregnancy)", code: "BHCG", turnaround: "1h" },
+      { name: "AMH (Anti-Müllerian Hormone)", code: "AMH", turnaround: "8h" },
+      { name: "SHBG (Sex Hormone Binding Globulin)", code: "SHBG", turnaround: "6h" },
+      { name: "Androstenedione", code: "ANDRO", turnaround: "8h" },
+    ]
+  },
+  {
+    name: "Immunology & Autoimmune Diseases",
+    icon: "🛡️", color: "#8b5cf6",
+    tests: [
+      { name: "ANA (Antinuclear Antibodies)", code: "ANA", turnaround: "24h", note: "SLE screening" },
+      { name: "Anti-dsDNA Antibodies", code: "DSDNA", turnaround: "24h", note: "SLE specific" },
+      { name: "Anti-Sm Antibodies", code: "ANTISM", turnaround: "3 days" },
+      { name: "Anti-SSA (Ro) / Anti-SSB (La)", code: "ROLA", turnaround: "3 days", note: "Sjögren's" },
+      { name: "Anti-Scl-70 (Topoisomerase I)", code: "SCL70", turnaround: "3 days", note: "Scleroderma" },
+      { name: "Anti-Jo-1", code: "JO1", turnaround: "3 days", note: "Myositis" },
+      { name: "Rheumatoid Factor (RF)", code: "RF", turnaround: "4h" },
+      { name: "Anti-CCP Antibodies", code: "ANTICCP", turnaround: "24h", note: "RA specific" },
+      { name: "ANCA (c-ANCA / p-ANCA)", code: "ANCA", turnaround: "24h", note: "Vasculitis" },
+      { name: "Anti-GBM (Goodpasture)", code: "ANTIGBM", turnaround: "3 days" },
+      { name: "Complement C3 & C4", code: "C3C4", turnaround: "8h" },
+      { name: "CH50 (Total Complement)", code: "CH50", turnaround: "8h" },
+      { name: "IgG, IgA, IgM (Immunoglobulins)", code: "IGS", turnaround: "8h" },
+      { name: "IgE (Total & Specific Allergen)", code: "IGE", turnaround: "24h" },
+      { name: "Anti-Mitochondrial Ab (AMA)", code: "AMA", turnaround: "3 days", note: "PBC" },
+      { name: "Anti-Smooth Muscle Ab (ASMA)", code: "ASMA", turnaround: "3 days", note: "Autoimmune hepatitis" },
+      { name: "Anti-LKM1", code: "LKM1", turnaround: "5 days" },
+      { name: "Cryoglobulins", code: "CRYO", turnaround: "5 days" },
+      { name: "Beta-2 Microglobulin", code: "B2M", turnaround: "6h" },
+      { name: "HLA Typing (A, B, C, DR, DQ)", code: "HLA", turnaround: "5 days", note: "Transplant" },
+    ]
+  },
+  {
+    name: "Tumor Markers & Oncology",
+    icon: "🔬", color: "#dc2626",
+    tests: [
+      { name: "PSA (Prostate Specific Antigen)", code: "PSA", turnaround: "4h" },
+      { name: "Free PSA / PSA Ratio", code: "FPSA", turnaround: "4h" },
+      { name: "AFP (Alpha-Fetoprotein)", code: "AFP", turnaround: "4h", note: "HCC / Testicular" },
+      { name: "CEA (Carcinoembryonic Antigen)", code: "CEA", turnaround: "4h", note: "Colorectal" },
+      { name: "CA 19-9", code: "CA199", turnaround: "6h", note: "Pancreatic" },
+      { name: "CA 125", code: "CA125", turnaround: "6h", note: "Ovarian" },
+      { name: "CA 15-3", code: "CA153", turnaround: "6h", note: "Breast" },
+      { name: "CA 72-4", code: "CA724", turnaround: "6h", note: "Gastric" },
+      { name: "HE4 (Human Epididymis Protein 4)", code: "HE4", turnaround: "8h", note: "Ovarian" },
+      { name: "Beta-hCG (Tumor marker)", code: "BHCG-T", turnaround: "4h" },
+      { name: "LDH (Lymphoma marker)", code: "LDH-T", turnaround: "2h" },
+      { name: "Calcitonin", code: "CALCI", turnaround: "6h", note: "Thyroid cancer" },
+      { name: "Thyroglobulin", code: "TG", turnaround: "6h", note: "Post-thyroidectomy" },
+      { name: "NSE (Neuron-Specific Enolase)", code: "NSE", turnaround: "8h", note: "Small cell lung" },
+      { name: "Cyfra 21-1", code: "CYFRA", turnaround: "8h", note: "NSCLC" },
+      { name: "SCC Antigen", code: "SCC", turnaround: "8h", note: "Squamous cell" },
+      { name: "Chromogranin A", code: "CGA", turnaround: "24h", note: "Neuroendocrine" },
+      { name: "S100 Protein", code: "S100", turnaround: "24h", note: "Melanoma" },
+    ]
+  },
+  {
+    name: "Nucleic Acid & PCR (DNA/RNA)",
+    icon: "🧫", color: "#10b981",
+    tests: [
+      { name: "COVID-19 RT-PCR", code: "COVID-PCR", turnaround: "4h" },
+      { name: "Influenza A/B PCR", code: "FLU-PCR", turnaround: "2h" },
+      { name: "RSV PCR", code: "RSV-PCR", turnaround: "2h" },
+      { name: "HBV DNA Quantitative", code: "HBV-DNA", turnaround: "24h" },
+      { name: "HCV RNA Quantitative", code: "HCV-RNA", turnaround: "24h" },
+      { name: "HIV-1 Viral Load", code: "HIV-VL", turnaround: "24h" },
+      { name: "CMV PCR (Quantitative)", code: "CMV-PCR", turnaround: "24h" },
+      { name: "EBV PCR (Quantitative)", code: "EBV-PCR", turnaround: "24h" },
+      { name: "HSV 1/2 PCR", code: "HSV-PCR", turnaround: "8h" },
+      { name: "VZV PCR", code: "VZV-PCR", turnaround: "8h" },
+      { name: "BK Virus PCR", code: "BKV-PCR", turnaround: "24h", note: "Transplant" },
+      { name: "Tuberculosis PCR (GeneXpert)", code: "TB-PCR", turnaround: "2h" },
+      { name: "Chlamydia / Gonorrhea PCR", code: "CT-GC", turnaround: "8h" },
+      { name: "HPV DNA Test (Genotyping)", code: "HPV-DNA", turnaround: "24h" },
+      { name: "Sepsis PCR Panel (SeptiFast)", code: "SEPSIS", turnaround: "6h" },
+      { name: "Meningitis/Encephalitis PCR Panel", code: "MEPAN", turnaround: "4h" },
+      { name: "Respiratory Pathogen Panel (FilmArray)", code: "RESP-PAN", turnaround: "2h" },
+      { name: "GI Pathogen PCR Panel", code: "GI-PAN", turnaround: "4h" },
+      { name: "Digital PCR (ddPCR)", code: "DDPCR", turnaround: "48h" },
+      { name: "mRNA Expression Analysis", code: "MRNA", turnaround: "5 days" },
+    ]
+  },
+  {
+    name: "Genetics & DNA Analysis",
+    icon: "🔭", color: "#6366f1",
+    tests: [
+      { name: "Whole Exome Sequencing (WES)", code: "WES", turnaround: "21 days", note: "Rare diseases" },
+      { name: "Whole Genome Sequencing (WGS)", code: "WGS", turnaround: "30 days" },
+      { name: "Chromosomal Microarray (CMA)", code: "CMA", turnaround: "14 days" },
+      { name: "Karyotyping", code: "KARYO", turnaround: "14 days" },
+      { name: "FISH (Fluorescence In Situ Hybridization)", code: "FISH", turnaround: "7 days" },
+      { name: "BRCA1 / BRCA2 Analysis", code: "BRCA", turnaround: "14 days", note: "Hereditary breast/ovarian" },
+      { name: "TP53 Mutation Analysis", code: "TP53", turnaround: "14 days", note: "Li-Fraumeni" },
+      { name: "EGFR Mutation (Lung)", code: "EGFR", turnaround: "10 days" },
+      { name: "KRAS / NRAS / BRAF", code: "RAS-RAF", turnaround: "10 days", note: "Colorectal/Melanoma" },
+      { name: "ALK / ROS1 Gene Fusion", code: "ALK-ROS", turnaround: "10 days", note: "Lung cancer" },
+      { name: "JAK2 V617F Mutation", code: "JAK2", turnaround: "7 days", note: "Myeloproliferative" },
+      { name: "BCR-ABL Quantitative (MRD)", code: "BCRABL", turnaround: "7 days", note: "CML monitoring" },
+      { name: "FLT3 / NPM1 (AML)", code: "AML-PAN", turnaround: "7 days" },
+      { name: "Factor V Leiden (DNA)", code: "FVL-DNA", turnaround: "7 days" },
+      { name: "HLA Typing (Next Gen)", code: "HLA-NGS", turnaround: "10 days" },
+      { name: "Pharmacogenomics Panel", code: "PGX", turnaround: "14 days", note: "Drug metabolism" },
+      { name: "Carrier Screening Panel", code: "CARRIER", turnaround: "14 days" },
+      { name: "Prenatal Genetic Screening (NIPT)", code: "NIPT", turnaround: "10 days" },
+      { name: "Copy Number Variation (CNV)", code: "CNV", turnaround: "14 days" },
+      { name: "Methylation Analysis", code: "METHYL", turnaround: "21 days" },
+      { name: "Oncology Somatic Mutation Panel", code: "ONCO-PAN", turnaround: "14 days" },
+      { name: "Hereditary Cancer Panel (50 genes)", code: "HCP50", turnaround: "21 days" },
+      { name: "Mitochondrial DNA Analysis", code: "MTDNA", turnaround: "21 days" },
+    ]
+  },
+  {
+    name: "Microbiology & Infectious Disease",
+    icon: "🦠", color: "#84cc16",
+    tests: [
+      { name: "Blood Culture (Aerobic + Anaerobic)", code: "BC", turnaround: "5 days" },
+      { name: "Urine Culture & Sensitivity", code: "UC", turnaround: "48h" },
+      { name: "Sputum Culture", code: "SC", turnaround: "48h" },
+      { name: "Wound Swab Culture", code: "WC", turnaround: "48h" },
+      { name: "Stool Culture & Ova/Parasites", code: "STOOL", turnaround: "48h" },
+      { name: "CSF Culture (Meningitis)", code: "CSF", turnaround: "72h", note: "STAT" },
+      { name: "AFB Culture (TB)", code: "AFB", turnaround: "6 weeks" },
+      { name: "Fungal Culture", code: "FUNGAL", turnaround: "4 weeks" },
+      { name: "HIV 1/2 Antibody + Ag", code: "HIV-AG", turnaround: "2h" },
+      { name: "HBsAg / Anti-HBs / HBeAg", code: "HBV-SER", turnaround: "4h" },
+      { name: "Anti-HCV", code: "HCV-AB", turnaround: "4h" },
+      { name: "RPR / VDRL (Syphilis)", code: "SYPH", turnaround: "4h" },
+      { name: "TPPA (Syphilis confirmatory)", code: "TPPA", turnaround: "8h" },
+      { name: "Malaria RDT & Smear", code: "MAL", turnaround: "1h" },
+      { name: "Brucella Serology", code: "BRUC", turnaround: "24h" },
+      { name: "Widal Test", code: "WIDAL", turnaround: "6h" },
+      { name: "Antifungal Sensitivity (MIC)", code: "AF-MIC", turnaround: "72h" },
+    ]
+  },
+  {
+    name: "Urinalysis & Renal",
+    icon: "🧪", color: "#0ea5e9",
+    tests: [
+      { name: "Urinalysis (Complete)", code: "UA-COMP", turnaround: "1h" },
+      { name: "Urine Microscopy", code: "UA-MICRO", turnaround: "1h" },
+      { name: "Urine Protein / Creatinine Ratio", code: "PCR-U", turnaround: "2h" },
+      { name: "24h Urine Protein", code: "24H-PROT", turnaround: "4h" },
+      { name: "Urine Albumin/Creatinine (ACR)", code: "ACR", turnaround: "2h", note: "Diabetic nephropathy" },
+      { name: "Urine Electrolytes (Na, K, Cl)", code: "UE", turnaround: "2h" },
+      { name: "Urine Osmolality", code: "U-OSM", turnaround: "2h" },
+      { name: "Cystatin C", code: "CYS-C", turnaround: "4h", note: "Better GFR marker" },
+      { name: "Beta-2 Microglobulin (Urine)", code: "B2M-U", turnaround: "8h" },
+    ]
+  },
+  {
+    name: "Historical Disease & Prior Exposure",
+    icon: "📋", color: "#94a3b8",
+    tests: [
+      { name: "Anti-HAV IgG (Hepatitis A immunity)", code: "HAV-IGG", turnaround: "6h" },
+      { name: "Anti-HBc IgG (past HBV infection)", code: "HBCAB", turnaround: "4h" },
+      { name: "Anti-HCV (past HCV exposure)", code: "HCV-PAST", turnaround: "4h" },
+      { name: "Rubella IgG (immunity)", code: "RUB-IGG", turnaround: "6h" },
+      { name: "CMV IgG (prior infection)", code: "CMV-IGG", turnaround: "6h" },
+      { name: "EBV VCA IgG (prior EBV)", code: "EBV-IGG", turnaround: "6h" },
+      { name: "Toxoplasma IgG", code: "TOXO-IGG", turnaround: "6h" },
+      { name: "HSV 1/2 IgG", code: "HSV-IGG", turnaround: "6h" },
+      { name: "Varicella-Zoster IgG", code: "VZV-IGG", turnaround: "6h" },
+      { name: "Measles IgG (immunity)", code: "MEAS-IGG", turnaround: "6h" },
+      { name: "Mumps IgG", code: "MUMP-IGG", turnaround: "6h" },
+      { name: "IGRA (TB — QuantiFERON)", code: "IGRA", turnaround: "24h", note: "Latent TB" },
+      { name: "Brucella IgG/IgM (past brucellosis)", code: "BRUC-IGG", turnaround: "24h" },
+      { name: "Rheumatic Fever (ASO Titre)", code: "ASO", turnaround: "4h" },
+      { name: "Lyme Disease IgG (past exposure)", code: "LYME-IGG", turnaround: "24h" },
+      { name: "HIV-1 Western Blot (confirmatory)", code: "HIV-WB", turnaround: "48h" },
+    ]
+  },
+  {
+    name: "Drug Monitoring & Toxicology",
+    icon: "💊", color: "#f43f5e",
+    tests: [
+      { name: "Digoxin Level", code: "DIG", turnaround: "4h" },
+      { name: "Vancomycin Trough/Peak", code: "VANC", turnaround: "2h" },
+      { name: "Aminoglycoside Levels", code: "AMINO", turnaround: "2h" },
+      { name: "Lithium Level", code: "LITHI", turnaround: "2h" },
+      { name: "Phenytoin Level", code: "PHENY", turnaround: "2h" },
+      { name: "Valproate Level", code: "VALP", turnaround: "2h" },
+      { name: "Carbamazepine Level", code: "CARBA", turnaround: "4h" },
+      { name: "Cyclosporine (Tacrolimus)", code: "CNI", turnaround: "4h", note: "Transplant" },
+      { name: "Methotrexate Level", code: "MTX", turnaround: "4h" },
+      { name: "Paracetamol Level (OD)", code: "PARA-OD", turnaround: "1h", note: "Overdose" },
+      { name: "Salicylate Level", code: "SAL", turnaround: "1h" },
+      { name: "Toxicology Screen (Urine)", code: "TOX-U", turnaround: "2h" },
+      { name: "Heavy Metal Screen (Pb, As, Hg)", code: "HEAVY", turnaround: "5 days" },
+      { name: "Alcohol (Ethanol) Level", code: "ETOH", turnaround: "1h" },
+    ]
+  },
+  {
+    name: "Vitamins & Nutritional Status",
+    icon: "🌿", color: "#22c55e",
+    tests: [
+      { name: "Vitamin D (25-OH D3)", code: "VITD3", turnaround: "6h" },
+      { name: "Vitamin B12 (Cobalamin)", code: "B12", turnaround: "6h" },
+      { name: "Folate (Folic Acid)", code: "FOLATE", turnaround: "6h" },
+      { name: "Vitamin B1 (Thiamine)", code: "B1", turnaround: "24h" },
+      { name: "Vitamin B6 (Pyridoxine)", code: "B6", turnaround: "24h" },
+      { name: "Vitamin A (Retinol)", code: "VITA", turnaround: "24h" },
+      { name: "Vitamin E (Tocopherol)", code: "VITE", turnaround: "24h" },
+      { name: "Zinc", code: "ZINC", turnaround: "24h" },
+      { name: "Copper", code: "COPPER", turnaround: "24h" },
+      { name: "Selenium", code: "SELEN", turnaround: "5 days" },
+      { name: "Iron Studies (Fe, Ferritin, TIBC, Transferrin)", code: "IRON", turnaround: "4h" },
+      { name: "Pre-albumin (Prealbumin)", code: "PREAL", turnaround: "6h", note: "Nutritional marker" },
+    ]
+  },
+]
 
 export default function LabCatalogPage() {
-  const [query, setQuery] = useState("")
-  const [selectedOrderId, setSelectedOrderId] = useState("")
-  const [selectedSection, setSelectedSection] = useState<LabSection>("classical")
-  const [selectedTests, setSelectedTests] = useState<string[]>([])
-  const [interpretation, setInterpretation] = useState(
-    "Inflammatory marker is elevated. Clinical correlation is recommended."
+  const [search, setSearch] = useState("")
+  const [selectedCat, setSelectedCat] = useState<string | null>(null)
+  const [selectedTest, setSelectedTest] = useState<Test | null>(null)
+  const user = getUser()
+
+  const filtered = CATALOG.map(cat => ({
+    ...cat,
+    tests: cat.tests.filter(t =>
+      t.name.toLowerCase().includes(search.toLowerCase()) ||
+      t.code?.toLowerCase().includes(search.toLowerCase())
+    )
+  })).filter(cat =>
+    (selectedCat ? cat.name === selectedCat : true) &&
+    cat.tests.length > 0
   )
-  const [resultText, setResultText] = useState("")
-  const [catalog, setCatalog] = useState<LabCatalog>({
-    classical: [],
-    specialized: [],
-    genetics: [],
-  })
-  const [patients, setPatients] = useState<Patient[]>([])
-  const [selectedPatientId, setSelectedPatientId] = useState("")
-  const [orders, setOrders] = useState<LabOrder[]>([])
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [savingResult, setSavingResult] = useState(false)
-  const [error, setError] = useState("")
 
-  const selectedPatient =
-    patients.find((p) => p.id === selectedPatientId) ?? patients[0]
-
-  async function loadBaseData() {
-    try {
-      setLoading(true)
-      setError("")
-
-      const [catalogData, patientsData] = await Promise.all([
-        apiGet<LabCatalog>("/labs/catalog"),
-        apiGet<Patient[]>("/patients"),
-      ])
-
-      setCatalog(catalogData)
-      setPatients(Array.isArray(patientsData) ? patientsData : [])
-
-      if (Array.isArray(patientsData) && patientsData.length > 0) {
-        setSelectedPatientId((current) => current || patientsData[0].id)
-      }
-    } catch (err) {
-      console.error(err)
-      setError("Failed to load laboratory base data")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function loadPatientOrders(patientId: string) {
-    try {
-      const ordersData = await apiGet<LabOrder[]>(`/labs/orders/${patientId}`)
-      setOrders(Array.isArray(ordersData) ? ordersData : [])
-      if (Array.isArray(ordersData) && ordersData.length > 0) {
-        setSelectedOrderId(ordersData[0].id)
-      } else {
-        setSelectedOrderId("")
-        setResultText("")
-      }
-    } catch (err) {
-      console.error(err)
-      setError("Failed to load patient lab orders")
-    }
-  }
-
-  useEffect(() => {
-    loadBaseData()
-  }, [])
-
-  useEffect(() => {
-    if (selectedPatientId) {
-      loadPatientOrders(selectedPatientId)
-    }
-  }, [selectedPatientId])
-
-  const classicalTests = catalog.classical ?? []
-  const specializedTests = catalog.specialized ?? []
-  const geneticsTests = catalog.genetics ?? []
-
-  const filteredOrders = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return orders
-    return orders.filter(
-      (order) =>
-        order.id.toLowerCase().includes(q) ||
-        order.patientId.toLowerCase().includes(q) ||
-        order.patientName.toLowerCase().includes(q) ||
-        order.tests.join(" ").toLowerCase().includes(q) ||
-        order.section.toLowerCase().includes(q)
-    )
-  }, [orders, query])
-
-  const selectedOrder =
-    filteredOrders.find((o) => o.id === selectedOrderId) ??
-    orders.find((o) => o.id === selectedOrderId) ??
-    orders[0]
-
-  useEffect(() => {
-    setResultText(selectedOrder?.result ?? "")
-  }, [selectedOrderId, selectedOrder?.result])
-
-  function toggleTest(testName: string) {
-    setSelectedTests((prev) =>
-      prev.includes(testName)
-        ? prev.filter((item) => item !== testName)
-        : [...prev, testName]
-    )
-  }
-
-  async function createLabOrder() {
-    if (!selectedPatient) {
-      setError("Select a patient first")
-      return
-    }
-
-    if (selectedTests.length === 0) {
-      setError("Select at least one test before creating a lab order")
-      return
-    }
-
-    try {
-      setSaving(true)
-      setError("")
-
-      const created = await apiPost<LabOrder>("/labs/orders", {
-        patientId: selectedPatient.id,
-        patientName: selectedPatient.name,
-        section: selectedSection,
-        tests: selectedTests,
-        priority: "Urgent",
-      })
-
-      setOrders((prev) => [created, ...prev])
-      setSelectedOrderId(created.id)
-      setSelectedTests([])
-    } catch (err) {
-      console.error(err)
-      setError("Failed to create lab order")
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  async function saveLabResult() {
-    if (!selectedOrder) {
-      setError("Select a lab order first")
-      return
-    }
-
-    if (!resultText.trim()) {
-      setError("Write a result before saving")
-      return
-    }
-
-    try {
-      setSavingResult(true)
-      setError("")
-
-      const updated = await apiPost<LabOrder>(`/labs/results/${selectedOrder.id}`, {
-        result: resultText.trim(),
-        status: "Completed",
-      })
-
-      setOrders((prev) =>
-        prev.map((order) => (order.id === updated.id ? updated : order))
-      )
-      setSelectedOrderId(updated.id)
-    } catch (err) {
-      console.error(err)
-      setError("Failed to save lab result")
-    } finally {
-      setSavingResult(false)
-    }
-  }
-
-  function renderTestList(title: string, tests: string[]) {
-    return (
-      <div className="rounded-3xl border border-green-200 bg-white/95 p-6 shadow-sm">
-        <div className="mb-4">
-          <h2 className="text-2xl font-bold text-slate-700">{title}</h2>
-          <p className="text-sm text-slate-500 mt-2">اختر التحاليل المطلوبة من المربعات التالية</p>
-        </div>
-
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {tests.map((test) => {
-            const checked = selectedTests.includes(test)
-            return (
-              <label
-                key={test}
-                className={`flex items-center gap-3 rounded-2xl border p-4 cursor-pointer transition ${
-                  checked
-                    ? "border-emerald-400 bg-emerald-50 shadow-sm"
-                    : "border-slate-200 bg-white hover:border-green-300"
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={() => toggleTest(test)}
-                  className="h-5 w-5"
-                />
-                <span className="font-medium text-slate-700">{test}</span>
-              </label>
-            )
-          })}
-        </div>
-      </div>
-    )
-  }
+  const totalTests = CATALOG.reduce((a, c) => a + c.tests.length, 0)
 
   return (
-    <div style={{ padding: "24px", color: "white" }}>
-      <h1 style={{ fontSize: "30px", marginBottom: "8px" }}>Laboratory Dashboard</h1>
-      <p style={{ opacity: 0.8, marginBottom: "20px" }}>
-        Orders, specimen workflow, results review, and AI clinical interpretation
-      </p>
+    <div style={{
+      
+      
+      padding: "28px 32px", fontFamily: "Inter, Arial, sans-serif", color: "white",
+    }}>
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none",
+        backgroundImage: "linear-gradient(rgba(16,185,129,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(16,185,129,0.03) 1px,transparent 1px)",
+        backgroundSize: "60px 60px",
+      }} />
 
-      {error && <div style={{ color: "#fca5a5", marginBottom: "16px" }}>{error}</div>}
+      <div style={{ position: "relative", zIndex: 1, maxWidth: 1400, margin: "0 auto" }}>
 
-      <div
-        style={{
-          background: "#ffffff",
-          border: "1px solid #d1fae5",
-          borderRadius: "20px",
-          padding: "16px",
-          marginBottom: "24px",
-          color: "#0f172a",
-          display: "grid",
-          gap: "12px",
-        }}
-      >
-        <div style={{ fontWeight: 700, color: "#166534" }}>Patient Selection</div>
-        <select
-          value={selectedPatientId}
-          onChange={(e) => setSelectedPatientId(e.target.value)}
-          style={{
-            border: "1px solid #bbf7d0",
-            borderRadius: "12px",
-            padding: "12px 14px",
-            background: "#f0fdf4",
-            color: "#0f172a",
-          }}
-        >
-          {patients.map((patient) => (
-            <option key={patient.id} value={patient.id}>
-              {patient.name} ({patient.id})
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(12, minmax(0, 1fr))",
-          gap: "16px",
-          marginBottom: "24px",
-        }}
-      >
-        <div style={{ gridColumn: "span 5" }}>
-          <OverviewLikeCard
-            title="Classical Lab Tests"
-            value={loading ? "..." : String(classicalTests.length)}
-            selected={selectedSection === "classical"}
-            onClick={() => setSelectedSection("classical")}
-            bg="#d9f2ff"
-            border="#bfe7fb"
-            icon={
-              <SectionIconBadge
-                icon={<Beaker size={20} strokeWidth={2} />}
-                bg="rgba(16,185,129,0.15)"
-                color="#065f46"
-              />
-            }
-          />
+        {/* Header */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: 12, color: "#10b981", fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>
+            ◈ AI HOSPITAL ALLIANCE — LAB CATALOG
+          </div>
+          <h1 style={{
+            margin: 0, fontSize: 28, fontWeight: 900,
+            background: "linear-gradient(135deg,#fff,#94a3b8)",
+            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+          }}>🧪 Complete Laboratory Test Catalog</h1>
+          <p style={{ color: "#475569", fontSize: 13, marginTop: 6 }}>
+            {totalTests} tests · {CATALOG.length} categories · WHO · AACC · CAP standards · {user?.name}
+          </p>
         </div>
 
-        <div style={{ gridColumn: "span 4" }}>
-          <OverviewLikeCard
-            title="Specialized Tests"
-            value={loading ? "..." : String(specializedTests.length)}
-            selected={selectedSection === "specialized"}
-            onClick={() => setSelectedSection("specialized")}
-            bg="#d8fbf4"
-            border="#b8efe4"
-            icon={
-              <SectionIconBadge
-                icon={<Microscope size={20} strokeWidth={2} />}
-                bg="rgba(6,182,212,0.15)"
-                color="#0e7490"
-              />
-            }
-          />
-        </div>
-
-        <div style={{ gridColumn: "span 3" }}>
-          <OverviewLikeCard
-            title="Oncology, DNA & Genetic"
-            value={loading ? "..." : String(geneticsTests.length)}
-            selected={selectedSection === "genetics"}
-            onClick={() => setSelectedSection("genetics")}
-            bg="#f7ecff"
-            border="#e9d1fb"
-            icon={
-              <SectionIconBadge
-                icon={<Dna size={20} strokeWidth={2} />}
-                bg="rgba(168,85,247,0.15)"
-                color="#6d28d9"
-              />
-            }
-          />
-        </div>
-      </div>
-
-      <div className="mb-6">
-        {selectedSection === "classical" && renderTestList("Classical Lab Tests", classicalTests)}
-        {selectedSection === "specialized" && renderTestList("Specialized Tests", specializedTests)}
-        {selectedSection === "genetics" && renderTestList("Oncology, DNA & Genetic Tests", geneticsTests)}
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-12">
-        <div className="xl:col-span-4 space-y-6">
-          <div className="rounded-2xl border border-green-200 bg-white/95 p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-green-950">Selected Tests</h2>
-              <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-                {selectedTests.length} selected
-              </span>
+        {/* Stats */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 12, marginBottom: 22 }}>
+          {[
+            { label: "Total Tests", value: totalTests, color: "#10b981" },
+            { label: "Categories", value: CATALOG.length, color: "#3b82f6" },
+            { label: "Genetics/DNA", value: "23+", color: "#6366f1" },
+            { label: "Immunology", value: "20+", color: "#8b5cf6" },
+            { label: "Tumor Markers", value: "18+", color: "#dc2626" },
+          ].map(({ label, value, color }) => (
+            <div key={label} style={{ padding: "12px 16px", borderRadius: 14, background: `${color}08`, border: `1px solid ${color}22` }}>
+              <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>{label}</div>
+              <div style={{ fontSize: 22, fontWeight: 900, color, marginTop: 4 }}>{value}</div>
             </div>
+          ))}
+        </div>
 
-            {selectedTests.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-green-200 bg-green-50 p-4 text-sm text-slate-600">
-                لم يتم اختيار أي تحليل بعد
+        {/* Search */}
+        <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="🔍 Search any test by name or code..."
+            style={{
+              flex: 1, minWidth: 280, padding: "12px 16px", borderRadius: 12, fontSize: 14,
+              background: "rgba(255,255,255,0.05)", border: "1px solid rgba(16,185,129,0.3)",
+              color: "white", outline: "none",
+            }}
+          />
+          <button onClick={() => { setSearch(""); setSelectedCat(null) }} style={{
+            padding: "12px 18px", borderRadius: 12, fontSize: 13, fontWeight: 700,
+            background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
+            color: "#94a3b8", cursor: "pointer",
+          }}>Clear</button>
+        </div>
+
+        {/* Category filter */}
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 24 }}>
+          <button onClick={() => setSelectedCat(null)} style={{
+            padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700,
+            background: !selectedCat ? "rgba(16,185,129,0.2)" : "rgba(255,255,255,0.04)",
+            color: !selectedCat ? "#4ade80" : "#64748b",
+            border: `1px solid ${!selectedCat ? "rgba(16,185,129,0.4)" : "rgba(255,255,255,0.08)"}`,
+            cursor: "pointer",
+          }}>All Categories</button>
+          {CATALOG.map(cat => (
+            <button key={cat.name} onClick={() => setSelectedCat(cat.name === selectedCat ? null : cat.name)} style={{
+              padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700,
+              background: selectedCat === cat.name ? `${cat.color}22` : "rgba(255,255,255,0.04)",
+              color: selectedCat === cat.name ? cat.color : "#64748b",
+              border: `1px solid ${selectedCat === cat.name ? cat.color + "55" : "rgba(255,255,255,0.08)"}`,
+              cursor: "pointer",
+            }}>{cat.icon} {cat.name.split("(")[0].trim()}</button>
+          ))}
+        </div>
+
+        {/* Results */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {filtered.map(cat => (
+            <div key={cat.name} style={{
+              background: "linear-gradient(135deg,#0f172a,#1a2540)",
+              border: `1px solid ${cat.color}22`, borderRadius: 20, overflow: "hidden",
+            }}>
+              <div style={{
+                padding: "16px 22px", display: "flex", alignItems: "center", gap: 12,
+                background: `${cat.color}08`, borderBottom: `1px solid ${cat.color}22`,
+              }}>
+                <span style={{ fontSize: 22 }}>{cat.icon}</span>
+                <div>
+                  <div style={{ fontWeight: 800, color: "white", fontSize: 15 }}>{cat.name}</div>
+                  <div style={{ color: "#64748b", fontSize: 12 }}>{cat.tests.length} tests</div>
+                </div>
               </div>
-            ) : (
-              <div className="space-y-2">
-                {selectedTests.map((test) => (
-                  <div
-                    key={test}
-                    className="flex items-center justify-between rounded-xl border border-green-100 bg-green-50 p-3"
+              <div style={{ padding: 16, display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 8 }}>
+                {cat.tests.map((test, i) => (
+                  <div key={i}
+                    onClick={() => setSelectedTest(selectedTest?.name === test.name ? null : test)}
+                    style={{
+                      padding: "10px 14px", borderRadius: 10, cursor: "pointer",
+                      background: selectedTest?.name === test.name ? `${cat.color}18` : "rgba(255,255,255,0.03)",
+                      border: `1px solid ${selectedTest?.name === test.name ? cat.color + "55" : "rgba(255,255,255,0.06)"}`,
+                      transition: "all 0.2s",
+                    }}
+                    onMouseEnter={e => { if (selectedTest?.name !== test.name) e.currentTarget.style.background = `${cat.color}10` }}
+                    onMouseLeave={e => { if (selectedTest?.name !== test.name) e.currentTarget.style.background = "rgba(255,255,255,0.03)" }}
                   >
-                    <span className="font-medium text-slate-800">{test}</span>
-                    <button
-                      onClick={() => toggleTest(test)}
-                      className="rounded-lg bg-white px-2 py-1 text-xs text-rose-600 border border-rose-100"
-                    >
-                      Remove
-                    </button>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                      <div style={{ fontWeight: 600, color: "white", fontSize: 13, lineHeight: 1.4 }}>{test.name}</div>
+                      {test.code && (
+                        <span style={{
+                          padding: "2px 8px", borderRadius: 6, fontSize: 10, fontWeight: 800,
+                          background: `${cat.color}22`, color: cat.color, whiteSpace: "nowrap", flexShrink: 0,
+                        }}>{test.code}</span>
+                      )}
+                    </div>
+                    <div style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
+                      {test.turnaround && (
+                        <span style={{ fontSize: 10, color: "#64748b" }}>⏱ {test.turnaround}</span>
+                      )}
+                      {test.note && (
+                        <span style={{ fontSize: 10, color: cat.color, fontWeight: 600 }}>• {test.note}</span>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
-            )}
-
-            <button
-              onClick={createLabOrder}
-              disabled={saving}
-              className="mt-4 w-full rounded-xl bg-green-600 px-4 py-3 font-semibold text-white hover:bg-green-700 disabled:opacity-60"
-            >
-              {saving ? "Creating..." : "Confirm Lab Request"}
-            </button>
-          </div>
-
-          <div className="rounded-2xl border border-green-200 bg-white/95 p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-green-950">Lab Orders Queue</h2>
-              <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-                {filteredOrders.length} orders
-              </span>
             </div>
-
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search patient, order, test..."
-              className="w-full rounded-xl border border-green-200 bg-green-50/60 px-4 py-3 outline-none focus:border-emerald-400"
-            />
-
-            <div className="mt-4 space-y-3">
-              {filteredOrders.map((order) => (
-                <button
-                  key={order.id}
-                  onClick={() => setSelectedOrderId(order.id)}
-                  className={`w-full rounded-2xl border p-4 text-left transition ${
-                    selectedOrderId === order.id
-                      ? "border-emerald-400 bg-gradient-to-r from-green-50 to-emerald-50 shadow"
-                      : "border-slate-200 bg-white hover:border-green-300 hover:bg-green-50/40"
-                  }`}
-                >
-                  <div className="font-semibold text-slate-900">{order.patientName}</div>
-                  <div className="mt-1 text-sm text-slate-600">
-                    {order.tests.join(", ")}
-                  </div>
-                  <div className="mt-2 text-xs text-slate-500">
-                    Order ID: {order.id} • {order.patientId} • {order.section}
-                  </div>
-                  <div className="mt-3 flex items-center gap-2">
-                    <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusClasses(order.status)}`}>
-                      {order.status}
-                    </span>
-                    <span className="rounded-full px-2.5 py-1 text-[11px] font-semibold bg-sky-100 text-sky-700 border border-sky-200">
-                      {order.priority}
-                    </span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
+          ))}
         </div>
 
-        <div className="xl:col-span-5 space-y-6">
-          <div className="rounded-2xl border border-green-200 bg-white/95 p-5 shadow-sm">
-            <div className="mb-4">
-              <h2 className="text-xl font-bold text-green-950">Selected Result</h2>
-              <p className="mt-1 text-sm text-slate-600">
-                Result details, sample status, and validation summary
-              </p>
-            </div>
-
-            {selectedOrder ? (
-              <div className="rounded-2xl border border-green-200 bg-gradient-to-br from-green-100 via-emerald-50 to-white p-5">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="rounded-xl bg-white p-4 border border-green-100">
-                    <div className="text-sm text-slate-500">Patient</div>
-                    <div className="font-semibold text-green-950">{selectedOrder.patientName}</div>
-                  </div>
-                  <div className="rounded-xl bg-white p-4 border border-green-100">
-                    <div className="text-sm text-slate-500">Order ID</div>
-                    <div className="font-semibold text-green-950">{selectedOrder.id}</div>
-                  </div>
-                  <div className="rounded-xl bg-white p-4 border border-green-100">
-                    <div className="text-sm text-slate-500">Tests</div>
-                    <div className="font-semibold text-green-950">{selectedOrder.tests.join(", ")}</div>
-                  </div>
-                  <div className="rounded-xl bg-white p-4 border border-green-100">
-                    <div className="text-sm text-slate-500">Section</div>
-                    <div className="font-semibold text-green-950">{selectedOrder.section}</div>
-                  </div>
-                  <div className="rounded-xl bg-white p-4 border border-green-100">
-                    <div className="text-sm text-slate-500">Priority</div>
-                    <div className="font-semibold text-green-950">{selectedOrder.priority}</div>
-                  </div>
-                  <div className="rounded-xl bg-white p-4 border border-green-100">
-                    <div className="text-sm text-slate-500">Status</div>
-                    <div className="font-semibold text-green-950">{selectedOrder.status}</div>
-                  </div>
-                </div>
-
-                <div className="mt-4 rounded-xl bg-white p-4 border border-emerald-100">
-                  <div className="text-sm text-slate-500">Result Summary</div>
-                  <div className="mt-2 font-medium text-slate-800">
-                    {selectedOrder.result?.trim() ? selectedOrder.result : "Result not available yet."}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-green-200 bg-green-50 p-5 text-slate-600">
-                No order selected.
-              </div>
-            )}
+        {filtered.length === 0 && (
+          <div style={{ textAlign: "center", padding: 60, color: "#64748b" }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>🔍</div>
+            <div style={{ fontSize: 16, fontWeight: 700 }}>No tests found for "{search}"</div>
           </div>
+        )}
 
-          <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-white to-green-50 p-5 shadow-sm">
-            <h2 className="text-xl font-bold text-green-950 mb-4">Lab Result Entry</h2>
-
-            <textarea
-              value={resultText}
-              onChange={(e) => setResultText(e.target.value)}
-              className="min-h-[220px] w-full rounded-2xl border border-green-200 bg-white px-4 py-4 outline-none focus:border-emerald-400"
-              placeholder="Write lab result..."
-            />
-
-            <div className="mt-4 flex flex-wrap gap-3">
-              <button
-                onClick={saveLabResult}
-                disabled={savingResult || !selectedOrder}
-                className="rounded-xl bg-green-600 px-4 py-2 font-semibold text-white hover:bg-green-700 disabled:opacity-60"
-              >
-                {savingResult ? "Saving..." : "Save Result"}
-              </button>
-              <button className="rounded-xl bg-emerald-600 px-4 py-2 font-semibold text-white hover:bg-emerald-700">
-                Validate Result
-              </button>
-              <button className="rounded-xl bg-slate-800 px-4 py-2 font-semibold text-white hover:bg-slate-900">
-                Send to EMR
-              </button>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-white to-green-50 p-5 shadow-sm">
-            <h2 className="text-xl font-bold text-green-950 mb-4">Clinical Interpretation</h2>
-
-            <textarea
-              value={interpretation}
-              onChange={(e) => setInterpretation(e.target.value)}
-              className="min-h-[160px] w-full rounded-2xl border border-green-200 bg-white px-4 py-4 outline-none focus:border-emerald-400"
-              placeholder="Write lab interpretation..."
-            />
-
-            <div className="mt-4 flex flex-wrap gap-3">
-              <button className="rounded-xl bg-green-600 px-4 py-2 font-semibold text-white hover:bg-green-700">
-                Save Interpretation
-              </button>
-              <button className="rounded-xl bg-slate-800 px-4 py-2 font-semibold text-white hover:bg-slate-900">
-                Review with Physician
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="xl:col-span-3 space-y-6">
-          <div className="rounded-2xl border border-green-200 bg-gradient-to-br from-green-100 to-white p-5 shadow-sm">
-            <h2 className="text-xl font-bold text-green-950 mb-4">Department Load</h2>
-
-            <div className="space-y-3">
-              <div className="rounded-xl bg-white p-4 border border-green-100 flex items-center justify-between">
-                <span className="text-slate-700">Classical</span>
-                <span className="font-bold text-green-950">{classicalTests.length}</span>
-              </div>
-              <div className="rounded-xl bg-white p-4 border border-green-100 flex items-center justify-between">
-                <span className="text-slate-700">Specialized</span>
-                <span className="font-bold text-green-950">{specializedTests.length}</span>
-              </div>
-              <div className="rounded-xl bg-white p-4 border border-green-100 flex items-center justify-between">
-                <span className="text-slate-700">Genetics</span>
-                <span className="font-bold text-green-950">{geneticsTests.length}</span>
-              </div>
-              <div className="rounded-xl bg-white p-4 border border-green-100 flex items-center justify-between">
-                <span className="text-slate-700">Orders</span>
-                <span className="font-bold text-green-950">{orders.length}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-lime-200 bg-gradient-to-br from-lime-50 to-green-50 p-5 shadow-sm">
-            <h2 className="text-xl font-bold text-green-950 mb-4">Quick Actions</h2>
-
-            <div className="space-y-3">
-              <button
-                onClick={() => selectedPatientId && loadPatientOrders(selectedPatientId)}
-                className="w-full rounded-xl bg-green-600 px-4 py-3 text-left font-semibold text-white hover:bg-green-700"
-              >
-                Refresh Patient Orders
-              </button>
-              <button className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-left font-semibold text-white hover:bg-emerald-700">
-                Open Analyzer Queue
-              </button>
-              <button className="w-full rounded-xl bg-slate-800 px-4 py-3 text-left font-semibold text-white hover:bg-slate-900">
-                Review Abnormal Results
-              </button>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   )
