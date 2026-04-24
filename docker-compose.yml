@@ -1,19 +1,60 @@
-version: "3"
-
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: aiha-postgres
+    environment:
+      POSTGRES_USER: aiha
+      POSTGRES_PASSWORD: aiha123
+      POSTGRES_DB: aiha_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aiha -d aiha_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "5432:5432"
+    networks:
+      - aiha-net
+    restart: unless-stopped
+
   backend:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: aiha-backend
     ports:
       - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://aiha:aiha123@db:5432/aiha_db
+      SECRET_KEY: aiha-super-secret-key-2026
+      ANTHROPIC_API_KEY: sk-ant-api03-XXXXXXXX
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      CORS_ORIGINS: "http://localhost,http://localhost:80,http://192.168.0.106,http://192.168.0.106:80"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - aiha-net
+    restart: unless-stopped
 
   frontend:
-    build: ./ai-hospital
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: aiha-frontend
     ports:
-      - "5173:80"
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - aiha-net
+    restart: unless-stopped
 
-  db:
-    image: postgres
-    environment:
-      POSTGRES_DB: ai_hospital
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin
+volumes:
+  postgres_data:
+
+networks:
+  aiha-net:
+    driver: bridge

@@ -1,11 +1,17 @@
+import { getToken } from "@/lib/auth-storage";
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
+function authHeaders() {
+    const token = getToken();
+    return token ? { Authorization: `Bearer ${token}` } : {};
+}
 async function request(path, options) {
     const res = await fetch(`${API_BASE}${path}`, {
+        ...options,
         headers: {
             "Content-Type": "application/json",
+            ...authHeaders(),
             ...(options?.headers ?? {}),
         },
-        ...options,
     });
     if (!res.ok) {
         const text = await res.text();
@@ -23,24 +29,11 @@ export function apiPost(path, body) {
     });
 }
 export async function apiPut(path, body) {
-    const res = await fetch(`${API_BASE}${path}`, {
+    return request(path, {
         method: "PUT",
-        headers: {
-            "Content-Type": "application/json",
-        },
         body: JSON.stringify(body),
     });
-    if (!res.ok) {
-        throw new Error(`PUT ${path} failed`);
-    }
-    return res.json();
 }
 export async function apiDelete(path) {
-    const res = await fetch(`${API_BASE}${path}`, {
-        method: "DELETE",
-    });
-    if (!res.ok) {
-        throw new Error(`DELETE ${path} failed`);
-    }
-    return res.json();
+    return request(path, { method: "DELETE" });
 }

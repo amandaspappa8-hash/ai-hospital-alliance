@@ -37,3 +37,20 @@ dicom/**/WebViewerCache/
 # Backups
 *.tar.gz
 infra/*.tar.gz
+.env
+.env.production
+.env.local
+*.db
+venv/
+.venv/
+__pycache__/
+node_modules/
+dist/
+.env
+.env.production
+.env.local
+*.db
+venv/
+.venv/
+__pycache__/
+dist/

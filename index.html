@@ -1,21 +1,35 @@
-<!doctype html>
-<html lang="en" class="dark">
+<!DOCTYPE html>
+<html lang="ar" dir="ltr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="AI Hospital" />
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
+    <!-- Icons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/pwa-192.png" />
+
+    <!-- SEO -->
+    <meta name="description" content="AI Hospital Alliance — Smart Medical Platform with AI Diagnosis, Pharmacy, Radiology" />
+    <meta name="application-name" content="AI Hospital Alliance" />
+
+    <!-- Prevent zoom on iOS inputs -->
+    <style>
+      input, select, textarea { font-size: 16px !important; }
+      * { -webkit-tap-highlight-color: transparent; }
+      body { overscroll-behavior: none; }
+    </style>
 
     <title>AI Hospital Alliance</title>
   </head>
-
-  <body class="font-sans bg-background text-foreground antialiased">
+  <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

@@ -1,792 +1,288 @@
-import { useEffect, useState } from "react"
-import { useSearchParams } from "react-router-dom"
-import hospitalLogo from "../assets/hospital-logo.png"
+import { useEffect, useState, useRef } from "react"
 import { apiGet } from "@/lib/api"
-import { mintMedicalReportNFT } from "@/lib/medicalReportBlockchain"
+import { getUser } from "@/lib/auth-storage"
 
-type ReportDraft = {
-  patientId?: string
-  patientName?: string
-  title?: string
-  status?: string
-  body?: string
-  hospitalName?: string
-  doctorName?: string
-  visitDate?: string
+type Report = { id: string; patient_id: string; title: string; type: string; status: string; body: string }
+type Patient = { id: string; name: string; age: number; gender: string; condition: string; department: string; status: string }
+
+const TYPE_COLOR: Record<string, string> = {
+  Cardiology: "#ef4444", Clinical: "#3b82f6", ICU: "#06b6d4",
+  Endocrine: "#f59e0b", Surgery: "#f97316", Neurology: "#a855f7",
+  Pediatrics: "#fbbf24", Orthopedics: "#10b981",
 }
 
-type Patient = {
-  id: string
-  name: string
-  age?: number
-  gender?: string
-  phone?: string
-  condition?: string
-  department?: string
-  status?: string
-}
-
-type Note = {
-  id: number
-  text: string
-}
-
-type Order = {
-  id: number
-  item: string
-  type?: string
-  priority?: string
-  status?: string
-}
-
-type VitalSigns = {
-  temperature: string
-  bloodPressure: string
-  heartRate: string
-  oxygenSaturation: string
-  respiratoryRate: string
-}
-
-const exportClinicalPDF = () => {
-  const element = document.getElementById("clinical-report")
-  if (!element) {
-    alert("Clinical report not found")
-    return
-  }
-
-  const printWindow = window.open("", "_blank", "width=1100,height=1400")
-  if (!printWindow) {
-    alert("Popup blocked. Please allow popups.")
-    return
-  }
-
-  printWindow.document.write(`
-    <html>
-      <head>
-        <title>Clinical Report</title>
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            margin: 24px;
-            color: #111827;
-            background: white;
-          }
-          #print-root {
-            width: 100%;
-          }
-          .avoid-break {
-            page-break-inside: avoid;
-            break-inside: avoid;
-          }
-          @media print {
-            body {
-              margin: 0;
-              padding: 14px;
-            }
-          }
-        </style>
-      </head>
-      <body>
-        <div id="print-root">${element.innerHTML}</div>
-      </body>
-    </html>
-  `)
-
-  printWindow.document.close()
-  printWindow.focus()
-
-  setTimeout(() => {
-    printWindow.print()
-  }, 500)
-}
-
-function getMockVitalSigns(patient: Patient): VitalSigns {
-  const condition = String(patient.condition ?? "").toLowerCase()
-  const status = String(patient.status ?? "").toLowerCase()
-
-  if (condition.includes("chest")) {
-    return {
-      temperature: "37.2 °C",
-      bloodPressure: "145/92 mmHg",
-      heartRate: "104 bpm",
-      oxygenSaturation: "95%",
-      respiratoryRate: "22/min",
-    }
-  }
-
-  if (condition.includes("fever")) {
-    return {
-      temperature: "38.6 °C",
-      bloodPressure: "118/76 mmHg",
-      heartRate: "102 bpm",
-      oxygenSaturation: "97%",
-      respiratoryRate: "20/min",
-    }
-  }
-
-  if (condition.includes("oxygen") || status.includes("critical")) {
-    return {
-      temperature: "37.8 °C",
-      bloodPressure: "132/84 mmHg",
-      heartRate: "110 bpm",
-      oxygenSaturation: "89%",
-      respiratoryRate: "26/min",
-    }
-  }
-
-  return {
-    temperature: "36.9 °C",
-    bloodPressure: "120/80 mmHg",
-    heartRate: "78 bpm",
-    oxygenSaturation: "98%",
-    respiratoryRate: "16/min",
-  }
-}
-
-function buildClinicalImpression(patient: Patient, notes: Note[], orders: Order[]) {
-  const department = patient.department ?? "General Medicine"
-  const condition = patient.condition ?? "Unspecified condition"
-  const hasUrgentOrder = orders.some(
-    (o) => String(o.priority ?? "").toLowerCase() === "urgent"
-  )
-  const hasNotes = notes.length > 0
-
-  return `Patient is currently under ${department} care with a presenting condition of ${condition}. ${
-    hasNotes
-      ? "Clinical notes indicate that the patient has already undergone initial assessment and documentation."
-      : "No detailed narrative notes are currently available in the chart."
-  } ${
-    hasUrgentOrder
-      ? "At least one urgent clinical order is active and should be prioritized."
-      : "Current listed orders appear routine and should continue to be monitored."
-  } Overall, the patient requires continued physician review, monitoring of response to treatment, and reassessment according to clinical workflow.`
-}
-
-function buildRecommendations(patient: Patient, orders: Order[]) {
-  const condition = String(patient.condition ?? "").toLowerCase()
-  const department = patient.department ?? "Clinical Department"
-
-  const base = [
-    "Continue routine clinical monitoring and reassessment.",
-    "Review all pending orders and confirm completion status.",
-    "Update physician notes after the next clinical evaluation.",
-  ]
-
-  if (condition.includes("chest")) {
-    base.unshift("Rule out acute cardiac cause and monitor for symptom progression.")
-  } else if (condition.includes("fever")) {
-    base.unshift("Investigate possible infectious source and monitor temperature trend.")
-  } else if (condition.includes("oxygen")) {
-    base.unshift("Closely monitor oxygen saturation and respiratory stability.")
-  } else {
-    base.unshift(`Maintain protocol-based follow-up under ${department}.`)
-  }
-
-  if (orders.length === 0) {
-    base.push("Consider entering diagnostic or supportive orders if clinically indicated.")
-  }
-
-  return base
+const STATUS_COLOR: Record<string, string> = {
+  Ready: "#4ade80", "In Progress": "#fbbf24", Draft: "#94a3b8",
 }
 
 export default function ReportsPage() {
-  const [searchParams] = useSearchParams()
-  const patientIdFromUrl = searchParams.get("patientId") ?? ""
+  const user = getUser()
+  const [reports, setReports] = useState<Report[]>([])
   const [patients, setPatients] = useState<Patient[]>([])
-  const [selectedPatientId, setSelectedPatientId] = useState(patientIdFromUrl || "P-1001")
-  const [loadingPatients, setLoadingPatients] = useState(true)
-  const [loadingReport, setLoadingReport] = useState(true)
-  const [error, setError] = useState("")
-
-  const [report, setReport] = useState<ReportDraft>({
-    patientId: "P-1001",
-    patientName: "Loading...",
-    title: "Official Clinical Summary",
-    status: "draft",
-    body: "Generating report...",
-    hospitalName: "AI Hospital Alliance",
-    doctorName: "Dr. Mohammed Al-Fallah, PharmD",
-    visitDate: new Date().toLocaleString(),
-  })
-
-  const [patient, setPatient] = useState<Patient | null>(null)
-  const [notes, setNotes] = useState<Note[]>([])
-  const [orders, setOrders] = useState<Order[]>([])
-  const [vitals, setVitals] = useState<VitalSigns | null>(null)
-  const [clinicalImpression, setClinicalImpression] = useState("")
-  const [recommendations, setRecommendations] = useState<string[]>([])
-  const [mintingBlockchain, setMintingBlockchain] = useState(false)
-  const [mintResult, setMintResult] = useState("")
+  const [loading, setLoading] = useState(true)
+  const [selected, setSelected] = useState<Report | null>(null)
+  const [filterType, setFilterType] = useState("All")
+  const [filterStatus, setFilterStatus] = useState("All")
+  const [search, setSearch] = useState("")
+  const [generating, setGenerating] = useState(false)
+  const printRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (patientIdFromUrl) {
-      setSelectedPatientId(patientIdFromUrl)
-    }
-  }, [patientIdFromUrl])
-
-  useEffect(() => {
-    async function loadPatients() {
-      try {
-        setLoadingPatients(true)
-        const data = await apiGet<Patient[]>("/patients")
-        const rows = Array.isArray(data) ? data : []
-        setPatients(rows)
-
-        if (rows.length > 0) {
-          setSelectedPatientId((current) => {
-            const exists = rows.some((p) => p.id === current)
-            return exists ? current : rows[0].id
-          })
-        }
-      } catch (err) {
-        console.error(err)
-        setError("Failed to load patients list")
-        setPatients([])
-      } finally {
-        setLoadingPatients(false)
-      }
-    }
-
-    loadPatients()
+    Promise.all([
+      apiGet<Report[]>("/reports").catch(() => []),
+      apiGet<Patient[]>("/patients").catch(() => []),
+    ]).then(([r, p]) => {
+      setReports(Array.isArray(r) ? r : [])
+      setPatients(Array.isArray(p) ? p : [])
+    }).finally(() => setLoading(false))
   }, [])
 
-
-  async function handleMintToBlockchain() {
-    try {
-      if (!patient) {
-        alert("Patient data is not loaded yet")
-        return
-      }
-
-      setMintingBlockchain(true)
-      setMintResult("")
-
-      const patientAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
-      const reportId = report.patientId || patient.id || "REPORT-UNKNOWN"
-      const reportHash = btoa(
-        JSON.stringify({
-          patientId: patient.id,
-          patientName: patient.name,
-          title: report.title,
-          body: report.body,
-          visitDate: report.visitDate,
-        })
-      ).slice(0, 64)
-
-      const metadataURI = `local://report/${reportId}`
-
-      const result = await mintMedicalReportNFT({
-        patient: patientAddress,
-        reportId,
-        reportHash,
-        metadataURI,
-      })
-
-      setMintResult(
-        `Blockchain mint success | tx: ${result.txHash} | total tokens: ${result.totalTokens}`
-      )
-    } catch (err: any) {
-      console.error(err)
-      setMintResult(err?.message || "Blockchain mint failed")
-    } finally {
-      setMintingBlockchain(false)
-    }
+  function getPatient(id: string) {
+    return patients.find(p => p.id === id)
   }
 
+  function printReport(report: Report) {
+    const patient = getPatient(report.patient_id)
+    const w = window.open("", "_blank")
+    if (!w) return
+    w.document.write(`
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>${report.title}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; color: #1a1a1a; background: white; padding: 40px; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #2563eb; }
+    .logo { font-size: 22px; font-weight: 900; color: #2563eb; }
+    .logo-sub { font-size: 11px; color: #64748b; letter-spacing: 2px; text-transform: uppercase; }
+    .report-id { font-size: 12px; color: #94a3b8; text-align: right; }
+    h1 { font-size: 20px; font-weight: 800; color: #1e293b; margin: 20px 0 8px; }
+    .badge { display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; background: #dbeafe; color: #1d4ed8; margin-bottom: 20px; }
+    .section { margin-bottom: 20px; }
+    .section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 8px; }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .info-item { padding: 10px 14px; background: #f8fafc; border-radius: 8px; border-left: 3px solid #2563eb; }
+    .info-label { font-size: 10px; color: #94a3b8; text-transform: uppercase; }
+    .info-value { font-size: 14px; font-weight: 700; color: #1e293b; margin-top: 2px; }
+    .body-text { padding: 16px; background: #f8fafc; border-radius: 10px; font-size: 14px; line-height: 1.8; color: #334155; border-left: 3px solid #10b981; }
+    .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; font-size: 11px; color: #94a3b8; }
+    .signature { text-align: right; }
+    .sig-line { width: 200px; border-bottom: 1px solid #94a3b8; margin: 30px 0 6px auto; }
+    @media print { body { padding: 20px; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="logo">🏥 AI Hospital Alliance</div>
+      <div class="logo-sub">Clinical Report System · Powered by AI</div>
+    </div>
+    <div class="report-id">
+      <div>Report ID: ${report.id}</div>
+      <div>Date: ${new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}</div>
+      <div>Status: ${report.status}</div>
+    </div>
+  </div>
 
-  useEffect(() => {
-    let cancelled = false
+  <h1>${report.title}</h1>
+  <span class="badge">${report.type}</span>
 
-    async function loadReport() {
-      if (!selectedPatientId) return
+  ${patient ? `
+  <div class="section">
+    <div class="section-title">Patient Information</div>
+    <div class="info-grid">
+      <div class="info-item"><div class="info-label">Full Name</div><div class="info-value">${patient.name}</div></div>
+      <div class="info-item"><div class="info-label">Patient ID</div><div class="info-value">${patient.id}</div></div>
+      <div class="info-item"><div class="info-label">Age / Gender</div><div class="info-value">${patient.age} years · ${patient.gender}</div></div>
+      <div class="info-item"><div class="info-label">Department</div><div class="info-value">${patient.department}</div></div>
+      <div class="info-item"><div class="info-label">Condition</div><div class="info-value">${patient.condition}</div></div>
+      <div class="info-item"><div class="info-label">Status</div><div class="info-value">${patient.status}</div></div>
+    </div>
+  </div>
+  ` : ""}
 
-      try {
-        setLoadingReport(true)
-        setError("")
+  <div class="section">
+    <div class="section-title">Clinical Report</div>
+    <div class="body-text">${report.body}</div>
+  </div>
 
-        const draftKey = `AI_REPORT_DRAFT_${selectedPatientId}`
-        const rawDraft = localStorage.getItem(draftKey)
+  <div class="signature">
+    <div class="sig-line"></div>
+    <div style="font-size:12px;color:#475569;">Authorized by: ${user?.name ?? "System Admin"}</div>
+    <div style="font-size:11px;color:#94a3b8;">${user?.role ?? "Admin"} · AI Hospital Alliance</div>
+  </div>
 
-        let parsed: ReportDraft | null = null
-        if (rawDraft) {
-          try {
-            parsed = JSON.parse(rawDraft) as ReportDraft
-          } catch (err) {
-            console.error("Invalid patient draft:", err)
-          }
-        }
+  <div class="footer">
+    <div>Generated by AI Hospital Alliance System · ${new Date().toLocaleString()}</div>
+    <div>Confidential Medical Document</div>
+  </div>
 
-        const [currentPatient, currentNotes, currentOrders] = await Promise.all([
-          apiGet<Patient>(`/patients/${selectedPatientId}`),
-          apiGet<Note[]>(`/notes/${selectedPatientId}`),
-          apiGet<Order[]>(`/orders/${selectedPatientId}`),
-        ])
+  <script>window.onload = () => { window.print(); }</script>
+</body>
+</html>`)
+    w.document.close()
+  }
 
-        if (cancelled) return
+  async function generateAIReport(report: Report) {
+    setGenerating(true)
+    const patient = getPatient(report.patient_id)
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          system: "You are a senior hospital clinician. Generate a professional clinical report in English. Be concise, clear, and medically accurate.",
+          messages: [{
+            role: "user",
+            content: `Generate a complete clinical report for:
+Report: ${report.title}
+Type: ${report.type}
+Patient: ${patient?.name ?? "Unknown"}, Age ${patient?.age}, ${patient?.gender}
+Condition: ${patient?.condition}
+Current: ${report.body}
 
-        const safeNotes = Array.isArray(currentNotes) ? currentNotes : []
-        const safeOrders = Array.isArray(currentOrders) ? currentOrders : []
-
-        setPatient(currentPatient)
-        setNotes(safeNotes)
-        setOrders(safeOrders)
-
-        const currentVitals = getMockVitalSigns(currentPatient)
-        const currentImpression = buildClinicalImpression(
-          currentPatient,
-          safeNotes,
-          safeOrders
-        )
-        const currentRecommendations = buildRecommendations(
-          currentPatient,
-          safeOrders
-        )
-
-        setVitals(currentVitals)
-        setClinicalImpression(currentImpression)
-        setRecommendations(currentRecommendations)
-
-        setReport({
-          patientId: parsed?.patientId ?? currentPatient.id,
-          patientName: parsed?.patientName ?? currentPatient.name,
-          title: parsed?.title ?? "Official Clinical Summary",
-          status: parsed?.status ?? (parsed ? "official-draft" : "auto-generated"),
-          body: parsed?.body ?? currentImpression,
-          hospitalName: parsed?.hospitalName ?? "AI Hospital Alliance",
-          doctorName: parsed?.doctorName ?? "Dr. Mohammed Al-Fallah, PharmD",
-          visitDate: parsed?.visitDate ?? new Date().toLocaleString(),
+Write a professional medical report with: Summary, Findings, Assessment, Plan.`
+          }]
         })
-      } catch (err) {
-        console.error(err)
-        if (cancelled) return
-        setError("Failed to generate report")
-        setPatient(null)
-        setNotes([])
-        setOrders([])
-        setVitals(null)
-        setClinicalImpression("")
-        setRecommendations([])
-      } finally {
-        if (!cancelled) {
-          setLoadingReport(false)
-        }
-      }
-    }
+      })
+      const data = await res.json()
+      const text = data.content?.[0]?.text ?? ""
+      setSelected({ ...report, body: text })
+    } catch {
+      alert("Claude AI not connected — using existing report")
+    } finally { setGenerating(false) }
+  }
 
-    loadReport()
+  const types = ["All", ...Array.from(new Set(reports.map(r => r.type)))]
+  const statuses = ["All", "Ready", "In Progress", "Draft"]
 
-    return () => {
-      cancelled = true
-    }
-  }, [selectedPatientId])
+  const filtered = reports.filter(r => {
+    const matchSearch = r.title.toLowerCase().includes(search.toLowerCase()) || r.patient_id.toLowerCase().includes(search.toLowerCase())
+    const matchType = filterType === "All" || r.type === filterType
+    const matchStatus = filterStatus === "All" || r.status === filterStatus
+    return matchSearch && matchType && matchStatus
+  })
 
   return (
-    <div style={{ padding: 24, color: "white" }}>
-      <h1 style={{ fontSize: 30, marginBottom: 8 }}>Reports</h1>
-      <p style={{ opacity: 0.8, marginBottom: 20 }}>
-        Official clinical and AI-generated reports
-      </p>
+    <div style={{ padding: "24px 28px", fontFamily: "Inter,Arial,sans-serif", color: "white", minHeight: "100vh" }}>
 
-      <div
-        style={{
-          display: "flex",
-          gap: 12,
-          alignItems: "center",
-          flexWrap: "wrap",
-          marginBottom: 20,
-        }}
-      >
-        <select
-          value={selectedPatientId}
-          onChange={(e) => setSelectedPatientId(e.target.value)}
-          disabled={loadingPatients || patients.length === 0}
-          style={{
-            minWidth: 280,
-            padding: "10px 12px",
-            borderRadius: 8,
-            border: "1px solid #374151",
-            background: "#0f172a",
-            color: "white",
-          }}
-        >
-          {patients.length === 0 ? (
-            <option value="">No patients available</option>
-          ) : (
-            patients.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} ({p.id})
-              </option>
-            ))
-          )}
-        </select>
-
-        <button
-          onClick={exportClinicalPDF}
-          style={{
-            background: "#2563eb",
-            color: "#fff",
-            padding: "10px 16px",
-            borderRadius: 8,
-            border: "none",
-            cursor: "pointer",
-            fontWeight: 700,
-          }}
-        >
-          Print / Save PDF
-        </button>
-
-        <button
-          onClick={handleMintToBlockchain}
-          disabled={mintingBlockchain || loadingReport || !patient}
-          style={{
-            background: mintingBlockchain ? "#475569" : "#059669",
-            color: "#fff",
-            padding: "10px 16px",
-            borderRadius: 8,
-            border: "none",
-            cursor: mintingBlockchain ? "not-allowed" : "pointer",
-            fontWeight: 700,
-            opacity: mintingBlockchain || loadingReport || !patient ? 0.7 : 1,
-          }}
-        >
-          {mintingBlockchain ? "Minting to Blockchain..." : "Mint Medical Report NFT"}
-        </button>
+      <div style={{ marginBottom: 22 }}>
+        <div style={{ fontSize: 11, color: "#f59e0b", fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>◈ AI HOSPITAL ALLIANCE</div>
+        <h1 style={{ margin: 0, fontSize: 26, fontWeight: 900, color: "white" }}>📄 Clinical Reports</h1>
+        <p style={{ color: "#475569", fontSize: 13, marginTop: 4 }}>AI-generated · Print-ready · {reports.length} reports</p>
       </div>
 
-      {error && (
-        <div style={{ color: "#fecaca", marginBottom: 16 }}>{error}</div>
-      )}
+      {/* Stats */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 18 }}>
+        {[
+          { label: "Total Reports", value: reports.length, color: "#3b82f6" },
+          { label: "Ready", value: reports.filter(r => r.status === "Ready").length, color: "#4ade80" },
+          { label: "In Progress", value: reports.filter(r => r.status === "In Progress").length, color: "#fbbf24" },
+          { label: "Report Types", value: new Set(reports.map(r => r.type)).size, color: "#a855f7" },
+        ].map(({ label, value, color }) => (
+          <div key={label} style={{ padding: "14px 16px", borderRadius: 14, background: `${color}08`, border: `1px solid ${color}22` }}>
+            <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>{label}</div>
+            <div style={{ fontSize: 24, fontWeight: 900, color, marginTop: 4 }}>{value}</div>
+          </div>
+        ))}
+      </div>
 
-      {mintResult && (
-        <div
-          style={{
-            marginBottom: 16,
-            padding: 12,
-            borderRadius: 10,
-            background: "#052e16",
-            color: "#bbf7d0",
-            border: "1px solid #166534",
-            wordBreak: "break-word",
-          }}
-        >
-          {mintResult}
-        </div>
-      )}
+      {/* Filters */}
+      <div style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap" }}>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Search reports..." style={{ flex: 1, minWidth: 200, padding: "10px 14px", borderRadius: 12, fontSize: 13, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(245,158,11,0.3)", color: "white", outline: "none" }} />
+        <select value={filterType} onChange={e => setFilterType(e.target.value)} style={{ padding: "10px 14px", borderRadius: 12, fontSize: 13, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "white", outline: "none" }}>
+          {types.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ padding: "10px 14px", borderRadius: 12, fontSize: 13, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "white", outline: "none" }}>
+          {statuses.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+      </div>
 
-      <div
-        id="clinical-report"
-        style={{
-          background: "white",
-          color: "#111827",
-          borderRadius: 18,
-          padding: 28,
-          maxWidth: 1000,
-          boxShadow: "0 12px 30px rgba(15, 23, 42, 0.12)",
-        }}
-      >
-        <div
-          className="avoid-break"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            borderBottom: "3px solid #dbeafe",
-            paddingBottom: 18,
-            marginBottom: 24,
-            gap: 16,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <img
-              src={hospitalLogo}
-              alt="Hospital Logo"
-              style={{ height: 64, width: 64, objectFit: "contain" }}
-            />
-            <div>
-              <div style={{ fontSize: 28, fontWeight: 800, color: "#0f172a" }}>
-                {report.hospitalName}
-              </div>
-              <div style={{ color: "#475569", fontSize: 15 }}>
-                Advanced Clinical Decision Report
-              </div>
-            </div>
-          </div>
+      <div style={{ display: "grid", gridTemplateColumns: selected ? "1fr 420px" : "1fr", gap: 16 }}>
 
-          <div
-            style={{
-              textAlign: "right",
-              fontSize: 14,
-              background: "#f8fafc",
-              border: "1px solid #e2e8f0",
-              borderRadius: 12,
-              padding: 12,
-              minWidth: 240,
-            }}
-          >
-            <div>
-              <strong>Doctor:</strong> {report.doctorName}
-            </div>
-            <div>
-              <strong>Date:</strong> {report.visitDate}
-            </div>
-            <div>
-              <strong>Status:</strong> {report.status}
-            </div>
-          </div>
-        </div>
-
-        <div className="avoid-break" style={{ marginBottom: 22 }}>
-          <div style={{ fontSize: 24, fontWeight: 800, marginBottom: 6 }}>
-            {report.title}
-          </div>
-          <div style={{ color: "#475569" }}>
-            Patient: {report.patientName} ({report.patientId})
-          </div>
-        </div>
-
-        <div
-          className="avoid-break"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-            gap: 14,
-            marginBottom: 22,
-          }}
-        >
-          <div
-            style={{
-              background: "#f8fafc",
-              border: "1px solid #e2e8f0",
-              borderRadius: 14,
-              padding: 16,
-            }}
-          >
-            <div style={{ fontWeight: 800, marginBottom: 12, color: "#0f172a" }}>
-              Patient Overview
-            </div>
-            <div style={{ display: "grid", gap: 8, fontSize: 14 }}>
-              <div><strong>Name:</strong> {patient?.name ?? "—"}</div>
-              <div><strong>ID:</strong> {patient?.id ?? "—"}</div>
-              <div><strong>Age:</strong> {patient?.age ?? "—"}</div>
-              <div><strong>Gender:</strong> {patient?.gender ?? "—"}</div>
-              <div><strong>Phone:</strong> {patient?.phone ?? "—"}</div>
-              <div><strong>Department:</strong> {patient?.department ?? "—"}</div>
-              <div><strong>Condition:</strong> {patient?.condition ?? "—"}</div>
-              <div><strong>Status:</strong> {patient?.status ?? "—"}</div>
-            </div>
-          </div>
-
-          <div
-            style={{
-              background: "#eff6ff",
-              border: "1px solid #bfdbfe",
-              borderRadius: 14,
-              padding: 16,
-            }}
-          >
-            <div style={{ fontWeight: 800, marginBottom: 12, color: "#1d4ed8" }}>
-              Vital Signs
-            </div>
-            <div style={{ display: "grid", gap: 10, fontSize: 14 }}>
-              <div><strong>Temperature:</strong> {vitals?.temperature ?? "—"}</div>
-              <div><strong>Blood Pressure:</strong> {vitals?.bloodPressure ?? "—"}</div>
-              <div><strong>Heart Rate:</strong> {vitals?.heartRate ?? "—"}</div>
-              <div><strong>O₂ Saturation:</strong> {vitals?.oxygenSaturation ?? "—"}</div>
-              <div><strong>Respiratory Rate:</strong> {vitals?.respiratoryRate ?? "—"}</div>
-            </div>
-          </div>
-        </div>
-
-        <div
-          className="avoid-break"
-          style={{
-            background: "#f8fafc",
-            border: "1px solid #e5e7eb",
-            borderRadius: 14,
-            padding: 18,
-            marginBottom: 18,
-          }}
-        >
-          <div style={{ fontWeight: 800, marginBottom: 12, fontSize: 18 }}>
-            Clinical Notes
-          </div>
-          <div style={{ display: "grid", gap: 10 }}>
-            {loadingReport ? (
-              <div>Loading notes...</div>
-            ) : notes.length === 0 ? (
-              <div>No clinical notes recorded.</div>
-            ) : (
-              notes.map((note) => (
-                <div
-                  key={note.id}
-                  style={{
-                    background: "white",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: 10,
-                    padding: 12,
-                    lineHeight: 1.6,
-                  }}
-                >
-                  {note.text}
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        <div
-          className="avoid-break"
-          style={{
-            background: "#f8fafc",
-            border: "1px solid #e5e7eb",
-            borderRadius: 14,
-            padding: 18,
-            marginBottom: 18,
-          }}
-        >
-          <div style={{ fontWeight: 800, marginBottom: 12, fontSize: 18 }}>
-            Clinical Orders
-          </div>
-          <div style={{ display: "grid", gap: 10 }}>
-            {loadingReport ? (
-              <div>Loading orders...</div>
-            ) : orders.length === 0 ? (
-              <div>No clinical orders recorded.</div>
-            ) : (
-              orders.map((order) => (
-                <div
-                  key={order.id}
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "minmax(0, 1.5fr) repeat(3, minmax(0, 1fr))",
-                    gap: 10,
-                    background: "white",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: 10,
-                    padding: 12,
-                    fontSize: 14,
-                  }}
-                >
-                  <div><strong>Item:</strong> {order.item}</div>
-                  <div><strong>Type:</strong> {order.type ?? "—"}</div>
-                  <div><strong>Priority:</strong> {order.priority ?? "—"}</div>
-                  <div><strong>Status:</strong> {order.status ?? "—"}</div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        <div
-          className="avoid-break"
-          style={{
-            background: "#fff7ed",
-            border: "1px solid #fed7aa",
-            borderRadius: 14,
-            padding: 18,
-            marginBottom: 18,
-          }}
-        >
-          <div style={{ fontWeight: 800, marginBottom: 12, fontSize: 18, color: "#9a3412" }}>
-            Clinical Impression
-          </div>
-          <div style={{ lineHeight: 1.8, whiteSpace: "pre-wrap" }}>
-            {loadingReport ? "Generating clinical impression..." : clinicalImpression}
-          </div>
-        </div>
-
-        <div
-          className="avoid-break"
-          style={{
-            marginBottom: 18,
-          }}
-        >
-          <div style={{ fontWeight: 800, marginBottom: 12, fontSize: 18 }}>
-            Recommendation Boxes
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-              gap: 12,
-            }}
-          >
-            {recommendations.map((item, index) => (
-              <div
-                key={index}
-                style={{
-                  background: index === 0 ? "#ecfeff" : "#f8fafc",
-                  border: index === 0 ? "1px solid #a5f3fc" : "1px solid #e5e7eb",
-                  borderRadius: 14,
-                  padding: 16,
-                  minHeight: 90,
-                  display: "flex",
-                  alignItems: "flex-start",
-                  lineHeight: 1.6,
-                }}
-              >
-                <div>
-                  <div
-                    style={{
-                      fontWeight: 800,
-                      marginBottom: 6,
-                      color: index === 0 ? "#0f766e" : "#0f172a",
-                    }}
-                  >
-                    Recommendation {index + 1}
+        {/* Reports list */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {loading ? <div style={{ color: "#64748b", padding: 20 }}>Loading reports...</div> :
+            filtered.map(r => {
+              const patient = getPatient(r.patient_id)
+              const tc = TYPE_COLOR[r.type] ?? "#64748b"
+              const sc = STATUS_COLOR[r.status] ?? "#94a3b8"
+              return (
+                <div key={r.id} onClick={() => setSelected(selected?.id === r.id ? null : r)} style={{
+                  padding: "16px 20px", borderRadius: 16, cursor: "pointer",
+                  background: selected?.id === r.id ? `${tc}10` : "linear-gradient(135deg,#0f172a,#1a2540)",
+                  border: `1px solid ${selected?.id === r.id ? tc + "40" : "rgba(255,255,255,0.08)"}`,
+                  transition: "all 0.2s",
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                        <span style={{ fontWeight: 800, color: "white", fontSize: 14 }}>{r.title}</span>
+                        <span style={{ padding: "2px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700, background: `${tc}15`, color: tc, border: `1px solid ${tc}30` }}>{r.type}</span>
+                        <span style={{ padding: "2px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700, background: `${sc}15`, color: sc }}>{r.status}</span>
+                      </div>
+                      <div style={{ color: "#64748b", fontSize: 12 }}>
+                        {r.id} · Patient: <strong style={{ color: "#94a3b8" }}>{patient?.name ?? r.patient_id}</strong>
+                        {patient && <span> · {patient.age}y · {patient.department}</span>}
+                      </div>
+                      <div style={{ color: "#475569", fontSize: 12, marginTop: 6, lineHeight: 1.5 }}>{r.body.slice(0, 120)}...</div>
+                    </div>
+                    <div style={{ display: "flex", gap: 6, flexShrink: 0, marginLeft: 12 }}>
+                      <button onClick={e => { e.stopPropagation(); generateAIReport(r) }} disabled={generating} style={{ padding: "6px 12px", borderRadius: 8, background: "rgba(124,58,237,0.1)", color: "#a78bfa", fontSize: 11, fontWeight: 700, border: "1px solid rgba(124,58,237,0.25)", cursor: "pointer" }}>
+                        {generating ? "..." : "🤖 AI"}
+                      </button>
+                      <button onClick={e => { e.stopPropagation(); printReport(r) }} style={{ padding: "6px 12px", borderRadius: 8, background: "rgba(59,130,246,0.1)", color: "#60a5fa", fontSize: 11, fontWeight: 700, border: "1px solid rgba(59,130,246,0.25)", cursor: "pointer" }}>
+                        🖨️ Print
+                      </button>
+                    </div>
                   </div>
-                  <div>{item}</div>
                 </div>
-              </div>
-            ))}
-          </div>
+              )
+            })
+          }
         </div>
 
-        <div
-          className="avoid-break"
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "end",
-            marginTop: 34,
-            paddingTop: 22,
-            borderTop: "2px dashed #cbd5e1",
-            gap: 20,
-          }}
-        >
-          <div>
-            <div style={{ fontWeight: 800, marginBottom: 28 }}>
-              Physician Signature: __________________________
+        {/* Report Detail */}
+        {selected && (
+          <div style={{ background: "linear-gradient(135deg,#0f172a,#1a2540)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 20, padding: 22, position: "sticky", top: 20, height: "fit-content" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+              <div style={{ fontWeight: 800, fontSize: 15, color: "white" }}>{selected.title}</div>
+              <button onClick={() => setSelected(null)} style={{ width: 28, height: 28, borderRadius: 8, border: "none", background: "rgba(255,255,255,0.06)", color: "#64748b", cursor: "pointer", fontSize: 16 }}>×</button>
             </div>
-            <div>{report.doctorName}</div>
-            <div style={{ color: "#64748b", fontSize: 14 }}>Attending Clinical Reviewer</div>
-          </div>
 
-          <div
-            style={{
-              border: "2px solid #93c5fd",
-              color: "#1d4ed8",
-              borderRadius: "999px",
-              padding: "10px 18px",
-              fontWeight: 800,
-              fontSize: 14,
-            }}
-          >
-            VERIFIED HOSPITAL COPY
-          </div>
-        </div>
+            {(() => {
+              const patient = getPatient(selected.patient_id)
+              return patient ? (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Patient</div>
+                  <div style={{ padding: "12px 14px", borderRadius: 12, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <div style={{ fontWeight: 700, color: "white", fontSize: 14 }}>{patient.name}</div>
+                    <div style={{ color: "#64748b", fontSize: 12, marginTop: 3 }}>{patient.age}y · {patient.gender} · {patient.department}</div>
+                    <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 2 }}>{patient.condition}</div>
+                  </div>
+                </div>
+              ) : null
+            })()}
 
-        <div
-          style={{
-            marginTop: 28,
-            fontSize: 12,
-            color: "#64748b",
-            textAlign: "center",
-          }}
-        >
-          AI Hospital Alliance • Confidential Medical Document • Auto-generated clinical decision support format
-        </div>
+            <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Report Content</div>
+            <div style={{ padding: "14px 16px", borderRadius: 12, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(16,185,129,0.15)", color: "#cbd5e1", fontSize: 13, lineHeight: 1.8, maxHeight: 300, overflowY: "auto", whiteSpace: "pre-wrap" }}>
+              {selected.body}
+            </div>
+
+            <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+              <button onClick={() => generateAIReport(selected)} disabled={generating} style={{ flex: 1, padding: "10px", borderRadius: 12, background: generating ? "rgba(124,58,237,0.2)" : "linear-gradient(135deg,#7c3aed,#4f46e5)", color: "white", border: "none", fontWeight: 700, fontSize: 13, cursor: generating ? "not-allowed" : "pointer" }}>
+                {generating ? "⟳ Generating..." : "🤖 AI Report"}
+              </button>
+              <button onClick={() => printReport(selected)} style={{ flex: 1, padding: "10px", borderRadius: 12, background: "linear-gradient(135deg,#2563eb,#1d4ed8)", color: "white", border: "none", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+                🖨️ Print PDF
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

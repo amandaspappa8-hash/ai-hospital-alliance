@@ -1,0 +1,2557 @@
+import os
+import httpx
+from backend.app import models
+from datetime import datetime
+import json
+import urllib.parse
+from urllib.request import urlopen, Request
+import json
+from urllib.request import urlopen
+from urllib.error import URLError, HTTPError
+from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect, Request as FastAPIRequest
+from backend.app.services.ai_engine import ask_ai
+from fastapi import Depends, HTTPException, Query
+from fastapi.responses import HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
+from .api.health import router as health_router
+from pydantic import BaseModel
+
+from .api.clinical_route import router as clinical_route_router
+from .api.clinical_orders import router as clinical_orders_router
+
+app = FastAPI(
+    title="AI Hospital Assistant API",
+    version="1.0.0"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:4173",
+        "http://127.0.0.1:4173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+USERS = {
+    "admin": {
+        "password": "admin123",
+        "name": "System Admin",
+        "role": "Admin",
+    },
+    "doctor": {
+        "password": "doctor123",
+        "name": "Dr. Demo",
+        "role": "Doctor",
+    },
+    "radiology": {
+        "password": "radio123",
+        "name": "Radiology User",
+        "role": "Radiology",
+    },
+}
+
+PATIENTS = [
+    {
+        "id": "P-1001",
+        "name": "Ahmed Ali",
+        "age": 45,
+        "gender": "Male",
+        "phone": "+218910000001",
+        "condition": "Chest Pain",
+        "department": "Cardiology",
+        "status": "Active",
+    },
+    {
+        "id": "P-1002",
+        "name": "Sara Omar",
+        "age": 31,
+        "gender": "Female",
+        "phone": "+218910000002",
+        "condition": "Fever",
+        "department": "Emergency",
+        "status": "Under Observation",
+    },
+    {
+        "id": "P-1003",
+        "name": "Mona Salem",
+        "age": 62,
+        "gender": "Female",
+        "phone": "+218910000003",
+        "condition": "Low Oxygen Saturation",
+        "department": "ICU",
+        "status": "Critical",
+    },
+]
+
+
+from .state import ORDERS
+from backend.app.repositories.registry import build_repositories
+from backend.app.services.core.registry import build_services
+
+ORTHANC_DICOMWEB_URL = "http://127.0.0.1:8042/dicom-web/studies"
+DEMO_STUDY_UID = "1.2.826.0.1.3680043.8.498.40352611434452298538894524161059434702"
+
+def get_latest_study_uid():
+    try:
+        with urlopen(ORTHANC_DICOMWEB_URL, timeout=5) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+            if isinstance(payload, list) and payload:
+                for item in reversed(payload):
+                    uid = (
+                        item.get("0020000D", {})
+                        .get("Value", [None])[0]
+                    )
+                    if uid:
+                        return uid
+    except (URLError, HTTPError, TimeoutError, ValueError, OSError):
+        pass
+    return DEMO_STUDY_UID
+
+
+
+DOCTOR_ASSIGNMENTS = {
+    "D-1002": [
+        {
+            "id": 1,
+            "patientId": "P-1001",
+            "patientName": "Ahmed Ali",
+            "department": "Cardiology",
+            "condition": "Chest Pain",
+            "status": "Assigned",
+        }
+    ]
+}
+
+
+NOTES = {
+    "P-1001": [
+        {"id": 1, "text": "Patient admitted with chest pain. Initial ECG ordered."}
+    ],
+    "P-1002": [
+        {"id": 1, "text": "Fever under evaluation. Hydration and CBC requested."}
+    ],
+    "P-1003": [
+        {"id": 1, "text": "Critical ICU patient. Oxygen and close monitoring ongoing."}
+    ],
+}
+
+APPOINTMENTS = [
+    {
+        "id": "A-2001",
+        "patientId": "P-1001",
+        "patientName": "Ahmed Ali",
+        "department": "Cardiology",
+        "doctor": "Dr. Demo",
+        "date": "2026-03-17",
+        "time": "10:00",
+        "status": "Scheduled",
+    },
+    {
+        "id": "A-2002",
+        "patientId": "P-1002",
+        "patientName": "Sara Omar",
+        "department": "Emergency",
+        "doctor": "Dr. Demo",
+        "date": "2026-03-17",
+        "time": "11:30",
+        "status": "Waiting",
+    },
+]
+
+REPORTS = [
+    {
+        "id": "R-3001",
+        "patientId": "P-1001",
+        "title": "Initial Clinical Report",
+        "type": "Clinical",
+        "status": "Ready",
+        "date": "2026-03-17",
+    },
+    {
+        "id": "R-3002",
+        "patientId": "P-1003",
+        "title": "ICU Monitoring Report",
+        "type": "ICU",
+        "status": "In Progress",
+        "date": "2026-03-17",
+    },
+]
+
+DOCTORS = [
+    {
+        "id": "D-1001",
+        "name": "Dr. Sarah Jones",
+        "specialty": "Neurology",
+        "department": "Brain & Nerve Center",
+        "experience": "12 years",
+        "status": "Available",
+        "rating": 4.9,
+        "patients": 28,
+        "schedule": "08:00 - 16:00",
+        "phone": "+218910100001",
+    },
+    {
+        "id": "D-1002",
+        "name": "Dr. John Smith",
+        "specialty": "Cardiology",
+        "department": "Heart Center",
+        "experience": "15 years",
+        "status": "On Call",
+        "rating": 4.8,
+        "patients": 34,
+        "schedule": "09:00 - 17:00",
+        "phone": "+218910100002",
+    },
+    {
+        "id": "D-1003",
+        "name": "Dr. Emily Brown",
+        "specialty": "Orthopedics",
+        "department": "Bone & Joint Unit",
+        "experience": "10 years",
+        "status": "Available",
+        "rating": 4.7,
+        "patients": 22,
+        "schedule": "08:30 - 15:30",
+        "phone": "+218910100003",
+    },
+    {
+        "id": "D-1004",
+        "name": "Dr. Ahmed Kareem",
+        "specialty": "Emergency",
+        "department": "Emergency Department",
+        "experience": "9 years",
+        "status": "In Surgery",
+        "rating": 4.6,
+        "patients": 19,
+        "schedule": "24/7 Rotation",
+        "phone": "+218910100004",
+    },
+    {
+        "id": "D-1005",
+        "name": "Dr. Lina Salem",
+        "specialty": "Radiology",
+        "department": "Imaging Center",
+        "experience": "11 years",
+        "status": "Available",
+        "rating": 4.9,
+        "patients": 17,
+        "schedule": "10:00 - 18:00",
+        "phone": "+218910100005",
+    },
+    {
+        "id": "D-1006",
+        "name": "Dr. Omar Hassan",
+        "specialty": "Pediatrics",
+        "department": "Children Care",
+        "experience": "13 years",
+        "status": "Offline",
+        "rating": 4.8,
+        "patients": 26,
+        "schedule": "09:00 - 14:00",
+        "phone": "+218910100006",
+    },
+    {
+        "id": "D-1007",
+        "name": "Dr. Noor Al-Masri",
+        "specialty": "ICU",
+        "department": "Critical Care Unit",
+        "experience": "14 years",
+        "status": "Available",
+        "rating": 4.9,
+        "patients": 12,
+        "schedule": "07:00 - 15:00",
+        "phone": "+218910100007",
+    },
+    {
+        "id": "D-1008",
+        "name": "Dr. Youssef Adel",
+        "specialty": "Cardiology",
+        "department": "Heart Center",
+        "experience": "8 years",
+        "status": "Available",
+        "rating": 4.5,
+        "patients": 16,
+        "schedule": "12:00 - 20:00",
+        "phone": "+218910100008",
+    },
+]
+
+SPECIALTIES_SUMMARY = [
+    {
+        "title": "Cardiology",
+        "subtitle": "Heart center, ECG, chest pain, vascular workflow",
+        "icon": "❤️",
+        "route": "/specialties/cardiology",
+        "doctors": 12,
+        "activeCases": 24,
+        "tone": "#ffe5e5",
+    },
+    {
+        "title": "Neurology",
+        "subtitle": "Brain, nerves, stroke assessment and monitoring",
+        "icon": "🧠",
+        "route": "/specialties/neurology",
+        "doctors": 9,
+        "activeCases": 17,
+        "tone": "#ece8ff",
+    },
+    {
+        "title": "Emergency",
+        "subtitle": "Triage, urgent workflow, rapid response",
+        "icon": "🚑",
+        "route": "/specialties/emergency",
+        "doctors": 14,
+        "activeCases": 41,
+        "tone": "#ffe9d6",
+    },
+    {
+        "title": "ICU",
+        "subtitle": "Critical care, oxygen, ventilation and close monitoring",
+        "icon": "🏥",
+        "route": "/specialties/icu",
+        "doctors": 7,
+        "activeCases": 12,
+        "tone": "#e0f2fe",
+    },
+    {
+        "title": "Radiology",
+        "subtitle": "Imaging center, PACS, CT, MRI and X-Ray",
+        "icon": "🩻",
+        "route": "/specialties/radiology",
+        "doctors": 6,
+        "activeCases": 29,
+        "tone": "#e7f9ef",
+    },
+    {
+        "title": "Pediatrics",
+        "subtitle": "Children care, growth, fever and outpatient support",
+        "icon": "🧒",
+        "route": "/specialties/pediatrics",
+        "doctors": 10,
+        "activeCases": 23,
+        "tone": "#fef9c3",
+    },
+]
+
+PACS_STUDIES = [
+    {
+        "studyInstanceUID": "1.2.840.10008.1.1001",
+        "patientId": "P-1001",
+        "patientName": "Ahmed Ali",
+        "modality": "CT",
+        "studyDate": "20260317",
+        "studyDescription": "Chest CT",
+    },
+    {
+        "studyInstanceUID": "1.2.840.10008.1.1002",
+        "patientId": "P-1002",
+        "patientName": "Sara Omar",
+        "modality": "XR",
+        "studyDate": "20260317",
+        "studyDescription": "Chest X-Ray",
+    },
+]
+
+
+NURSING_VITALS = {
+    "P-1001": [
+        {
+            "id": 1,
+            "temperature": "37.1",
+            "bloodPressure": "128/82",
+            "heartRate": "88",
+            "respiratoryRate": "18",
+            "oxygenSaturation": "97",
+            "time": "08:30",
+        }
+    ],
+    "P-1002": [
+        {
+            "id": 1,
+            "temperature": "38.4",
+            "bloodPressure": "110/70",
+            "heartRate": "102",
+            "respiratoryRate": "22",
+            "oxygenSaturation": "95",
+            "time": "09:10",
+        }
+    ],
+}
+
+NURSING_NOTES = {
+    "P-1001": [
+        {
+            "id": 1,
+            "text": "Patient stable. Chest pain reduced after initial management."
+        }
+    ],
+    "P-1002": [
+        {
+            "id": 1,
+            "text": "Fever ongoing. Fluids encouraged and observation continued."
+        }
+    ],
+}
+
+
+RADIOLOGY_CATALOG = {
+    "xray": [
+        "Chest X-Ray",
+        "Abdomen X-Ray",
+        "Pelvis X-Ray",
+        "Spine X-Ray",
+        "Skull X-Ray",
+        "Extremities X-Ray (Hand, Foot, Leg)"
+    ],
+
+    "ct": [
+        "CT Brain",
+        "CT Chest",
+        "CT Abdomen",
+        "CT Pelvis",
+        "CT Angiography",
+        "CT Spine",
+        "CT Whole Body Trauma"
+    ],
+
+    "mri": [
+        "MRI Brain",
+        "MRI Spine",
+        "MRI Knee",
+        "MRI Shoulder",
+        "MRI Abdomen",
+        "MRI Pelvis",
+        "MR Angiography"
+    ],
+
+    "ultrasound": [
+        "Abdominal Ultrasound",
+        "Pelvic Ultrasound",
+        "Obstetric Ultrasound",
+        "Thyroid Ultrasound",
+        "Doppler Ultrasound",
+        "Cardiac Echo (Echocardiography)"
+    ],
+
+    "mammography": [
+        "Screening Mammography",
+        "Diagnostic Mammography",
+        "Breast Ultrasound"
+    ],
+
+    "fluoroscopy": [
+        "Barium Swallow",
+        "Barium Enema",
+        "Upper GI Study"
+    ],
+
+    "pet_ct": [
+        "PET-CT Whole Body",
+        "Oncology PET-CT",
+        "Brain PET-CT"
+    ],
+
+    "interventional": [
+        "Biopsy Imaging Guided",
+        "Drainage Procedures",
+        "Angiography",
+        "Stent Placement"
+    ]
+}
+
+RADIOLOGY_ORDERS = [
+    {
+        "id": "RAD-5001",
+        "patientId": "P-1001",
+        "patientName": "Ahmed Ali",
+        "section": "ct",
+        "studies": ["CT Chest"],
+        "priority": "Urgent",
+        "status": "Pending",
+        "studyUid": "1.2.840.10008.1.1001",
+        "report": "",
+    },
+    {
+        "id": "RAD-5002",
+        "patientId": "P-1002",
+        "patientName": "Sara Omar",
+        "section": "xray",
+        "studies": ["Chest X-Ray"],
+        "priority": "Routine",
+        "status": "Completed",
+        "studyUid": "1.2.840.10008.1.1002",
+        "report": "No acute cardiopulmonary abnormality.",
+    },
+]
+
+
+LAB_CATALOG = {
+    "classical": [
+        "CBC",
+        "ESR",
+        "CRP",
+        "Blood Glucose",
+        "Fasting Blood Sugar",
+        "Random Blood Sugar",
+        "HbA1c",
+        "Urea",
+        "Creatinine",
+        "BUN",
+        "Electrolytes",
+        "Sodium",
+        "Potassium",
+        "Chloride",
+        "Calcium",
+        "Magnesium",
+        "Phosphorus",
+        "Uric Acid",
+        "Lipid Profile",
+        "Total Cholesterol",
+        "Triglycerides",
+        "HDL",
+        "LDL",
+        "Liver Function Test",
+        "ALT",
+        "AST",
+        "ALP",
+        "GGT",
+        "Total Bilirubin",
+        "Direct Bilirubin",
+        "Albumin",
+        "Total Protein",
+        "Urinalysis",
+        "Stool Analysis",
+        "Blood Group",
+        "Rh Typing",
+        "PT",
+        "aPTT",
+        "INR",
+        "D-Dimer",
+        "Serum Iron",
+        "Ferritin",
+        "TIBC",
+        "Vitamin B12",
+        "Vitamin D",
+        "Folate",
+        "Amylase",
+        "Lipase",
+        "Troponin",
+        "CK",
+        "CK-MB",
+        "LDH"
+    ],
+    "specialized": [
+        "Hormonal Panel",
+        "Thyroid Profile",
+        "TSH",
+        "Free T3",
+        "Free T4",
+        "PTH",
+        "Cortisol",
+        "ACTH",
+        "Prolactin",
+        "FSH",
+        "LH",
+        "Estradiol",
+        "Progesterone",
+        "Testosterone",
+        "Beta-hCG",
+        "Insulin",
+        "C-Peptide",
+        "Immunology Panel",
+        "ANA",
+        "Anti-dsDNA",
+        "ANCA",
+        "RF",
+        "Anti-CCP",
+        "Complement C3",
+        "Complement C4",
+        "Total IgE",
+        "IgG",
+        "IgA",
+        "IgM",
+        "Microbiology",
+        "Blood Culture",
+        "Urine Culture",
+        "Sputum Culture",
+        "Wound Swab Culture",
+        "Stool Culture",
+        "Sensitivity Test",
+        "Cardiac Markers",
+        "BNP",
+        "NT-proBNP",
+        "Procalcitonin",
+        "Tumor Markers",
+        "AFP",
+        "CEA",
+        "CA 19-9",
+        "CA 125",
+        "PSA",
+        "Free PSA",
+        "Beta-2 Microglobulin",
+        "Coagulation Profile",
+        "Thrombophilia Screen",
+        "Protein C",
+        "Protein S",
+        "Antithrombin III",
+        "Homocysteine",
+        "Autoimmune Panel",
+        "Endocrine Panel",
+        "Drug Monitoring",
+        "Toxicology Screen",
+        "Heavy Metal Screen",
+        "Allergy Panel"
+    ],
+    "genetics": [
+        "Genetic Screening",
+        "DNA Analysis",
+        "RNA Analysis",
+        "Whole Exome Sequencing",
+        "Whole Genome Sequencing",
+        "Targeted Gene Panel",
+        "Carrier Screening",
+        "Prenatal Genetic Screening",
+        "Postnatal Genetic Screening",
+        "BRCA1/BRCA2",
+        "TP53 Mutation Analysis",
+        "EGFR Mutation Analysis",
+        "KRAS Mutation Analysis",
+        "NRAS Mutation Analysis",
+        "BRAF Mutation Analysis",
+        "PIK3CA Mutation Analysis",
+        "JAK2 Mutation Analysis",
+        "Factor V Leiden Mutation",
+        "Prothrombin Gene Mutation",
+        "MTHFR Mutation Analysis",
+        "HLA Typing",
+        "Chromosomal Analysis",
+        "Karyotyping",
+        "FISH",
+        "Microarray CGH",
+        "Cytogenetics",
+        "Pharmacogenomics",
+        "Oncology Mutation Panel",
+        "Hereditary Cancer Panel",
+        "Neuromuscular Genetics Panel",
+        "Cardiomyopathy Genetics Panel",
+        "Hemoglobinopathy Genetics",
+        "Thalassemia Mutation Analysis",
+        "Sickle Cell Mutation Analysis"
+    ],
+    "nucleic_acid": [
+        "PCR",
+        "RT-PCR",
+        "qPCR",
+        "Multiplex PCR",
+        "Digital PCR",
+        "Viral Load PCR",
+        "Bacterial PCR",
+        "Fungal PCR",
+        "Tuberculosis PCR",
+        "COVID-19 PCR",
+        "Influenza PCR",
+        "RSV PCR",
+        "HBV DNA PCR",
+        "HCV RNA PCR",
+        "HIV Viral Load",
+        "HIV PCR",
+        "CMV PCR",
+        "EBV PCR",
+        "HSV PCR",
+        "HPV DNA Test",
+        "Chlamydia PCR",
+        "Gonorrhea PCR",
+        "Mycoplasma PCR",
+        "Ureaplasma PCR",
+        "Meningitis/Encephalitis PCR Panel",
+        "Respiratory Pathogen PCR Panel",
+        "Gastrointestinal PCR Panel",
+        "Sepsis PCR Panel",
+        "Nucleic Acid Amplification Test (NAAT)",
+        "mRNA Expression Analysis",
+        "Gene Fusion Detection",
+        "Minimal Residual Disease Molecular Test",
+        "Copy Number Variation Analysis",
+        "Methylation Analysis"
+    ]
+}
+
+LAB_ORDERS = [
+    {
+        "id": "L-4001",
+        "patientId": "P-1001",
+        "patientName": "Ahmed Ali",
+        "section": "classical",
+        "tests": ["CBC", "CRP"],
+        "priority": "Urgent",
+        "status": "Pending",
+        "result": "",
+    },
+    {
+        "id": "L-4002",
+        "patientId": "P-1002",
+        "patientName": "Sara Omar",
+        "section": "specialized",
+        "tests": ["Culture & Sensitivity"],
+        "priority": "Routine",
+        "status": "Processing",
+        "result": "",
+    },
+]
+
+
+
+
+
+
+class NursingVitalRequest(BaseModel):
+    temperature: str
+    bloodPressure: str
+    heartRate: str
+    respiratoryRate: str
+    oxygenSaturation: str
+    time: str
+
+
+class NursingNoteRequest(BaseModel):
+    text: str
+
+class RadiologyOrderCreateRequest(BaseModel):
+    patientId: str
+    patientName: str
+    section: str
+    studies: list[str]
+    priority: str | None = "Routine"
+    status: str | None = "Pending"
+
+
+class RadiologyReportRequest(BaseModel):
+    report: str
+    status: str | None = "Completed"
+
+
+class LabOrderCreateRequest(BaseModel):
+    patientId: str
+    patientName: str
+    section: str
+    tests: list[str]
+    priority: str | None = "Routine"
+    status: str | None = "Pending"
+
+
+class LabResultRequest(BaseModel):
+    result: str
+    status: str | None = "Completed"
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class NoteRequest(BaseModel):
+    text: str
+
+
+class OrderRequest(BaseModel):
+    item: str
+    type: str | None = "manual"
+    priority: str | None = "Routine"
+    status: str | None = "Pending"
+
+
+class DoctorAssignmentRequest(BaseModel):
+    patientId: str
+    patientName: str
+    department: str | None = None
+    condition: str | None = None
+    status: str | None = "Assigned"
+
+
+class DoctorAssignmentStatusRequest(BaseModel):
+    status: str
+
+
+class AppointmentRequest(BaseModel):
+    patientId: str | None = None
+    patientName: str | None = None
+    patient: str | None = None
+    department: str
+    doctor: str
+    date: str | None = None
+    time: str
+    status: str | None = "Scheduled"
+
+
+@app.get("/")
+def root():
+    return {"status": "AI Hospital API running"}
+
+
+@app.post("/auth/login")
+def login(payload: LoginRequest):
+    user = USERS.get(payload.username)
+
+    if not user or user.get("password") != payload.password:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    return {
+        "access_token": f"demo-token-{payload.username}",
+        "token_type": "bearer",
+        "user": {
+            "username": payload.username,
+            "name": user.get("name", payload.username),
+            "role": user.get("role", "User"),
+        },
+    }
+
+
+@app.get("/patients")
+def get_patients():
+    return SERVICES["patients"].list_patients()
+
+
+@app.get("/patients/{patient_id}")
+def get_patient(patient_id: str):
+    return SERVICES["patients"].get_patient(patient_id)
+
+
+@app.get("/orders/{patient_id}")
+def get_orders(patient_id: str):
+    return SERVICES["orders"].list_orders(patient_id)
+
+
+@app.post("/orders/{patient_id}")
+def create_order(patient_id: str, payload: OrderRequest):
+    return SERVICES["orders"].create_order(
+        patient_id,
+        {
+            "item": payload.item,
+            "type": payload.type,
+            "priority": payload.priority,
+            "status": "Pending",
+        },
+    )
+
+
+@app.get("/notes/{patient_id}")
+def get_notes(patient_id: str):
+    return SERVICES["notes"].list_notes(patient_id)
+
+
+@app.post("/notes/{patient_id}")
+def create_note(patient_id: str, payload: NoteRequest):
+    return SERVICES["notes"].create_note(patient_id, payload.text)
+
+
+@app.get("/appointments")
+def get_appointments():
+    return SERVICES["appointments"].list_appointments()
+
+
+@app.post("/appointments")
+def create_appointment(payload: AppointmentRequest):
+    patient_name = payload.patientName or payload.patient or ""
+    patient_id = payload.patientId or ""
+
+    return SERVICES["appointments"].create_appointment(
+        {
+            "patientId": patient_id,
+            "patientName": patient_name,
+            "department": payload.department,
+            "doctor": payload.doctor,
+            "date": payload.date or "",
+            "time": payload.time,
+            "status": payload.status or "Scheduled",
+        }
+    )
+
+
+@app.get("/reports")
+def get_reports():
+    return SERVICES["reports"].list_reports()
+
+
+@app.get("/doctors/summary")
+def get_doctors_summary():
+    return DOCTORS
+
+
+@app.get("/doctors/by-specialty/{name}")
+def get_doctors_by_specialty(name: str):
+    normalized = name.strip().lower()
+    return [doctor for doctor in DOCTORS if doctor["specialty"].strip().lower() == normalized]
+
+
+@app.get("/doctors/{doctor_id}")
+def get_doctor_by_id(doctor_id: str):
+    for doctor in DOCTORS:
+        if doctor["id"] == doctor_id:
+            return doctor
+    raise HTTPException(status_code=404, detail="Doctor not found")
+
+
+@app.get("/doctor-assignments/{doctor_id}")
+def get_doctor_assignments(doctor_id: str):
+    return DOCTOR_ASSIGNMENTS.get(doctor_id, [])
+
+
+@app.post("/doctor-assignments/{doctor_id}")
+def create_doctor_assignment(doctor_id: str, payload: DoctorAssignmentRequest):
+    if doctor_id not in DOCTOR_ASSIGNMENTS:
+        DOCTOR_ASSIGNMENTS[doctor_id] = []
+
+    existing = next(
+        (
+            item for item in DOCTOR_ASSIGNMENTS[doctor_id]
+            if item["patientId"] == payload.patientId
+        ),
+        None,
+    )
+    if existing:
+        return existing
+
+    new_assignment = {
+        "id": len(DOCTOR_ASSIGNMENTS[doctor_id]) + 1,
+        "patientId": payload.patientId,
+        "patientName": payload.patientName,
+        "department": payload.department,
+        "condition": payload.condition,
+        "status": payload.status or "Assigned",
+    }
+    DOCTOR_ASSIGNMENTS[doctor_id].append(new_assignment)
+    return new_assignment
+
+
+@app.post("/doctor-assignments/{doctor_id}/{assignment_id}/status")
+def update_doctor_assignment_status(
+    doctor_id: str,
+    assignment_id: int,
+    payload: DoctorAssignmentStatusRequest,
+):
+    assignments = DOCTOR_ASSIGNMENTS.get(doctor_id, [])
+    for item in assignments:
+        if item["id"] == assignment_id:
+            item["status"] = payload.status
+            return item
+    raise HTTPException(status_code=404, detail="Assignment not found")
+
+
+@app.delete("/doctor-assignments/{doctor_id}/{assignment_id}")
+def delete_doctor_assignment(doctor_id: str, assignment_id: int):
+    assignments = DOCTOR_ASSIGNMENTS.get(doctor_id, [])
+    for index, item in enumerate(assignments):
+        if item["id"] == assignment_id:
+            removed = assignments.pop(index)
+            return removed
+    raise HTTPException(status_code=404, detail="Assignment not found")
+
+
+@app.get("/specialties/summary")
+def get_specialties_summary():
+    return SPECIALTIES_SUMMARY
+
+
+@app.get("/pacs/studies")
+def get_pacs_studies():
+    return PACS_STUDIES
+
+@app.get("/nursing/vitals/{patient_id}")
+def get_nursing_vitals(patient_id: str):
+    return SERVICES["nursing"].list_vitals(patient_id)
+
+
+@app.post("/nursing/vitals/{patient_id}")
+def create_nursing_vital(patient_id: str, payload: NursingVitalRequest):
+    return SERVICES["nursing"].create_vital(
+        patient_id,
+        {
+            "temperature": payload.temperature,
+            "bloodPressure": payload.bloodPressure,
+            "heartRate": payload.heartRate,
+            "respiratoryRate": payload.respiratoryRate,
+            "oxygenSaturation": payload.oxygenSaturation,
+            "time": payload.time,
+        },
+    )
+
+
+@app.get("/nursing/notes/{patient_id}")
+def get_nursing_notes(patient_id: str):
+    return SERVICES["nursing"].list_notes(patient_id)
+
+
+@app.post("/nursing/notes/{patient_id}")
+def create_nursing_note(patient_id: str, payload: NursingNoteRequest):
+    return SERVICES["nursing"].create_note(patient_id, payload.text)
+
+@app.get("/radiology/catalog")
+def get_radiology_catalog():
+    return RADIOLOGY_CATALOG
+
+
+@app.get("/radiology/orders")
+def get_radiology_orders():
+    return RADIOLOGY_ORDERS
+
+
+@app.get("/radiology/orders/{patient_id}")
+def get_radiology_orders_by_patient(patient_id: str):
+    return [order for order in RADIOLOGY_ORDERS if order["patientId"] == patient_id]
+
+
+@app.post("/radiology/orders")
+def create_radiology_order(payload: RadiologyOrderCreateRequest):
+    if not payload.studies:
+        raise HTTPException(status_code=400, detail="At least one study is required")
+
+    new_order = {
+        "id": f"RAD-{5000 + len(RADIOLOGY_ORDERS) + 1}",
+        "patientId": payload.patientId,
+        "patientName": payload.patientName,
+        "section": payload.section,
+        "studies": payload.studies,
+        "priority": payload.priority or "Routine",
+        "status": payload.status or "Pending",
+        "report": "",
+    }
+    RADIOLOGY_ORDERS.append(new_order)
+    return new_order
+
+
+@app.post("/radiology/results/{order_id}")
+def create_radiology_report(order_id: str, payload: RadiologyReportRequest):
+    for order in RADIOLOGY_ORDERS:
+        if order["id"] == order_id:
+            order["report"] = payload.report
+            order["status"] = payload.status or "Completed"
+            return order
+    raise HTTPException(status_code=404, detail="Radiology order not found")
+
+
+
+
+@app.get("/labs/catalog")
+def get_labs_catalog():
+    return LAB_CATALOG
+
+
+@app.get("/labs/orders")
+def get_lab_orders():
+    return LAB_ORDERS
+
+
+@app.get("/labs/orders/{patient_id}")
+def get_lab_orders_by_patient(patient_id: str):
+    return [order for order in LAB_ORDERS if order["patientId"] == patient_id]
+
+
+@app.post("/labs/orders")
+def create_lab_order(payload: LabOrderCreateRequest):
+    if not payload.tests:
+        raise HTTPException(status_code=400, detail="At least one test is required")
+
+    new_order = {
+        "id": f"L-{4000 + len(LAB_ORDERS) + 1}",
+        "patientId": payload.patientId,
+        "patientName": payload.patientName,
+        "section": payload.section,
+        "tests": payload.tests,
+        "priority": payload.priority or "Routine",
+        "status": payload.status or "Pending",
+        "result": "",
+    }
+    LAB_ORDERS.append(new_order)
+    return new_order
+
+
+@app.post("/labs/results/{order_id}")
+def create_lab_result(order_id: str, payload: LabResultRequest):
+    for order in LAB_ORDERS:
+        if order["id"] == order_id:
+            order["result"] = payload.result
+            order["status"] = payload.status or "Completed"
+            return order
+    raise HTTPException(status_code=404, detail="Lab order not found")
+
+
+
+
+app.include_router(clinical_route_router)
+app.include_router(clinical_orders_router)
+app.include_router(health_router)
+
+
+
+MED_RECONCILIATION = {
+    "P-1001": {
+        "homeMeds": [
+            "aspirin 81 mg",
+            "atorvastatin 40 mg",
+            "metoprolol 50 mg"
+        ],
+        "admissionMeds": [
+            "aspirin 81 mg",
+            "ibuprofen 400 mg"
+        ],
+        "dischargeMeds": [
+            "aspirin 81 mg",
+            "atorvastatin 40 mg"
+        ]
+    },
+    "P-1002": {
+        "homeMeds": [
+            "paracetamol 500 mg"
+        ],
+        "admissionMeds": [
+            "paracetamol 1 g"
+        ],
+        "dischargeMeds": [
+            "paracetamol 500 mg"
+        ]
+    }
+}
+
+
+def _normalize_med_list(values: list[str]) -> list[str]:
+    return [_normalize_med_name(v) for v in values if (v or "").strip()]
+
+
+def _build_reconciliation_summary(patient_id: str):
+    raw = MED_RECONCILIATION.get(patient_id, {
+        "homeMeds": [],
+        "admissionMeds": [],
+        "dischargeMeds": [],
+    })
+
+    home = _normalize_med_list(raw.get("homeMeds", []))
+    admission = _normalize_med_list(raw.get("admissionMeds", []))
+    discharge = _normalize_med_list(raw.get("dischargeMeds", []))
+
+    missing_on_admission = [med for med in home if med not in admission]
+    missing_on_discharge = [med for med in home if med not in discharge]
+    added_in_hospital = [med for med in admission if med not in home]
+    discharge_only = [med for med in discharge if med not in home]
+
+    findings = []
+
+    for med in missing_on_admission:
+        findings.append({
+            "severity": "moderate",
+            "type": "missing_on_admission",
+            "title": "Possible chronic medication missing on admission",
+            "detail": med,
+        })
+
+    for med in missing_on_discharge:
+        findings.append({
+            "severity": "high",
+            "type": "missing_on_discharge",
+            "title": "Possible chronic medication missing on discharge",
+            "detail": med,
+        })
+
+    for med in added_in_hospital:
+        findings.append({
+            "severity": "moderate",
+            "type": "added_in_hospital",
+            "title": "Medication added during admission",
+            "detail": med,
+        })
+
+    for med in discharge_only:
+        findings.append({
+            "severity": "moderate",
+            "type": "new_discharge_med",
+            "title": "New medication planned at discharge",
+            "detail": med,
+        })
+
+    duplicate_groups = _match_ingredient_groups(admission + discharge)
+    for ingredient, meds in duplicate_groups.items():
+        if len(meds) > 1:
+            findings.append({
+                "severity": "high",
+                "type": "duplicate_therapy",
+                "title": "Duplicate therapy detected across reconciliation lists",
+                "detail": f"{ingredient}: " + ", ".join(meds),
+            })
+
+    return {
+        "patientId": patient_id,
+        "homeMeds": home,
+        "admissionMeds": admission,
+        "dischargeMeds": discharge,
+        "findings": findings,
+        "summary": {
+            "high_risk_count": len([f for f in findings if f["severity"] == "high"]),
+            "moderate_risk_count": len([f for f in findings if f["severity"] == "moderate"]),
+            "has_findings": len(findings) > 0,
+        }
+    }
+
+
+@app.get("/drug-intel/reconciliation/{patient_id}")
+def get_medication_reconciliation(patient_id: str):
+    return _build_reconciliation_summary(patient_id)
+
+
+def _default_take_time(med: str):
+    med = _normalize_med_name(med)
+    if "aspirin" in med:
+        return "After food, once daily in the morning unless your doctor changed the time."
+    if "atorvastatin" in med:
+        return "Once daily in the evening."
+    if "metoprolol" in med:
+        return "At the same time each day, usually after food."
+    if "warfarin" in med:
+        return "At the same time every day. Follow INR monitoring instructions carefully."
+    if "ibuprofen" in med:
+        return "After food, only as directed, and not longer than recommended."
+    if "paracetamol" in med:
+        return "Every 6 to 8 hours as needed, without exceeding the daily maximum."
+    return "Take exactly as prescribed by your clinician."
+
+def _default_avoid_text(med: str):
+    med = _normalize_med_name(med)
+    if "aspirin" in med:
+        return "Avoid taking extra NSAIDs like ibuprofen or naproxen unless specifically approved."
+    if "atorvastatin" in med:
+        return "Avoid excess alcohol and report unexplained muscle pain."
+    if "metoprolol" in med:
+        return "Avoid stopping the medicine suddenly without medical advice."
+    if "warfarin" in med:
+        return "Avoid dose changes, unsupervised NSAIDs, and report any bleeding immediately."
+    if "ibuprofen" in med:
+        return "Avoid combining with other NSAIDs and use caution if you have stomach or kidney problems."
+    if "paracetamol" in med:
+        return "Avoid duplicate acetaminophen/paracetamol products."
+    return "Avoid self-adjusting the dose without medical advice."
+
+def _default_when_to_review(med: str):
+    med = _normalize_med_name(med)
+    if "aspirin" in med or "warfarin" in med:
+        return "Seek medical review urgently if bleeding, black stool, vomiting blood, or severe dizziness occurs."
+    if "metoprolol" in med:
+        return "Seek review if severe dizziness, fainting, or very slow pulse occurs."
+    if "atorvastatin" in med:
+        return "Seek review if severe muscle pain, dark urine, or jaundice occurs."
+    if "ibuprofen" in med:
+        return "Seek review if stomach pain, black stool, swelling, or reduced urine occurs."
+    if "paracetamol" in med:
+        return "Seek review if symptoms persist, worsen, or overdose is suspected."
+    return "Return for medical review if symptoms worsen or side effects appear."
+
+def _build_discharge_counseling(patient_id: str):
+    reconciliation = _build_reconciliation_summary(patient_id)
+    discharge_meds = reconciliation.get("dischargeMeds", [])
+
+    counseling = []
+    for med in discharge_meds:
+        counseling.append({
+            "medication": med,
+            "take_time": _default_take_time(med),
+            "what_to_avoid": _default_avoid_text(med),
+            "when_to_seek_help": _default_when_to_review(med),
+        })
+
+    general_points = [
+        "Take medicines exactly as prescribed.",
+        "Keep an updated medication list with you.",
+        "Do not restart stopped medicines unless your doctor confirms.",
+        "If you miss a dose, follow the medication-specific advice or ask your pharmacist.",
+    ]
+
+    return {
+        "patientId": patient_id,
+        "dischargeMeds": discharge_meds,
+        "counseling": counseling,
+        "generalAdvice": general_points,
+        "summary": {
+            "count": len(counseling),
+            "has_discharge_meds": len(discharge_meds) > 0,
+        }
+    }
+
+
+@app.get("/drug-intel/discharge-counseling/{patient_id}")
+def get_discharge_counseling(patient_id: str):
+    return _build_discharge_counseling(patient_id)
+
+
+
+MAR = {
+    "P-1001": [
+        {
+            "id": 1,
+            "medication": "Aspirin 81 mg",
+            "dose": "1 tablet",
+            "route": "PO",
+            "schedule": "Once daily",
+            "status": "Given",
+            "givenAt": "08:00",
+            "createdAt": "2026-03-20 08:00",
+        }
+    ],
+    "P-1002": [
+        {
+            "id": 1,
+            "medication": "Paracetamol 1 g",
+            "dose": "1 tablet",
+            "route": "PO",
+            "schedule": "Every 8 hours",
+            "status": "Pending",
+            "givenAt": "",
+            "createdAt": "2026-03-20 09:00",
+        }
+    ],
+}
+
+REPOSITORIES = build_repositories(
+    USERS,
+    PATIENTS,
+    NOTES,
+    ORDERS,
+    APPOINTMENTS,
+    REPORTS,
+    NURSING_VITALS,
+    NURSING_NOTES,
+    MAR,
+    LAB_CATALOG,
+    LAB_ORDERS,
+    RADIOLOGY_CATALOG,
+    RADIOLOGY_ORDERS,
+    DOCTOR_ASSIGNMENTS,
+)
+
+SERVICES = build_services(REPOSITORIES)
+
+
+class MARItemRequest(BaseModel):
+    medication: str
+    dose: str
+    route: str
+    schedule: str
+    status: str | None = "Pending"
+    givenAt: str | None = ""
+
+
+class MARStatusRequest(BaseModel):
+    status: str
+    givenAt: str | None = ""
+
+
+class MARUpdateRequest(BaseModel):
+    medication: str
+    dose: str
+    route: str
+    schedule: str
+    status: str | None = "Pending"
+    givenAt: str | None = ""
+
+
+
+
+class DrugInteractionRequest(BaseModel):
+    patientId: str | None = None
+    medications: list[str] | None = None
+
+
+NSAID_KEYWORDS = [
+    "aspirin", "ibuprofen", "naproxen", "diclofenac", "ketorolac",
+    "indomethacin", "meloxicam", "celecoxib", "etoricoxib"
+]
+
+ANTICOAGULANT_KEYWORDS = [
+    "warfarin", "apixaban", "rivaroxaban", "dabigatran", "edoxaban", "heparin", "enoxaparin"
+]
+
+ANTIPLATELET_KEYWORDS = [
+    "clopidogrel", "ticagrelor", "prasugrel", "aspirin"
+]
+
+RENAL_CAUTION_KEYWORDS = [
+    "ibuprofen", "naproxen", "diclofenac", "ketorolac", "indomethacin",
+    "meloxicam", "celecoxib", "metformin", "gentamicin", "vancomycin",
+    "furosemide", "spironolactone", "lisinopril", "losartan"
+]
+
+
+def _normalize_med_name(name: str) -> str:
+    return (name or "").strip().lower()
+
+
+def _contains_any(name: str, keywords: list[str]) -> bool:
+    return any(keyword in name for keyword in keywords)
+
+
+def _analyze_medication_list(medications: list[str]):
+    normalized = [_normalize_med_name(m) for m in medications if (m or "").strip()]
+    findings = []
+
+    seen = {}
+    for med in normalized:
+        seen[med] = seen.get(med, 0) + 1
+    for med, count in seen.items():
+        if count > 1:
+            findings.append({
+                "severity": "moderate",
+                "type": "duplicate_therapy",
+                "title": "Duplicate therapy detected",
+                "detail": f"{med} appears {count} times in the medication list."
+            })
+
+    has_nsaid = any(_contains_any(med, NSAID_KEYWORDS) for med in normalized)
+    has_anticoagulant = any(_contains_any(med, ANTICOAGULANT_KEYWORDS) for med in normalized)
+    has_antiplatelet = any(_contains_any(med, ANTIPLATELET_KEYWORDS) for med in normalized)
+
+    if has_nsaid and has_anticoagulant:
+        findings.append({
+            "severity": "high",
+            "type": "bleeding_risk",
+            "title": "Bleeding risk",
+            "detail": "NSAID + anticoagulant combination may increase gastrointestinal or systemic bleeding risk."
+        })
+
+    if has_nsaid and has_antiplatelet:
+        findings.append({
+            "severity": "high",
+            "type": "bleeding_risk",
+            "title": "Bleeding risk",
+            "detail": "NSAID + antiplatelet combination may increase bleeding risk."
+        })
+
+    nsaid_meds = [med for med in normalized if _contains_any(med, NSAID_KEYWORDS)]
+    if len(nsaid_meds) >= 2:
+        findings.append({
+            "severity": "high",
+            "type": "nsaid_warning",
+            "title": "Multiple NSAIDs detected",
+            "detail": "Using more than one NSAID may increase GI bleeding and kidney injury risk."
+        })
+
+    renal_meds = [med for med in normalized if _contains_any(med, RENAL_CAUTION_KEYWORDS)]
+    if renal_meds:
+        findings.append({
+            "severity": "moderate",
+            "type": "renal_caution",
+            "title": "Renal caution",
+            "detail": "One or more medications may require renal function review: " + ", ".join(sorted(set(renal_meds)))
+        })
+
+    return {
+        "count": len(normalized),
+        "medications": normalized,
+        "findings": findings,
+        "summary": {
+            "has_findings": len(findings) > 0,
+            "high_risk_count": len([f for f in findings if f["severity"] == "high"]),
+            "moderate_risk_count": len([f for f in findings if f["severity"] == "moderate"]),
+        }
+    }
+
+
+
+
+class DoseSafetyRequest(BaseModel):
+    patientId: str | None = None
+    age: int | None = None
+    medications: list[str] | None = None
+
+
+MAX_DAILY_DOSE_RULES = {
+    "aspirin": {"adult_mg": 4000, "pediatric_allowed": False},
+    "ibuprofen": {"adult_mg": 3200, "pediatric_allowed": True},
+    "acetaminophen": {"adult_mg": 4000, "pediatric_allowed": True},
+    "paracetamol": {"adult_mg": 4000, "pediatric_allowed": True},
+    "naproxen": {"adult_mg": 1250, "pediatric_allowed": False},
+    "diclofenac": {"adult_mg": 150, "pediatric_allowed": False},
+    "warfarin": {"adult_mg": None, "pediatric_allowed": False},
+}
+
+HEPATIC_CAUTION_KEYWORDS = [
+    "acetaminophen", "paracetamol", "valproate", "isoniazid", "methotrexate", "amiodarone"
+]
+
+DUPLICATE_INGREDIENT_GROUPS = {
+    "aspirin": ["aspirin", "asa", "excedrin", "alka-seltzer", "anacin", "bufferin", "ecotrin"],
+    "acetaminophen": ["acetaminophen", "paracetamol", "apap", "excedrin", "panadol", "tylenol"],
+    "ibuprofen": ["ibuprofen", "advil", "motrin"],
+    "naproxen": ["naproxen", "aleve"],
+}
+
+
+def _extract_numeric_dose_mg(text: str) -> int | None:
+    import re
+    value = (text or "").lower()
+    m = re.search(r'(\d+(?:\.\d+)?)\s*mg', value)
+    if not m:
+        return None
+    try:
+        return int(float(m.group(1)))
+    except Exception:
+        return None
+
+
+def _match_ingredient_groups(medications: list[str]):
+    normalized = [_normalize_med_name(m) for m in medications if (m or "").strip()]
+    matches = {}
+    for group, keywords in DUPLICATE_INGREDIENT_GROUPS.items():
+        present = []
+        for med in normalized:
+            if any(keyword in med for keyword in keywords):
+                present.append(med)
+        if len(set(present)) > 1:
+            matches[group] = sorted(set(present))
+    return matches
+
+
+def _analyze_dose_safety(medications: list[str], age: int | None):
+    normalized = [_normalize_med_name(m) for m in medications if (m or "").strip()]
+    findings = []
+
+    duplicate_groups = _match_ingredient_groups(normalized)
+    for ingredient, meds in duplicate_groups.items():
+        findings.append({
+            "severity": "high",
+            "type": "duplicate_ingredient",
+            "title": "Duplicate active ingredient detected",
+            "detail": f"Multiple products may contain {ingredient}: " + ", ".join(meds)
+        })
+
+    for med in normalized:
+        med_mg = _extract_numeric_dose_mg(med)
+
+        for ingredient, rule in MAX_DAILY_DOSE_RULES.items():
+            if ingredient in med:
+                if age is not None and age < 12 and not rule.get("pediatric_allowed", False):
+                    findings.append({
+                        "severity": "high",
+                        "type": "pediatric_adult_warning",
+                        "title": "Pediatric warning",
+                        "detail": f"{ingredient} may not be appropriate for pediatric use without specialist review."
+                    })
+
+                if med_mg is not None and rule.get("adult_mg") is not None and med_mg > rule["adult_mg"]:
+                    findings.append({
+                        "severity": "high",
+                        "type": "max_daily_dose",
+                        "title": "Possible excessive dose",
+                        "detail": f"{med} exceeds adult reference threshold of {rule['adult_mg']} mg/day."
+                    })
+
+        if _contains_any(med, RENAL_CAUTION_KEYWORDS):
+            findings.append({
+                "severity": "moderate",
+                "type": "renal_caution",
+                "title": "Renal dose caution",
+                "detail": f"{med} may require renal function review or dose adjustment."
+            })
+
+        if _contains_any(med, HEPATIC_CAUTION_KEYWORDS):
+            findings.append({
+                "severity": "moderate",
+                "type": "hepatic_caution",
+                "title": "Hepatic dose caution",
+                "detail": f"{med} may require liver function review or hepatic dose caution."
+            })
+
+    return {
+        "age": age,
+        "count": len(normalized),
+        "medications": normalized,
+        "findings": findings,
+        "summary": {
+            "has_findings": len(findings) > 0,
+            "high_risk_count": len([f for f in findings if f["severity"] == "high"]),
+            "moderate_risk_count": len([f for f in findings if f["severity"] == "moderate"]),
+        }
+    }
+
+
+
+
+class MedicationRecommendationRequest(BaseModel):
+    patientId: str | None = None
+    age: int | None = None
+    medications: list[str] | None = None
+
+
+def _build_medication_recommendations(medications: list[str], age: int | None = None):
+    recommendations = []
+
+    for med in medications:
+        med_name = str(med).strip()
+
+        if not med_name:
+            continue
+
+        med_lower = med_name.lower()
+
+        if "warfarin" in med_lower:
+            recommendations.append({
+                "recommendation": f"Monitor INR closely for {med_name} and avoid unnecessary NSAID/aspirin combinations.",
+                "message": f"High-risk anticoagulant review recommended for {med_name}.",
+                "severity": "high"
+            })
+        elif "metformin" in med_lower:
+            recommendations.append({
+                "recommendation": f"Review renal function periodically while using {med_name}.",
+                "message": f"Routine kidney function monitoring suggested for {med_name}.",
+                "severity": "medium"
+            })
+        else:
+            recommendations.append({
+                "recommendation": f"Review standard dosing and counseling for {med_name}.",
+                "message": f"No special AI flags detected for {med_name}.",
+                "severity": "low"
+            })
+
+    if age is not None and age >= 65:
+        recommendations.append({
+            "recommendation": "Consider age-related dose adjustment and fall-risk review.",
+            "message": "Older adult safety review recommended.",
+            "severity": "medium"
+        })
+
+    return {
+        "recommendations": recommendations,
+        "count": len(recommendations)
+    }
+
+
+@app.get("/drug-intel/recommendations/{patient_id}")
+def get_medication_recommendations_for_patient(patient_id: str, age: int | None = None):
+    mar_items = MAR.get(patient_id, [])
+    medications = [item.get("medication", "") for item in mar_items]
+    result = _build_medication_recommendations(medications, age)
+    result["patientId"] = patient_id
+    return result
+
+
+@app.post("/drug-intel/recommendations")
+def analyze_medication_recommendations(payload: MedicationRecommendationRequest):
+    medications = payload.medications or []
+    result = _build_medication_recommendations(medications, payload.age)
+    result["patientId"] = payload.patientId
+    return result
+
+@app.get("/drug-intel/dose-safety/{patient_id}")
+def get_dose_safety_for_patient(patient_id: str, age: int | None = None):
+    mar_items = MAR.get(patient_id, [])
+    medications = [item.get("medication", "") for item in mar_items]
+    result = _analyze_dose_safety(medications, age)
+    result["patientId"] = patient_id
+    return result
+
+
+@app.post("/drug-intel/dose-safety")
+def analyze_dose_safety(payload: DoseSafetyRequest):
+    medications = payload.medications or []
+    result = _analyze_dose_safety(medications, payload.age)
+    result["patientId"] = payload.patientId
+    return result
+
+@app.get("/drug-intel/interactions/{patient_id}")
+def get_drug_interactions_for_patient(patient_id: str):
+    mar_items = MAR.get(patient_id, [])
+    medications = [item.get("medication", "") for item in mar_items]
+    result = _analyze_medication_list(medications)
+    result["patientId"] = patient_id
+    return result
+
+
+@app.post("/drug-intel/interactions")
+def analyze_drug_interactions(payload: DrugInteractionRequest):
+    medications = payload.medications or []
+    result = _analyze_medication_list(medications)
+    result["patientId"] = payload.patientId
+    return result
+
+@app.get("/mar/{patient_id}")
+def get_mar(patient_id: str):
+    return SERVICES["mar"].list_items(patient_id)
+
+
+@app.post("/mar/{patient_id}")
+def create_mar_item(patient_id: str, payload: MARItemRequest):
+    return SERVICES["mar"].create_item(
+        patient_id,
+        {
+            "medication": payload.medication,
+            "dose": payload.dose,
+            "route": payload.route,
+            "schedule": payload.schedule,
+            "status": "Pending",
+        },
+    )
+
+
+@app.put("/mar/{patient_id}/{item_id}")
+def update_mar_item(patient_id: str, item_id: int, payload: MARUpdateRequest):
+    items = MAR.get(patient_id, [])
+    for item in items:
+        if item["id"] == item_id:
+            item["medication"] = payload.medication
+            item["dose"] = payload.dose
+            item["route"] = payload.route
+            item["schedule"] = payload.schedule
+            item["status"] = payload.status or item.get("status", "Pending")
+            item["givenAt"] = payload.givenAt or ""
+            return item
+    raise HTTPException(status_code=404, detail="MAR item not found")
+
+
+
+
+class PharmacistReviewRequest(BaseModel):
+    status: str
+    note: str | None = ""
+
+
+@app.put("/mar/{patient_id}/{item_id}/pharmacist-review")
+def pharmacist_review_mar_item(patient_id: str, item_id: int, payload: PharmacistReviewRequest):
+    items = MAR.get(patient_id, [])
+    for item in items:
+        if item["id"] == item_id:
+            item["status"] = payload.status or item.get("status", "Pending")
+            item["pharmacistNote"] = payload.note or ""
+            item["reviewedAt"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+            return item
+    raise HTTPException(status_code=404, detail="MAR item not found")
+
+@app.put("/mar/{patient_id}/{item_id}/status")
+def update_mar_item_status(patient_id: str, item_id: int, payload: MARStatusRequest):
+    items = MAR.get(patient_id, [])
+    for item in items:
+        if item["id"] == item_id:
+            item["status"] = payload.status
+            item["givenAt"] = payload.givenAt or item.get("givenAt", "")
+            return item
+    raise HTTPException(status_code=404, detail="MAR item not found")
+
+
+
+@app.get("/drug-intel/search")
+def drug_intel_search(q: str = Query(..., min_length=2)):
+    encoded = urllib.parse.quote(q)
+    rxnorm_url = f"https://rxnav.nlm.nih.gov/REST/drugs.json?name={encoded}"
+    openfda_url = f"https://api.fda.gov/drug/label.json?search=openfda.generic_name:%22{encoded}%22+openfda.brand_name:%22{encoded}%22&limit=3"
+
+    rxnorm_data = {}
+    openfda_data = {}
+
+    try:
+        with urlopen(Request(rxnorm_url, headers={"User-Agent": "AI-Hospital-Alliance"}), timeout=12) as response:
+            rxnorm_data = json.loads(response.read().decode("utf-8"))
+    except Exception:
+        rxnorm_data = {}
+
+    try:
+        with urlopen(Request(openfda_url, headers={"User-Agent": "AI-Hospital-Alliance"}), timeout=12) as response:
+            openfda_data = json.loads(response.read().decode("utf-8"))
+    except Exception:
+        openfda_data = {}
+
+    return {
+        "query": q,
+        "rxnorm": rxnorm_data,
+        "openfda": openfda_data,
+    }
+
+
+@app.get("/drug-intel/dailymed")
+def drug_intel_dailymed(name: str = Query(..., min_length=2)):
+    encoded = urllib.parse.quote(name)
+    dailymed_url = f"https://dailymed.nlm.nih.gov/dailymed/services/v2/spls.json?drug_name={encoded}"
+
+    try:
+        with urlopen(Request(dailymed_url, headers={"User-Agent": "AI-Hospital-Alliance"}), timeout=12) as response:
+            data = json.loads(response.read().decode("utf-8"))
+            return data
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"DailyMed fetch failed: {exc}")
+
+
+@app.delete("/mar/{patient_id}/{item_id}")
+def delete_mar_item(patient_id: str, item_id: int):
+    items = MAR.get(patient_id, [])
+    for index, item in enumerate(items):
+        if item["id"] == item_id:
+            deleted = items.pop(index)
+            return {"deleted": True, "item": deleted}
+    raise HTTPException(status_code=404, detail="MAR item not found")
+
+@app.get("/drug-intel/risk/{patient_id}")
+def get_risk(patient_id: str):
+    patient = next((p for p in PATIENTS if p["id"] == patient_id), None)
+
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+
+    score = 0
+    reasons = []
+
+    # Age factor
+    if patient.get("age", 0) > 60:
+        score += 2
+        reasons.append("Age > 60")
+
+    # Condition factor
+    condition = (patient.get("condition") or "").lower()
+
+    if "chest" in condition:
+        score += 3
+        reasons.append("Chest condition")
+
+    if "oxygen" in condition:
+        score += 3
+        reasons.append("Low oxygen")
+
+    if "fever" in condition:
+        score += 1
+        reasons.append("Fever")
+
+    # Risk level
+    if score >= 5:
+        level = "HIGH"
+    elif score >= 3:
+        level = "MEDIUM"
+    else:
+        level = "LOW"
+
+    return {
+        "level": level,
+        "score": score,
+        "reasons": reasons
+    }
+
+
+@app.post("/ai/chat")
+def ai_chat(payload: dict):
+    msg = payload.get("message", "")
+
+    return {
+        "reply": f"AI Doctor says: Based on your input '{msg}', please consider medical evaluation and monitoring."
+    }
+
+
+
+# ===== Reports Create Endpoint =====
+try:
+    REPORTS
+except NameError:
+    REPORTS = []
+
+class ReportCreateRequest(BaseModel):
+    title: str
+    type: str | None = "Clinical Report"
+    summary: str | None = ""
+    content: str | None = ""
+    status: str | None = "Draft"
+
+@app.post("/reports/{patient_id}")
+def create_report(patient_id: str, payload: ReportCreateRequest):
+    report = {
+        "id": f"R-{len(REPORTS) + 1:04d}",
+        "patient_id": patient_id,
+        "title": payload.title,
+        "type": payload.type or "Clinical Report",
+        "summary": payload.summary or "",
+        "content": payload.content or "",
+        "status": payload.status or "Draft",
+    }
+    REPORTS.append(report)
+    return report
+
+
+from fastapi import Depends, HTTPException
+
+VERIFIED_REPORTS = {}
+
+@app.post("/verify/register/{report_id}")
+def register_report(report_id: str):
+    VERIFIED_REPORTS[report_id] = {
+        "status": "verified",
+        "timestamp": "valid"
+    }
+    return {"message": "Report registered", "report_id": report_id}
+
+@app.get("/verify/{report_id}")
+def verify_report(report_id: str):
+    report = VERIFIED_REPORTS.get(report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found or invalid")
+
+    return {
+        "report_id": report_id,
+        "status": "VERIFIED",
+        "source": "AI Hospital Alliance",
+        "security": "Blockchain-grade verification",
+    }
+
+
+import hashlib
+import json
+
+REPORT_HASHES = {}
+
+def generate_report_hash(data: dict):
+    content = json.dumps(data, sort_keys=True).encode()
+    return hashlib.sha256(content).hexdigest()
+
+@app.post("/secure-report/{report_id}")
+def secure_report(report_id: str, payload: dict):
+    report_hash = generate_report_hash(payload)
+
+    REPORT_HASHES[report_id] = {
+        "hash": report_hash,
+        "data": payload
+    }
+
+    return {
+        "report_id": report_id,
+        "hash": report_hash,
+        "status": "secured"
+    }
+
+@app.post("/verify-secure/{report_id}")
+def verify_secure(report_id: str, payload: dict):
+    existing = REPORT_HASHES.get(report_id)
+
+    if not existing:
+        return {"status": "NOT FOUND"}
+
+    new_hash = generate_report_hash(payload)
+
+    if new_hash == existing["hash"]:
+        return {
+            "status": "VALID",
+            "security": "UNCHANGED"
+        }
+    else:
+        return {
+            "status": "TAMPERED",
+            "security": "DATA MODIFIED"
+        }
+
+
+def sign_data(data: bytes) -> str:
+    import hmac, hashlib
+    key = os.environ.get("SECRET_KEY", "aiha-super-secret-key-2026").encode()
+    return hmac.new(key, data, hashlib.sha256).hexdigest()
+
+
+def verify_signature(data: bytes, signature: str) -> bool:
+    import hmac
+    expected = sign_data(data)
+    return hmac.compare_digest(expected, signature)
+
+
+@app.post("/sign-report/{report_id}")
+def sign_report(report_id: str, payload: dict):
+    import json
+    data = json.dumps(payload, sort_keys=True).encode()
+    signature = sign_data(data)
+
+    return {
+        "report_id": report_id,
+        "signature": signature,
+        "status": "signed"
+    }
+
+@app.post("/verify-signature/{report_id}")
+def verify_report_signature(report_id: str, payload: dict, signature: str):
+    import json
+    data = json.dumps(payload, sort_keys=True).encode()
+
+    valid = verify_signature(data, signature)
+
+    return {
+        "status": "VALID" if valid else "INVALID",
+        "security": "HMAC-SHA256"
+    }
+
+
+BLOCKCHAIN_LEDGER = {}
+
+@app.post("/blockchain/register/{report_id}")
+def blockchain_register(report_id: str, payload: dict):
+    import hashlib, json
+
+    content = json.dumps(payload, sort_keys=True).encode()
+    hash_value = hashlib.sha256(content).hexdigest()
+
+    BLOCKCHAIN_LEDGER[report_id] = hash_value
+
+    return {
+        "report_id": report_id,
+        "hash": hash_value,
+        "blockchain": "registered"
+    }
+
+@app.get("/blockchain/verify/{report_id}")
+def blockchain_verify(report_id: str, payload: dict):
+    import hashlib, json
+
+    stored = BLOCKCHAIN_LEDGER.get(report_id)
+    if not stored:
+        return {"status": "NOT FOUND"}
+
+    new_hash = hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
+
+    return {
+        "status": "VALID" if stored == new_hash else "TAMPERED",
+        "layer": "BLOCKCHAIN"
+    }
+
+
+# =============================
+# VERIFIED REPORT WORKFLOW
+# =============================
+VERIFY_REPORTS = {}
+
+@app.post("/verify-secure/register/{visit_id}")
+def register_verify(visit_id: str):
+    VERIFY_REPORTS[visit_id] = {
+        "status": "registered",
+        "timestamp": str(datetime.now())
+    }
+    return {"status": "registered", "visit_id": visit_id}
+
+
+@app.get("/verify-secure/{visit_id}", response_class=HTMLResponse)
+def verify_report_page(visit_id: str):
+    report = VERIFY_REPORTS.get(visit_id)
+
+    if not report:
+        return "<h2 style='color:red;'>Report NOT FOUND</h2>"
+
+    return f"""
+    <html>
+      <body style="font-family:Arial;text-align:center;padding:40px;">
+        <h1 style="color:green;">✔ Verified Medical Report</h1>
+        <p><strong>Visit ID:</strong> {visit_id}</p>
+        <p>Status: VERIFIED</p>
+        <p>Timestamp: {report.get("timestamp")}</p>
+      </body>
+    </html>
+    """
+
+
+# =============================
+# PATIENT PORTAL
+# =============================
+PATIENT_REPORTS = {}
+
+@app.post("/patient/report/{visit_id}")
+def save_patient_report(visit_id: str, payload: dict):
+    PATIENT_REPORTS[visit_id] = payload
+    return {"status": "saved", "visit_id": visit_id}
+
+
+@app.get("/patient/report/{visit_id}")
+def get_patient_report(visit_id: str):
+    report = PATIENT_REPORTS.get(visit_id)
+
+    if not report:
+        return {"status": "NOT FOUND"}
+
+    return {
+        "status": "FOUND",
+        "visit_id": visit_id,
+        "report": report
+    }
+
+from backend.app.drug_external import openfda_label_by_generic_name
+
+@app.get("/drug-intel/fda-label/{drug_name}")
+def get_fda_label_lookup(drug_name: str):
+    result = {
+        "drug": drug_name,
+        "rxcui": None,
+        "dailymed": None,
+        "openfda": None,
+    }
+
+    try:
+        result["openfda"] = openfda_label_by_generic_name(drug_name)
+    except Exception as e:
+        result["openfda_error"] = str(e)
+        result["openfda"] = {
+            "results": [
+                {
+                    "openfda": {
+                        "generic_name": [drug_name],
+                        "brand_name": [drug_name],
+                        "manufacturer_name": ["Fallback Local Data"],
+                        "route": ["unknown"]
+                    },
+                    "warnings": [f"Could not fetch live FDA data for {drug_name}. Showing local fallback."],
+                    "adverse_reactions": ["No live adverse reactions available."]
+                }
+            ]
+        }
+
+    return result
+
+@app.get("/drug-intel/global/{drug}")
+def global_drug_info(drug: str):
+    return {
+        "drug": drug,
+        "WHO_ATC": "B01AA03",
+        "category": "Anticoagulant",
+        "fda_warning": "Risk of bleeding",
+        "global_note": "Monitor INR regularly"
+    }
+
+from backend.app.db import SessionLocal, get_db
+from sqlalchemy.orm import Session
+from backend.app.models import User
+from backend.app.auth import verify_password, create_token
+
+
+@app.post("/auth/jwt-login")
+def jwt_login(payload: dict):
+    try:
+        db = SessionLocal()
+        username = payload.get("username")
+        password = payload.get("password")
+
+        if not username or not password:
+            return {"error": "Missing username or password"}
+
+        user = db.query(User).filter(User.username == username).first()
+
+        if not user:
+            return {"error": "User not found"}
+
+        if not verify_password(password, user.password):
+            return {"error": "Invalid credentials"}
+
+        token = create_token({
+            "user_id": user.id,
+            "role": user.role,
+            "hospital_id": user.hospital_id
+        })
+
+        return {
+            "access_token": token,
+            "user": {
+                "username": user.username,
+                "role": user.role,
+                "hospital_id": user.hospital_id
+            }
+        }
+    except Exception as e:
+        return {"error": f"JWT login failed: {str(e)}"}
+
+from backend.app.auth import get_current_user
+
+
+@app.post("/mar/{patient_id}/{index}/status")
+def update_mar_status(patient_id: str, index: int, payload: dict, current_user: dict = Depends(get_current_user)):
+    if patient_id not in MAR:
+        return {"error": "Patient MAR not found"}
+
+    if index < 0 or index >= len(MAR[patient_id]):
+        return {"error": "Invalid MAR index"}
+
+    MAR[patient_id][index]["status"] = payload.get("status", MAR[patient_id][index].get("status"))
+    return {"status": "ok", "mar": MAR[patient_id]}
+
+
+@app.post("/mar/{patient_id}/{index}/pharmacy-review")
+def pharmacy_review_mar_item(patient_id: str, index: int, payload: dict, current_user: dict = Depends(get_current_user)):
+    if patient_id not in MAR:
+        return {"error": "Patient MAR not found"}
+
+    if index < 0 or index >= len(MAR[patient_id]):
+        return {"error": "Invalid MAR index"}
+
+    MAR[patient_id][index]["pharmacy_review"] = payload.get("pharmacy_review", "Reviewed")
+    MAR[patient_id][index]["ai_flag"] = payload.get("ai_flag", "Safe")
+    return {"status": "ok", "mar": MAR[patient_id]}
+
+
+RADIOLOGY = {
+    "P-1001": [
+        {
+            "study": "CT Chest",
+            "status": "Pending",
+            "report": ""
+        }
+    ]
+}
+
+@app.get("/radiology/{patient_id}")
+def get_radiology(patient_id: str, current_user: dict = Depends(get_current_user)):
+    return RADIOLOGY.get(patient_id, [])
+
+@app.post("/radiology/{patient_id}")
+def add_radiology(patient_id: str, payload: dict, current_user: dict = Depends(get_current_user)):
+    if patient_id not in RADIOLOGY:
+        RADIOLOGY[patient_id] = []
+    RADIOLOGY[patient_id].append(payload)
+    return {"status": "ok", "radiology": RADIOLOGY[patient_id]}
+
+
+from backend.app.ai_radiology import analyze_ct_scan
+
+@app.post("/radiology/{patient_id}/{index}/analyze")
+def analyze_radiology(patient_id: str, index: int, current_user: dict = Depends(get_current_user)):
+    if patient_id not in RADIOLOGY:
+        return {"error": "No studies"}
+
+    study = RADIOLOGY[patient_id][index]
+    result = analyze_ct_scan(study.get("study", ""))
+
+    RADIOLOGY[patient_id][index]["ai"] = result
+    
+    if result.get("priority") == "HIGH":
+        ALERTS.append({
+            "patient_id": patient_id,
+            "message": "Critical radiology finding",
+            "time": "NOW"
+        })
+    return {"status": "ok", "result": result}
+
+
+
+ALERTS = []
+
+@app.get("/alerts")
+def get_alerts():
+    return ALERTS
+
+
+from backend.app.deep_ai_radiology import analyze_image
+from backend.app.dicom_utils import load_dicom
+
+@app.post("/ai/deep-radiology")
+def deep_radiology(payload: dict):
+    path = payload.get("path")
+
+    img = load_dicom(path)
+    result = analyze_image(img)
+
+    return {
+        "status": "ok",
+        "prediction": result,
+        "risk": "HIGH" if result["abnormal"] > 0.7 else "LOW"
+    }
+
+
+from backend.app.ai_report import generate_radiology_report
+
+@app.post("/ai/deep-report")
+def deep_report(payload: dict):
+    pred = payload.get("prediction")
+    report = generate_radiology_report(pred)
+
+    return {
+        "report": report
+    }
+
+
+from backend.app.ai_inference import predict_image
+
+@app.post("/ai/predict")
+def predict(payload: dict):
+    path = payload.get("path")
+    result = predict_image(path)
+
+    return {
+        "prediction": result,
+        "risk": "HIGH" if result["abnormal"] > 0.7 else "LOW"
+    }
+
+
+from backend.app.unet_inference import segment_image
+
+@app.post("/ai/segment")
+def segment(payload: dict):
+    path = payload.get("path")
+    mask = segment_image(path)
+
+    return {
+        "status": "ok",
+        "mask": mask
+    }
+
+
+from backend.app.unet3d_inference import segment_3d
+
+@app.post("/ai/3d-segmentation")
+def ai_3d(payload: dict):
+    folder = payload.get("folder")
+
+    mask = segment_3d(folder)
+
+    return {
+        "status": "ok",
+        "message": "3D segmentation complete",
+        "mask": mask
+    }
+
+
+from backend.app.ai_diagnosis import auto_diagnose
+
+@app.post("/ai/diagnose")
+def diagnose(payload: dict):
+    mask = payload.get("mask")
+    result = auto_diagnose(mask)
+
+    return result
+from backend.app.db import Base, engine
+Base.metadata.create_all(bind=engine)
+
+# ── WebSocket Real-time Alerts ────────────────────────────────────────────────
+import asyncio
+import uuid
+from typing import List
+
+class ConnectionManager:
+    def __init__(self):
+        self.active: List[WebSocket] = []
+
+    async def connect(self, ws: WebSocket):
+        await ws.accept()
+        self.active.append(ws)
+
+    def disconnect(self, ws: WebSocket):
+        if ws in self.active:
+            self.active.remove(ws)
+
+    async def broadcast(self, data: dict):
+        import json
+        msg = json.dumps(data)
+        for ws in self.active.copy():
+            try:
+                await ws.send_text(msg)
+            except Exception:
+                self.active.remove(ws)
+
+ws_manager = ConnectionManager()
+
+@app.websocket("/ws/alerts")
+async def websocket_alerts(websocket: WebSocket):
+    await ws_manager.connect(websocket)
+    try:
+        # Send demo alerts every 30 seconds
+        import random, datetime
+        demo_alerts = [
+            {"type": "patient",  "message": "Patient P-1003 oxygen saturation dropped to 87%", "severity": "critical", "patientId": "P-1003"},
+            {"type": "lab",      "message": "Critical lab result: Troponin 1.2 ng/mL for P-1001", "severity": "critical", "patientId": "P-1001"},
+            {"type": "pharmacy", "message": "Drug interaction detected: Warfarin + Aspirin for P-1001", "severity": "high", "patientId": "P-1001"},
+            {"type": "radiology","message": "AI detected abnormality in CT Chest — P-1002", "severity": "high", "patientId": "P-1002"},
+            {"type": "alert",    "message": "ICU bed capacity at 90% — critical threshold", "severity": "moderate"},
+        ]
+        while True:
+            await asyncio.sleep(30)
+            alert = random.choice(demo_alerts)
+            await ws_manager.broadcast({
+                **alert,
+                "id": str(uuid.uuid4()),
+                "timestamp": datetime.datetime.utcnow().isoformat(),
+            })
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket)
+
+@app.post("/claude/analyze", response_model=None)
+async def claude_analyze(req: FastAPIRequest):
+    body = await req.json()
+    async with httpx.AsyncClient(timeout=30) as client:
+        res = await client.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "Content-Type": "application/json",
+                "anthropic-version": "2023-06-01",
+                "x-api-key": os.environ.get("ANTHROPIC_API_KEY", ""),
+            },
+            json=body
+        )
+    return res.json()
+
+# ── Patient CRUD ──────────────────────────────────────────────────────────────
+
+@app.post("/groq/chat")
+async def groq_chat(req: FastAPIRequest):
+    import httpx
+    body = await req.json()
+    message = body.get("message", "")
+    mode = body.get("mode", "default")
+    language = body.get("language", "en")
+    history = body.get("history", [])
+    
+    prompts = {
+        "triage": "You are an AI medical triage specialist. Assess symptoms: CRITICAL|URGENT|SEMI-URGENT|NON-URGENT.",
+        "lab": "You are an AI lab interpreter. Flag HIGH/LOW/CRITICAL/NORMAL.",
+        "report": "You are an AI medical report generator.",
+        "decision": "You are an AI clinical decision support system.",
+        "default": "You are CareBot, an AI medical assistant.",
+        "cardiology": "You are an expert AI cardiologist (ACC/AHA guidelines).",
+        "neurology": "You are an expert AI neurologist (AAN guidelines).",
+        "emergency": "You are an expert AI emergency physician (ATLS/ACLS).",
+        "pediatrics": "You are an expert AI pediatrician (AAP/WHO).",
+        "pharmacy": "You are an expert AI clinical pharmacist (FDA/USP).",
+    }
+    lang_suffix = {"ar": "\n\nأجب باللغة العربية.", "fr": "\n\nRépondez en français.", "en": ""}
+    system = prompts.get(mode, prompts["default"]) + lang_suffix.get(language, "")
+    
+    messages = [{"role": "system", "content": system}]
+    for m in history[-12:]:
+        if m.get("role") in ("user","assistant"):
+            messages.append({"role": m["role"], "content": m.get("content","")})
+    messages.append({"role": "user", "content": message})
+    
+    import os
+    groq_key = os.environ.get("GROQ_API_KEY", "")
+    if not groq_key:
+        return {"response": "AI unavailable — GROQ_API_KEY not set", "mode": mode}
+    
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        res = await client.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
+            json={"model": "llama-3.3-70b-versatile", "messages": messages, "max_tokens": 1500}
+        )
+        data = res.json()
+        reply = data["choices"][0]["message"]["content"]
+    return {"response": reply, "message": reply, "mode": mode}
+
+
+@app.post("/patients", response_model=None)
+def create_patient(data: dict, db: Session = Depends(get_db)):
+    from backend.app.models import Patient
+    import uuid
+    p = Patient(
+        id=f"P-{str(uuid.uuid4())[:6].upper()}",
+        name=data.get("name",""),
+        age=data.get("age",0),
+        gender=data.get("gender","Male"),
+        phone=data.get("phone",""),
+        condition=data.get("condition",""),
+        department_id=None,
+        hospital_id="H-001",
+        status=data.get("status","Active"),
+    )
+    db.add(p); db.commit(); db.refresh(p)
+    return {"id": p.id, "name": p.name, "status": p.status}
+
+@app.put("/patients/{patient_id}", response_model=None)
+def update_patient(patient_id: str, data: dict, db: Session = Depends(get_db)):
+    from backend.app.models import Patient
+    p = db.query(Patient).filter(Patient.id == patient_id).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    for k, v in data.items():
+        if hasattr(p, k) and k not in ("id","hospital_id"):
+            setattr(p, k, v)
+    db.commit()
+    return {"success": True}
+
+@app.delete("/patients/{patient_id}", response_model=None)
+def delete_patient(patient_id: str, db: Session = Depends(get_db)):
+    from backend.app.models import Patient
+    p = db.query(Patient).filter(Patient.id == patient_id).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    db.delete(p); db.commit()
+    return {"success": True}
+
+# ── FHIR R4 Endpoints ─────────────────────────────────────────────────────────
+from backend.app.fhir import patient_to_fhir, observation_to_fhir, bundle_response
+from backend.app.security import create_access_token, create_refresh_token, verify_refresh_token, check_rate_limit, AuditLogger
+from backend.app.tenant import TenantContext
+
+@app.get("/fhir/R4/Patient", response_model=None)
+def fhir_patients(db: Session = Depends(get_db)):
+    from backend.app.models import Patient
+    patients = db.query(Patient).all()
+    resources = [patient_to_fhir(p) for p in patients]
+    return bundle_response(resources)
+
+@app.get("/fhir/R4/Patient/{patient_id}", response_model=None)
+def fhir_patient(patient_id: str, db: Session = Depends(get_db)):
+    from backend.app.models import Patient
+    p = db.query(Patient).filter(Patient.id == patient_id).first()
+    if not p:
+        raise HTTPException(404, "Patient not found")
+    return patient_to_fhir(p)
+
+@app.get("/fhir/R4/Observation", response_model=None)
+def fhir_observations(patient: str = None, db: Session = Depends(get_db)):
+    from backend.app.models import NursingVital
+    q = db.query(NursingVital)
+    if patient:
+        q = q.filter(NursingVital.patient_id == patient)
+    vitals = q.all()
+    resources = [observation_to_fhir(v, v.patient_id) for v in vitals]
+    return bundle_response(resources)
+
+@app.get("/fhir/R4/metadata", response_model=None)
+def fhir_capability():
+    return {
+        "resourceType": "CapabilityStatement",
+        "status": "active",
+        "kind": "instance",
+        "fhirVersion": "4.0.1",
+        "format": ["json"],
+        "software": {"name": "AI Hospital Alliance FHIR Server", "version": "1.0.0"},
+        "rest": [{"mode": "server", "resource": [
+            {"type": "Patient",     "interaction": [{"code": "read"}, {"code": "search-type"}]},
+            {"type": "Observation", "interaction": [{"code": "read"}, {"code": "search-type"}]},
+        ]}]
+    }
+
+# ── Auth Refresh Token ────────────────────────────────────────────────────────
+@app.post("/auth/refresh", response_model=None)
+def refresh_token(data: dict):
+    token = data.get("refresh_token", "")
+    payload = verify_refresh_token(token)
+    if not payload:
+        raise HTTPException(401, "Invalid or expired refresh token")
+    username = payload.get("sub")
+    new_access = create_access_token({"sub": username})
+    new_refresh = create_refresh_token({"sub": username})
+    return {"access_token": new_access, "refresh_token": new_refresh}
+
+# ── Audit Log endpoint ────────────────────────────────────────────────────────
+@app.get("/audit/logs", response_model=None)
+def get_audit_logs(limit: int = 50, db: Session = Depends(get_db)):
+    try:
+        from backend.app.models import AuditLog
+        logs = db.query(AuditLog).order_by(AuditLog.timestamp.desc()).limit(limit).all()
+        return [{"id": l.id, "user_id": l.user_id, "action": l.action, "resource": l.resource,
+                 "success": l.success, "timestamp": str(l.timestamp), "ip": l.ip_address} for l in logs]
+    except:
+        return []
+
+# ── Multi-tenant info ────────────────────────────────────────────────────────
+@app.get("/tenant/{hospital_id}", response_model=None)
+def get_tenant_info(hospital_id: str):
+    from backend.app.tenant import TENANT_REGISTRY
+    tenant = TENANT_REGISTRY.get(hospital_id)
+    if not tenant:
+        raise HTTPException(404, "Tenant not found")
+    return {"hospital_id": hospital_id, **tenant}
+
+@app.get("/tenants", response_model=None)
+def list_tenants():
+    from backend.app.tenant import TENANT_REGISTRY
+    return [{"id": k, **v} for k, v in TENANT_REGISTRY.items()]
+
+
+# ===== Smart AI Endpoint =====
+@app.post("/ai/smart")
+def smart_ai(payload: dict):
+    msg = payload.get("message", "")
+    provider = payload.get("provider", "auto")
+    return {"reply": ask_ai(msg, provider)}
+

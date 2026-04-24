@@ -1,0 +1,252 @@
+import { useState,useEffect,useCallback } from "react"
+import { View,Text,ScrollView,TouchableOpacity,StyleSheet,RefreshControl,ActivityIndicator,Dimensions } from "react-native"
+import { SafeAreaView } from "react-native-safe-area-context"
+import { Colors,Typography,Spacing,Radius,statusColor } from "../../constants/theme"
+import { useAuth } from "../context/AuthContext"
+import { getDoctors,getAlerts } from "../api/client"
+import { t,setLang,getLang,LANGS } from "../i18n"
+
+const W = Dimensions.get("window").width
+const CARD_W = W * 0.42
+
+// ── Line icons matching CareBot reference ──────────────────────────────
+function FeatIcon({type,color}:{type:string;color:string}){
+  if(type==="symptom") return(
+    <View style={{width:24,height:24,alignItems:"center",justifyContent:"center"}}>
+      <View style={{width:20,height:20,borderRadius:4,borderWidth:1.8,borderColor:color,alignItems:"center",justifyContent:"center"}}>
+        <View style={{position:"absolute",top:-4,right:2,width:8,height:8,borderRadius:4,borderWidth:1.8,borderColor:color,backgroundColor:Colors.white}}/>
+        <View style={{width:10,height:1.5,backgroundColor:color,marginBottom:2}}/>
+        <View style={{width:10,height:1.5,backgroundColor:color,marginBottom:2}}/>
+        <View style={{width:7,height:1.5,backgroundColor:color}}/>
+      </View>
+    </View>)
+  if(type==="video") return(
+    <View style={{width:24,height:24,alignItems:"center",justifyContent:"center"}}>
+      <View style={{width:15,height:11,borderRadius:3,borderWidth:1.8,borderColor:color}}/>
+      <View style={{position:"absolute",right:2,width:0,height:0,borderTopWidth:5,borderBottomWidth:5,borderLeftWidth:6,borderTopColor:"transparent",borderBottomColor:"transparent",borderLeftColor:color}}/>
+    </View>)
+  if(type==="shield") return(
+    <View style={{width:24,height:24,alignItems:"center",justifyContent:"center"}}>
+      <View style={{width:16,height:19,borderTopLeftRadius:8,borderTopRightRadius:8,borderWidth:1.8,borderColor:color,alignItems:"center",justifyContent:"center"}}>
+        <View style={{width:6,height:4,borderLeftWidth:1.5,borderBottomWidth:1.5,borderColor:color,transform:[{rotate:"-45deg"}],marginTop:2}}/>
+      </View>
+    </View>)
+  if(type==="heart") return(
+    <View style={{width:24,height:24,alignItems:"center",justifyContent:"center"}}>
+      <View style={{width:9,height:9,borderRadius:4.5,borderWidth:1.8,borderColor:color,position:"absolute",left:2,top:3}}/>
+      <View style={{width:9,height:9,borderRadius:4.5,borderWidth:1.8,borderColor:color,position:"absolute",right:2,top:3}}/>
+      <View style={{width:0,height:0,borderLeftWidth:10,borderRightWidth:10,borderTopWidth:11,borderLeftColor:"transparent",borderRightColor:"transparent",borderTopColor:color,position:"absolute",bottom:1}}/>
+    </View>)
+  if(type==="pill") return(
+    <View style={{width:24,height:24,alignItems:"center",justifyContent:"center"}}>
+      <View style={{width:18,height:9,borderRadius:5,borderWidth:1.8,borderColor:color,transform:[{rotate:"-35deg"}]}}>
+        <View style={{position:"absolute",left:"48%",top:-1,bottom:-1,width:1.5,backgroundColor:color}}/>
+      </View>
+    </View>)
+  if(type==="scan") return(
+    <View style={{width:24,height:24,alignItems:"center",justifyContent:"center"}}>
+      <View style={{position:"absolute",top:0,left:0,width:7,height:7,borderTopWidth:1.8,borderLeftWidth:1.8,borderColor:color}}/>
+      <View style={{position:"absolute",top:0,right:0,width:7,height:7,borderTopWidth:1.8,borderRightWidth:1.8,borderColor:color}}/>
+      <View style={{position:"absolute",bottom:0,left:0,width:7,height:7,borderBottomWidth:1.8,borderLeftWidth:1.8,borderColor:color}}/>
+      <View style={{position:"absolute",bottom:0,right:0,width:7,height:7,borderBottomWidth:1.8,borderRightWidth:1.8,borderColor:color}}/>
+      <View style={{width:12,height:1.5,backgroundColor:color}}/>
+    </View>)
+  return <View style={{width:24,height:24,borderRadius:4,borderWidth:1.8,borderColor:color}}/>
+}
+
+const FEATS=[
+  {k:"s",type:"symptom", lbl:{en:"Symptom\nChecker",   ar:"فحص\nالأعراض",    fr:"Vérif.\nSymptômes"  }},
+  {k:"t",type:"video",   lbl:{en:"Telecon-\nsultation", ar:"استشارة\nعن بُعد", fr:"Télé-\nconsult"    }},
+  {k:"i",type:"shield",  lbl:{en:"Insurance\nAssistance",ar:"مساعدة\nالتأمين",fr:"Assistance\nAssurance"}},
+  {k:"h",type:"heart",   lbl:{en:"Health\nMonitoring",  ar:"مراقبة\nالصحة",    fr:"Santé\nMoniteur"   }},
+  {k:"m",type:"pill",    lbl:{en:"Medication\nReminders",ar:"تذكير\nالأدوية",  fr:"Rappels\nMédic."   }},
+  {k:"r",type:"scan",    lbl:{en:"Scan your\nReport",   ar:"مسح\nتقريرك",      fr:"Scanner\nRapport"  }},
+]
+
+const MOCK_DR=[
+  {id:1,name:"Leslie Alexander",specialty:"Headaches And\nMigraines", rating:4.9,status:"available",bg:"#4F6EF7"},
+  {id:2,name:"Dr. Sarah Chen",  specialty:"Cardiology",               rating:4.8,status:"on_call",  bg:"#6C5CE7"},
+  {id:3,name:"Adam Max",        specialty:"Psychology",               rating:4.9,status:"available",bg:"#00B894"},
+]
+
+export default function HomeScreen(){
+  const {user}=useAuth()
+  const [lang,setLangState]=useState(getLang())
+  const [doctors,setDoctors]=useState<any[]>([])
+  const [alerts,setAlerts]=useState<any[]>([])
+  const [loading,setLoading]=useState(true)
+  const [refreshing,setRefreshing]=useState(false)
+  const isRTL=lang==="ar"
+
+  function greet(){const h=new Date().getHours();return h<12?t("greeting_morning"):h<17?t("greeting_afternoon"):t("greeting_evening")}
+  async function load(){
+    try{
+      const [d,a]=await Promise.all([getDoctors(),getAlerts()])
+      if(Array.isArray(d)&&d.length>0) setDoctors(d.slice(0,4))
+      if(Array.isArray(a)&&a.length>0) setAlerts(a.slice(0,3))
+    }catch{}
+    setLoading(false)
+  }
+  useEffect(()=>{load()},[])
+  const onRefresh=useCallback(async()=>{setRefreshing(true);await load();setRefreshing(false)},[])
+  function switchLang(c:string){setLang(c as any);setLangState(c as any)}
+
+  const name=user?.full_name??user?.username??"Robertson"
+  const shown=doctors.length>0?doctors:MOCK_DR
+
+  return(
+    <SafeAreaView style={s.safe}>
+      {/* HEADER */}
+      <View style={s.hdr}>
+        <View style={[s.hdrRow,isRTL&&{flexDirection:"row-reverse"}]}>
+          <View style={{flex:1}}>
+            <Text style={[s.hello,isRTL&&s.rtl]} numberOfLines={2}>{"Hello,\n"}<Text style={s.helloName}>{name}!</Text></Text>
+          </View>
+          <TouchableOpacity style={s.bell}>
+            <View style={s.bellDot}/>
+            <View style={{alignItems:"center"}}>
+              <View style={{width:17,height:14,borderTopLeftRadius:9,borderTopRightRadius:9,borderWidth:2,borderBottomWidth:0,borderColor:Colors.neutral700}}/>
+              <View style={{width:21,height:3,backgroundColor:Colors.neutral700,borderRadius:1,marginTop:-1}}/>
+              <View style={{width:7,height:4,borderBottomLeftRadius:4,borderBottomRightRadius:4,borderWidth:2,borderTopWidth:0,borderColor:Colors.neutral700,marginTop:1}}/>
+            </View>
+          </TouchableOpacity>
+        </View>
+        <View style={[s.langRow,isRTL&&{flexDirection:"row-reverse"}]}>
+          {LANGS.map(l=>(
+            <TouchableOpacity key={l.code} style={[s.langBtn,lang===l.code&&s.langOn]} onPress={()=>switchLang(l.code)}>
+              <Text style={[s.langTxt,lang===l.code&&s.langTxtOn]}>{l.flag} {l.code.toUpperCase()}</Text>
+            </TouchableOpacity>))}
+        </View>
+      </View>
+
+      <ScrollView style={s.scroll} showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary}/>}>
+
+        {/* BANNER */}
+        <TouchableOpacity style={s.banner} activeOpacity={0.88}>
+          <View style={s.banIco}>
+            <View style={{width:28,height:24,backgroundColor:"rgba(255,255,255,0.9)",borderRadius:6,alignItems:"center",justifyContent:"center"}}>
+              <View style={{width:18,height:11,backgroundColor:Colors.primary,borderRadius:3}}/>
+              <View style={{flexDirection:"row",gap:3,marginTop:2}}>
+                <View style={{width:4,height:4,backgroundColor:Colors.primary,borderRadius:2}}/>
+                <View style={{width:4,height:4,backgroundColor:Colors.primary,borderRadius:2}}/>
+              </View>
+            </View>
+          </View>
+          <View style={{flex:1}}>
+            <Text style={[s.banTitle,isRTL&&s.rtl]} numberOfLines={2}>{t("discover_ai")}</Text>
+            <Text style={[s.banSub,isRTL&&s.rtl]} numberOfLines={1}>{t("discover_sub")}</Text>
+          </View>
+          <View style={s.banArr}>
+            <Text style={{color:Colors.white,fontSize:22,fontWeight:"700",marginLeft:-4}}>›</Text>
+            <Text style={{color:"rgba(255,255,255,0.5)",fontSize:22,fontWeight:"700",marginLeft:-10}}>›</Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* FEATURES */}
+        <View style={[s.sh,isRTL&&{flexDirection:"row-reverse"}]}>
+          <Text style={[s.shTitle,isRTL&&s.rtl]}>{t("our_features")}</Text>
+        </View>
+        <View style={s.featGrid}>
+          {FEATS.map(f=>(
+            <TouchableOpacity key={f.k} style={s.featCard} activeOpacity={0.75}>
+              <FeatIcon type={f.type} color={Colors.neutral700}/>
+              <Text style={[s.featLbl,isRTL&&s.rtl]} numberOfLines={2}>{(f.lbl as any)[lang]??(f.lbl as any).en}</Text>
+            </TouchableOpacity>))}
+        </View>
+
+        {/* APPOINTMENT SCHEDULING */}
+        <View style={[s.sh,isRTL&&{flexDirection:"row-reverse"}]}>
+          <Text style={[s.shTitle,isRTL&&s.rtl]}>{t("appointment_scheduling")}</Text>
+          <TouchableOpacity><Text style={s.seeAll}>{t("see_all")}</Text></TouchableOpacity>
+        </View>
+
+        {loading?<ActivityIndicator color={Colors.primary} style={{paddingVertical:Spacing.xl}}/>:(
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{paddingLeft:Spacing.lg,marginBottom:Spacing.lg}} contentContainerStyle={{paddingRight:Spacing.lg}}>
+            {shown.map((d,i)=>{
+              const sc=statusColor(d.status??"available")
+              const ini=(d.name??d.full_name??"D").split(" ").map((w:string)=>w[0]).join("").slice(0,2).toUpperCase()
+              const bg=d.bg??d.color??Colors.primary
+              return(
+                <TouchableOpacity key={d.id??i} style={[s.docCard,{backgroundColor:bg}]} activeOpacity={0.88}>
+                  {/* bookmark */}
+                  <View style={s.bookmark}>
+                    <View style={{width:10,height:13,borderWidth:1.5,borderColor:"rgba(255,255,255,0.7)",borderRadius:2}}/>
+                  </View>
+                  {/* avatar */}
+                  <View style={s.docAv}>
+                    <Text style={s.docAvTxt}>{ini}</Text>
+                    <View style={[s.docDot,{backgroundColor:sc.text,borderColor:"rgba(255,255,255,0.9)"}]}/>
+                  </View>
+                  <Text style={[s.docNm,isRTL&&s.rtl]} numberOfLines={1}>{d.name??d.full_name}</Text>
+                  <Text style={[s.docSp,isRTL&&s.rtl]} numberOfLines={2}>{d.specialty??d.specialization}</Text>
+                  <View style={{flexDirection:"row",alignItems:"center",gap:3}}>
+                    <Text style={{color:"#FFD700",fontSize:11}}>★</Text>
+                    <Text style={s.docRat}>{(d.rating??4.9).toFixed(1)}</Text>
+                  </View>
+                </TouchableOpacity>)})}
+          </ScrollView>)}
+
+        {/* ALERTS */}
+        {alerts.length>0&&alerts.map((a,i)=>{
+          const sc=statusColor(a.severity??"active")
+          return(
+            <TouchableOpacity key={i} style={s.alertCard}>
+              <View style={{width:9,height:9,borderRadius:5,marginTop:2,backgroundColor:a.severity==="critical"?Colors.danger:Colors.warning}}/>
+              <View style={{flex:1}}>
+                <Text style={[s.alertNm,isRTL&&s.rtl]} numberOfLines={1}>{a.patient_name??"Patient"}</Text>
+                <Text style={[s.alertMsg,isRTL&&s.rtl]} numberOfLines={2}>{a.message??a.description}</Text>
+              </View>
+              <View style={{borderRadius:20,paddingHorizontal:8,paddingVertical:3,backgroundColor:sc.bg}}>
+                <Text style={{fontSize:10,fontWeight:"800",color:sc.text}}>{t(a.severity??"active")}</Text>
+              </View>
+            </TouchableOpacity>)})}
+
+        <View style={{height:90}}/>
+      </ScrollView>
+    </SafeAreaView>)
+}
+
+const s=StyleSheet.create({
+  safe:{flex:1,backgroundColor:Colors.white},
+  rtl:{textAlign:"right"},
+  hdr:{backgroundColor:Colors.white,paddingHorizontal:Spacing.lg,paddingTop:Spacing.sm,paddingBottom:Spacing.md,borderBottomWidth:1,borderBottomColor:Colors.neutral100},
+  hdrRow:{flexDirection:"row",justifyContent:"space-between",alignItems:"flex-start",marginBottom:Spacing.md},
+  hello:{fontSize:30,fontWeight:"700",color:Colors.neutral900,lineHeight:36,letterSpacing:-0.5},
+  helloName:{fontSize:30,fontWeight:"900",color:Colors.neutral900},
+  bell:{width:44,height:44,borderRadius:22,borderWidth:1,borderColor:Colors.neutral200,backgroundColor:Colors.white,alignItems:"center",justifyContent:"center",position:"relative"},
+  bellDot:{width:9,height:9,borderRadius:5,backgroundColor:Colors.danger,position:"absolute",top:8,right:8,zIndex:2,borderWidth:1.5,borderColor:Colors.white},
+  langRow:{flexDirection:"row",gap:6},
+  langBtn:{flex:1,paddingVertical:6,borderRadius:Radius.sm,borderWidth:1.5,borderColor:Colors.neutral200,backgroundColor:Colors.white,alignItems:"center"},
+  langOn:{borderColor:Colors.primary,backgroundColor:Colors.primary2},
+  langTxt:{fontSize:Typography.xs,fontWeight:Typography.bold,color:Colors.neutral500},
+  langTxtOn:{color:Colors.primary},
+  scroll:{flex:1,backgroundColor:Colors.neutral50},
+  // Banner
+  banner:{backgroundColor:Colors.primary,borderRadius:Radius.xl,marginHorizontal:Spacing.lg,marginTop:Spacing.md,marginBottom:Spacing.lg,padding:Spacing.md,flexDirection:"row",alignItems:"center",gap:12},
+  banIco:{width:48,height:48,backgroundColor:"rgba(255,255,255,0.2)",borderRadius:14,alignItems:"center",justifyContent:"center"},
+  banTitle:{fontSize:Typography.base,fontWeight:Typography.black,color:Colors.white,lineHeight:19},
+  banSub:{fontSize:Typography.xs,color:"rgba(255,255,255,0.75)",marginTop:2},
+  banArr:{flexDirection:"row",alignItems:"center",width:36,height:36,backgroundColor:"rgba(255,255,255,0.2)",borderRadius:18,alignItems:"center",justifyContent:"center"},
+  // Section
+  sh:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",paddingHorizontal:Spacing.lg,marginBottom:Spacing.sm},
+  shTitle:{fontSize:Typography.lg,fontWeight:Typography.black,color:Colors.neutral900,letterSpacing:-0.3},
+  seeAll:{fontSize:Typography.sm,fontWeight:Typography.bold,color:Colors.primary},
+  // Features — 3 col grid matching reference
+  featGrid:{flexDirection:"row",flexWrap:"wrap",paddingHorizontal:Spacing.md,gap:10,marginBottom:Spacing.lg},
+  featCard:{width:(W-Spacing.md*2-20)/3,backgroundColor:Colors.white,borderRadius:Radius.md,borderWidth:1,borderColor:Colors.neutral200,paddingVertical:14,paddingHorizontal:8,alignItems:"center",gap:8},
+  featLbl:{fontSize:10,fontWeight:Typography.bold,color:Colors.neutral700,textAlign:"center",lineHeight:14},
+  // Doctor cards
+  docCard:{width:CARD_W,borderRadius:Radius.xl,padding:Spacing.md,marginRight:Spacing.sm,minHeight:185,justifyContent:"flex-end",position:"relative"},
+  bookmark:{position:"absolute",top:12,right:12},
+  docAv:{width:56,height:56,borderRadius:28,backgroundColor:"rgba(255,255,255,0.25)",borderWidth:2,borderColor:"rgba(255,255,255,0.5)",alignItems:"center",justifyContent:"center",marginBottom:8,position:"relative"},
+  docAvTxt:{fontSize:Typography.lg,fontWeight:Typography.black,color:Colors.white},
+  docDot:{width:14,height:14,borderRadius:7,position:"absolute",bottom:0,right:0,borderWidth:2},
+  docNm:{fontSize:Typography.base,fontWeight:Typography.black,color:Colors.white,marginBottom:2},
+  docSp:{fontSize:Typography.xs,color:"rgba(255,255,255,0.8)",fontWeight:"500",lineHeight:15,marginBottom:5},
+  docRat:{fontSize:Typography.xs,fontWeight:Typography.bold,color:Colors.white},
+  // Alerts
+  alertCard:{backgroundColor:Colors.white,borderRadius:Radius.md,borderWidth:1,borderColor:Colors.neutral200,padding:Spacing.md,flexDirection:"row",alignItems:"flex-start",gap:Spacing.sm,marginHorizontal:Spacing.lg,marginBottom:Spacing.sm},
+  alertNm:{fontSize:Typography.base,fontWeight:Typography.bold,color:Colors.neutral900},
+  alertMsg:{fontSize:Typography.xs,color:Colors.neutral500,marginTop:2,lineHeight:16},
+})
