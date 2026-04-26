@@ -9,3 +9,4 @@ httpx
 anthropic
 google-generativeai
 requests
+psycopg2-binary
