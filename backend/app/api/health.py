@@ -1,26 +1,25 @@
-from fastapi import APIRouter
-from datetime import datetime, timezone
 import os
+from fastapi import APIRouter
 
 router = APIRouter()
 
 @router.get("/health")
 def health():
-    return {
-        "status": "ok",
-        "service": os.getenv("APP_NAME", "AI Hospital Assistant API"),
-        "environment": os.getenv("APP_ENV", "development"),
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-    }
+    from .db import health_check
+    db_status = health_check()
 
-@router.get("/ready")
-def ready():
-    required = ["APP_ENV"]
-    missing = [key for key in required if not os.getenv(key)]
+    required_vars = ["DATABASE_URL", "SECRET_KEY"]
+    missing = [v for v in required_vars if not os.environ.get(v)]
+
+    anthropic = bool(os.environ.get("ANTHROPIC_API_KEY","").strip() and
+                     os.environ.get("ANTHROPIC_API_KEY") != "your-key-here")
+
+    status = "healthy" if db_status["db"] == "ok" and not missing else "degraded"
 
     return {
-        "ready": len(missing) == 0,
-        "missing_env": missing,
-        "environment": os.getenv("APP_ENV", "development"),
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "status": status,
+        "db": db_status,
+        "ai": {"anthropic": "ok" if anthropic else "missing"},
+        "env": {"missing_vars": missing},
+        "version": "2.0.0"
     }

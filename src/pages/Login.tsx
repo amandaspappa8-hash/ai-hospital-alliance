@@ -1,16 +1,20 @@
-import { useState } from "react"
-import { Navigate } from "react-router-dom"
+import { useState, useMemo } from "react"
+import { Navigate, useNavigate } from "react-router-dom"
 import { clearAuth, getToken, saveAuth } from "@/lib/auth-storage"
 import { login } from "@/services/auth"
 
 export default function Login() {
-  const token = getToken()
+  // useMemo يمنع إعادة قراءة localStorage عند كل render
+  const existingToken = useMemo(() => getToken(), [])
+  const navigate = useNavigate()
+
   const [username, setUsername] = useState("admin")
   const [password, setPassword] = useState("admin123")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  if (token) return <Navigate to="/dashboard" replace />
+  // إذا كان مسجلاً مسبقاً، وجّهه مباشرة
+  if (existingToken) return <Navigate to="/dashboard" replace />
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -21,7 +25,8 @@ export default function Login() {
       clearAuth()
       const data = await login(username.trim(), password.trim())
       saveAuth(data.access_token, data.user)
-      window.location.href = "/dashboard"
+      // navigate بدلاً من window.location لتجنب إعادة mount كاملة
+      navigate("/dashboard", { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed")
     } finally {

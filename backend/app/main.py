@@ -1,7 +1,7 @@
-from backend.app.security_jwt import login_with_env, get_current_user
+from .security_jwt import login_with_env, get_current_user
 import os
 import httpx
-from backend.app import models
+from . import models
 from datetime import datetime
 import json
 import urllib.parse
@@ -10,7 +10,7 @@ import json
 from urllib.request import urlopen
 from urllib.error import URLError, HTTPError
 from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect, Request as FastAPIRequest
-from backend.app.services.ai_engine import ask_ai
+from .services.ai_engine import ask_ai
 from fastapi import Depends, HTTPException, Query
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -99,8 +99,8 @@ PATIENTS = [
 
 
 from .state import ORDERS
-from backend.app.repositories.registry import build_repositories
-from backend.app.services.core.registry import build_services
+from .repositories.registry import build_repositories
+from .services.core.registry import build_services
 
 ORTHANC_DICOMWEB_URL = "http://127.0.0.1:8042/dicom-web/studies"
 DEMO_STUDY_UID = "1.2.826.0.1.3680043.8.498.40352611434452298538894524161059434702"
@@ -2066,7 +2066,7 @@ def get_patient_report(visit_id: str):
         "report": report
     }
 
-from backend.app.drug_external import openfda_label_by_generic_name
+from .drug_external import openfda_label_by_generic_name
 
 @app.get("/drug-intel/fda-label/{drug_name}")
 def get_fda_label_lookup(drug_name: str):
@@ -2108,10 +2108,10 @@ def global_drug_info(drug: str):
         "global_note": "Monitor INR regularly"
     }
 
-from backend.app.db import SessionLocal, get_db
+from .db import SessionLocal, get_db
 from sqlalchemy.orm import Session
-from backend.app.models import User
-from backend.app.auth import verify_password, create_token
+from .models import User
+from .auth import verify_password, create_token
 
 
 @app.post("/auth/jwt-login")
@@ -2149,7 +2149,7 @@ def jwt_login(payload: dict):
     except Exception as e:
         return {"error": f"JWT login failed: {str(e)}"}
 
-from backend.app.auth import get_current_user
+from .auth import get_current_user
 
 
 @app.post("/mar/{patient_id}/{index}/status")
@@ -2199,7 +2199,7 @@ def add_radiology(patient_id: str, payload: dict, current_user: dict = Depends(g
     return {"status": "ok", "radiology": RADIOLOGY[patient_id]}
 
 
-from backend.app.ai_radiology import analyze_ct_scan
+from .ai_radiology import analyze_ct_scan
 
 @app.post("/radiology/{patient_id}/{index}/analyze")
 def analyze_radiology(patient_id: str, index: int, current_user: dict = Depends(get_current_user)):
@@ -2228,8 +2228,8 @@ def get_alerts():
     return ALERTS
 
 
-from backend.app.deep_ai_radiology import analyze_image
-from backend.app.dicom_utils import load_dicom
+from .deep_ai_radiology import analyze_image
+from .dicom_utils import load_dicom
 
 @app.post("/ai/deep-radiology")
 def deep_radiology(payload: dict):
@@ -2245,7 +2245,7 @@ def deep_radiology(payload: dict):
     }
 
 
-from backend.app.ai_report import generate_radiology_report
+from .ai_report import generate_radiology_report
 
 @app.post("/ai/deep-report")
 def deep_report(payload: dict):
@@ -2257,7 +2257,7 @@ def deep_report(payload: dict):
     }
 
 
-from backend.app.ai_inference import predict_image
+from .ai_inference import predict_image
 
 @app.post("/ai/predict")
 def predict(payload: dict):
@@ -2270,7 +2270,7 @@ def predict(payload: dict):
     }
 
 
-from backend.app.unet_inference import segment_image
+from .unet_inference import segment_image
 
 @app.post("/ai/segment")
 def segment(payload: dict):
@@ -2283,7 +2283,7 @@ def segment(payload: dict):
     }
 
 
-from backend.app.unet3d_inference import segment_3d
+from .unet3d_inference import segment_3d
 
 @app.post("/ai/3d-segmentation")
 def ai_3d(payload: dict):
@@ -2298,7 +2298,7 @@ def ai_3d(payload: dict):
     }
 
 
-from backend.app.ai_diagnosis import auto_diagnose
+from .ai_diagnosis import auto_diagnose
 
 @app.post("/ai/diagnose")
 def diagnose(payload: dict):
@@ -2306,7 +2306,7 @@ def diagnose(payload: dict):
     result = auto_diagnose(mask)
 
     return result
-from backend.app.db import Base, engine
+from .db import Base, engine
 Base.metadata.create_all(bind=engine)
 
 # ── WebSocket Real-time Alerts ────────────────────────────────────────────────
@@ -2426,7 +2426,7 @@ async def groq_chat(req: FastAPIRequest):
 
 @app.post("/patients", response_model=None)
 def create_patient(data: dict, db: Session = Depends(get_db)):
-    from backend.app.models import Patient
+    from .models import Patient
     import uuid
     p = Patient(
         id=f"P-{str(uuid.uuid4())[:6].upper()}",
@@ -2444,7 +2444,7 @@ def create_patient(data: dict, db: Session = Depends(get_db)):
 
 @app.put("/patients/{patient_id}", response_model=None)
 def update_patient(patient_id: str, data: dict, db: Session = Depends(get_db)):
-    from backend.app.models import Patient
+    from .models import Patient
     p = db.query(Patient).filter(Patient.id == patient_id).first()
     if not p:
         raise HTTPException(status_code=404, detail="Patient not found")
@@ -2456,7 +2456,7 @@ def update_patient(patient_id: str, data: dict, db: Session = Depends(get_db)):
 
 @app.delete("/patients/{patient_id}", response_model=None)
 def delete_patient(patient_id: str, db: Session = Depends(get_db)):
-    from backend.app.models import Patient
+    from .models import Patient
     p = db.query(Patient).filter(Patient.id == patient_id).first()
     if not p:
         raise HTTPException(status_code=404, detail="Patient not found")
@@ -2464,20 +2464,20 @@ def delete_patient(patient_id: str, db: Session = Depends(get_db)):
     return {"success": True}
 
 # ── FHIR R4 Endpoints ─────────────────────────────────────────────────────────
-from backend.app.fhir import patient_to_fhir, observation_to_fhir, bundle_response
-from backend.app.security import create_access_token, create_refresh_token, verify_refresh_token, check_rate_limit, AuditLogger
-from backend.app.tenant import TenantContext
+from .fhir import patient_to_fhir, observation_to_fhir, bundle_response
+from .security import create_access_token, create_refresh_token, verify_refresh_token, check_rate_limit, AuditLogger
+from .tenant import TenantContext
 
 @app.get("/fhir/R4/Patient", response_model=None)
 def fhir_patients(db: Session = Depends(get_db)):
-    from backend.app.models import Patient
+    from .models import Patient
     patients = db.query(Patient).all()
     resources = [patient_to_fhir(p) for p in patients]
     return bundle_response(resources)
 
 @app.get("/fhir/R4/Patient/{patient_id}", response_model=None)
 def fhir_patient(patient_id: str, db: Session = Depends(get_db)):
-    from backend.app.models import Patient
+    from .models import Patient
     p = db.query(Patient).filter(Patient.id == patient_id).first()
     if not p:
         raise HTTPException(404, "Patient not found")
@@ -2485,7 +2485,7 @@ def fhir_patient(patient_id: str, db: Session = Depends(get_db)):
 
 @app.get("/fhir/R4/Observation", response_model=None)
 def fhir_observations(patient: str = None, db: Session = Depends(get_db)):
-    from backend.app.models import NursingVital
+    from .models import NursingVital
     q = db.query(NursingVital)
     if patient:
         q = q.filter(NursingVital.patient_id == patient)
@@ -2524,7 +2524,7 @@ def refresh_token(data: dict):
 @app.get("/audit/logs", response_model=None)
 def get_audit_logs(limit: int = 50, db: Session = Depends(get_db)):
     try:
-        from backend.app.models import AuditLog
+        from .models import AuditLog
         logs = db.query(AuditLog).order_by(AuditLog.timestamp.desc()).limit(limit).all()
         return [{"id": l.id, "user_id": l.user_id, "action": l.action, "resource": l.resource,
                  "success": l.success, "timestamp": str(l.timestamp), "ip": l.ip_address} for l in logs]
@@ -2534,7 +2534,7 @@ def get_audit_logs(limit: int = 50, db: Session = Depends(get_db)):
 # ── Multi-tenant info ────────────────────────────────────────────────────────
 @app.get("/tenant/{hospital_id}", response_model=None)
 def get_tenant_info(hospital_id: str):
-    from backend.app.tenant import TENANT_REGISTRY
+    from .tenant import TENANT_REGISTRY
     tenant = TENANT_REGISTRY.get(hospital_id)
     if not tenant:
         raise HTTPException(404, "Tenant not found")
@@ -2542,7 +2542,7 @@ def get_tenant_info(hospital_id: str):
 
 @app.get("/tenants", response_model=None)
 def list_tenants():
-    from backend.app.tenant import TENANT_REGISTRY
+    from .tenant import TENANT_REGISTRY
     return [{"id": k, **v} for k, v in TENANT_REGISTRY.items()]
 
 

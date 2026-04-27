@@ -7,7 +7,9 @@ import fr from "./locales/fr/common.json"
 import it from "./locales/it/common.json"
 import tzm from "./locales/tzm/common.json"
 
-const savedLanguage = localStorage.getItem("aiha_language") || "en"
+function getSavedLanguage(): string {
+  try { return localStorage.getItem("aiha_language") || "en" } catch { return "en" }
+}
 
 i18n.use(initReactI18next).init({
   resources: {
@@ -17,11 +19,9 @@ i18n.use(initReactI18next).init({
     it: { translation: it },
     tzm: { translation: tzm }
   },
-  lng: savedLanguage,
+  lng: getSavedLanguage(),
   fallbackLng: "en",
-  interpolation: {
-    escapeValue: false
-  }
+  interpolation: { escapeValue: false }
 })
 
 export default i18n

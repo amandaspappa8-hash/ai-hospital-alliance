@@ -92,7 +92,7 @@ class AuditLogger:
     def log(self, user_id: str, action: str, resource: str, resource_id: str = "",
             details: str = "", ip: str = "", success: bool = True):
         try:
-            from backend.app.models import AuditLog
+            from .models import AuditLog
             entry = AuditLog(
                 user_id=user_id, action=action, resource=resource,
                 resource_id=resource_id, details=details, ip_address=ip,

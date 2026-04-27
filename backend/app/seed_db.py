@@ -3,8 +3,8 @@ import os, sys
 sys.path.insert(0, '/app')
 os.environ.setdefault("DATABASE_URL", "postgresql://aiha:aiha123@db:5432/aiha_db")
 
-from backend.app.db import create_tables, SessionLocal
-from backend.app.models import *
+from .db import create_tables, SessionLocal
+from .models import *
 
 create_tables()
 db = SessionLocal()
@@ -31,7 +31,7 @@ try:
     dm = {d.code: d.id for d in depts}
 
     try:
-        from backend.app.auth import hash_password
+        from .auth import hash_password
         pw = hash_password
     except:
         pw = lambda x: x

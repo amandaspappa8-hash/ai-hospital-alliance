@@ -5,13 +5,19 @@ type ThemeCtx = { theme: Theme; toggle: () => void }
 
 const ThemeContext = createContext<ThemeCtx>({ theme: "dark", toggle: () => {} })
 
+function getSavedTheme(): Theme {
+  try { return (localStorage.getItem("aiha_theme") as Theme) ?? "dark" } catch { return "dark" }
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(() =>
-    (localStorage.getItem("aiha_theme") as Theme) ?? "dark"
-  )
+  const [theme, setTheme] = useState<Theme>("dark")
 
   useEffect(() => {
-    localStorage.setItem("aiha_theme", theme)
+    setTheme(getSavedTheme())
+  }, [])
+
+  useEffect(() => {
+    try { localStorage.setItem("aiha_theme", theme) } catch {}
     document.documentElement.setAttribute("data-theme", theme)
     document.body.style.background = theme === "dark" ? "#020817" : "#f1f5f9"
     document.body.style.color = theme === "dark" ? "white" : "#0f172a"

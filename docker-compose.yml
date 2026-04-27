@@ -3,13 +3,13 @@ services:
     image: postgres:16-alpine
     container_name: aiha-postgres
     environment:
-      POSTGRES_USER: aiha
-      POSTGRES_PASSWORD: aiha123
-      POSTGRES_DB: aiha_db
+      POSTGRES_USER: ${POSTGRES_USER:-aiha}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aiha123}
+      POSTGRES_DB: ${POSTGRES_DB:-aiha_db}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U aiha -d aiha_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aiha}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -25,13 +25,8 @@ services:
       dockerfile: Dockerfile.backend
     container_name: aiha-backend
     ports:
-      - "8000:8000"
-    environment:
-      DATABASE_URL: postgresql://aiha:aiha123@db:5432/aiha_db
-      SECRET_KEY: aiha-super-secret-key-2026
-      ANTHROPIC_API_KEY: sk-ant-api03-XXXXXXXX
-      GROQ_API_KEY: ${GROQ_API_KEY}
-      CORS_ORIGINS: "http://localhost,http://localhost:80,https://ai-hospital-alliance-production.up.railway.app"
+      - "${PORT:-8000}:${PORT:-8000}"
+    env_file: .env
     depends_on:
       db:
         condition: service_healthy

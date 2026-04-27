@@ -1,14 +1,14 @@
-from backend.app.repositories.memory.users_repository import InMemoryUsersRepository
-from backend.app.repositories.memory.patients_repository import InMemoryPatientsRepository
-from backend.app.repositories.memory.notes_repository import InMemoryNotesRepository
-from backend.app.repositories.memory.orders_repository import InMemoryOrdersRepository
-from backend.app.repositories.memory.appointments_repository import InMemoryAppointmentsRepository
-from backend.app.repositories.memory.reports_repository import InMemoryReportsRepository
-from backend.app.repositories.memory.nursing_repository import InMemoryNursingRepository
-from backend.app.repositories.memory.mar_repository import InMemoryMarRepository
-from backend.app.repositories.memory.labs_repository import InMemoryLabsRepository
-from backend.app.repositories.memory.radiology_repository import InMemoryRadiologyRepository
-from backend.app.repositories.memory.doctor_assignments_repository import InMemoryDoctorAssignmentsRepository
+from .repositories.memory.users_repository import InMemoryUsersRepository
+from .repositories.memory.patients_repository import InMemoryPatientsRepository
+from .repositories.memory.notes_repository import InMemoryNotesRepository
+from .repositories.memory.orders_repository import InMemoryOrdersRepository
+from .repositories.memory.appointments_repository import InMemoryAppointmentsRepository
+from .repositories.memory.reports_repository import InMemoryReportsRepository
+from .repositories.memory.nursing_repository import InMemoryNursingRepository
+from .repositories.memory.mar_repository import InMemoryMarRepository
+from .repositories.memory.labs_repository import InMemoryLabsRepository
+from .repositories.memory.radiology_repository import InMemoryRadiologyRepository
+from .repositories.memory.doctor_assignments_repository import InMemoryDoctorAssignmentsRepository
 
 def build_repositories(
     users_store,

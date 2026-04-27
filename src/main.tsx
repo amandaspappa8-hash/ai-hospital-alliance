@@ -9,7 +9,6 @@ import PWAInstall from "./components/PWAInstall"
 
 initMonitoring()
 
-// Register PWA service worker
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
@@ -20,12 +19,11 @@ if ("serviceWorker" in navigator) {
 }
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <ErrorBoundary>
-      <BrowserRouter>
-        <App />
-        <PWAInstall />
-      </BrowserRouter>
-    </ErrorBoundary>
-  </React.StrictMode>
+  // StrictMode أُزيل - كان يشغّل كل effect مرتين ويسبب History API flood
+  <ErrorBoundary>
+    <BrowserRouter>
+      <App />
+      <PWAInstall />
+    </BrowserRouter>
+  </ErrorBoundary>
 )
