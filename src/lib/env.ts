@@ -1,6 +1,6 @@
 export const appEnv = import.meta.env.VITE_APP_ENV || "development"
 export const apiBaseUrl =
-  import.meta.env.VITE_API_BASE_URL || "http://192.168.0.106:8000"
+  import.meta.env.VITE_API_BASE_URL || "https://ai-hospital-alliance-production.up.railway.app"
 export const monitoringEnabled =
   String(import.meta.env.VITE_ENABLE_MONITORING || "false") === "true"
 

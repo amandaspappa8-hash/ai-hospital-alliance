@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from "@/lib/api";
+import { apiGet, apiPost, apiDelete } from "@/lib/api";
 export async function getDoctorAssignments(doctorId) {
     const data = await apiGet(`/doctor-assignments/${encodeURIComponent(doctorId)}`);
     return Array.isArray(data) ? data : [];
