@@ -21,15 +21,14 @@ from .api.clinical_route import router as clinical_route_router
 from .api.clinical_orders import router as clinical_orders_router
 
 app = FastAPI(
+    title="AI Hospital Assistant API",
+    version="1.0.0"
+)
 
 @app.on_event("startup")
 async def startup_event():
     from .db import create_tables
     create_tables()
-
-    title="AI Hospital Assistant API",
-    version="1.0.0"
-)
 
 app.add_middleware(
     CORSMiddleware,
