@@ -1,3 +1,4 @@
+from backend.app.security_jwt import login_with_env, get_current_user
 import os
 import httpx
 from backend.app import models
@@ -37,6 +38,8 @@ app.add_middleware(
         "http://127.0.0.1:80",
         "http://192.168.0.106",
         "http://192.168.0.106:80",
+        "https://ai-hospital-alliance-production.up.railway.app",
+        "https://zesty-recreation-production.up.railway.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -800,21 +803,10 @@ def root():
 
 
 @app.post("/auth/login")
-def login(payload: LoginRequest):
-    user = USERS.get(payload.username)
-
-    if not user or user.get("password") != payload.password:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-
-    return {
-        "access_token": f"demo-token-{payload.username}",
-        "token_type": "bearer",
-        "user": {
-            "username": payload.username,
-            "name": user.get("name", payload.username),
-            "role": user.get("role", "User"),
-        },
-    }
+def login(payload: dict):
+    username = payload.get("username", "")
+    password = payload.get("password", "")
+    return login_with_env(username, password)
 
 
 @app.get("/patients")
