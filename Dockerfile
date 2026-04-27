@@ -6,7 +6,9 @@ COPY backend/requirements.txt /app/backend/requirements.txt
 RUN pip install --no-cache-dir -r /app/backend/requirements.txt
 
 COPY backend/ /app/backend/
+COPY backend/__init__.py /app/backend/__init__.py
 
+ENV PYTHONPATH=/app
 ENV PORT=8000
 EXPOSE 8000
 
