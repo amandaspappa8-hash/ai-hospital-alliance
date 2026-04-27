@@ -21,6 +21,12 @@ from .api.clinical_route import router as clinical_route_router
 from .api.clinical_orders import router as clinical_orders_router
 
 app = FastAPI(
+
+@app.on_event("startup")
+async def startup_event():
+    from .db import create_tables
+    create_tables()
+
     title="AI Hospital Assistant API",
     version="1.0.0"
 )
@@ -2306,8 +2312,6 @@ def diagnose(payload: dict):
     result = auto_diagnose(mask)
 
     return result
-from .db import Base, engine
-Base.metadata.create_all(bind=engine)
 
 # ── WebSocket Real-time Alerts ────────────────────────────────────────────────
 import asyncio
