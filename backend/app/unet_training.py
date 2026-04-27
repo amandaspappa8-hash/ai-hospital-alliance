@@ -4,7 +4,7 @@ import numpy as np
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader
 from torch import nn, optim
-from backend.app.unet_model import get_model
+from .unet_model import get_model
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

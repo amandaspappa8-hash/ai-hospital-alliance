@@ -1,4 +1,5 @@
-import { Navigate } from "react-router-dom"
+import { useMemo } from "react"
+import { Navigate, useLocation } from "react-router-dom"
 import { getToken, getUser } from "@/lib/auth-storage"
 import { hasAccess, type AppRoute } from "@/lib/rbac"
 
@@ -8,11 +9,13 @@ type ProtectedRouteProps = {
 }
 
 export default function ProtectedRoute({ children, routeKey }: ProtectedRouteProps) {
-  const token = getToken()
-  const user = getUser()
+  const location = useLocation()
+
+  const token = useMemo(() => getToken(), [])
+  const user = useMemo(() => getUser(), [])
 
   if (!token || !user) {
-    return <Navigate to="/login" replace />
+    return <Navigate to="/login" replace state={{ from: location }} />
   }
 
   if (routeKey && !hasAccess(user.role, routeKey)) {
