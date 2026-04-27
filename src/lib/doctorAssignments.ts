@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from "@/lib/api"
+import { apiGet, apiPost, apiDelete } from "@/lib/api"
 
 export type DoctorAssignmentRecord = {
   id: number
