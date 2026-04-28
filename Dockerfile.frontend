@@ -3,8 +3,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install --legacy-peer-deps
 COPY . .
-ARG VITE_API_BASE_URL
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=https://zesty-recreation-production-6b62.up.railway.app
 RUN npm run build
 
 FROM nginx:alpine
