@@ -5,7 +5,7 @@ router = APIRouter()
 
 @router.get("/health")
 def health():
-    from .db import health_check
+    from ..db import health_check
     db_status = health_check()
 
     required_vars = ["DATABASE_URL", "SECRET_KEY"]
