@@ -51,9 +51,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+import os as _os
 USERS = {
     "admin": {
-        "password": "admin123",
+        "password": _os.environ.get("ADMIN_PASSWORD", "admin123"),
         "name": "System Admin",
         "role": "Admin",
     },

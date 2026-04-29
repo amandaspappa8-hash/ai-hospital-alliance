@@ -1,5 +1,4 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
@@ -8,7 +7,6 @@ import { initMonitoring } from "./lib/monitoring";
 import ErrorBoundary from "./components/system/ErrorBoundary";
 import PWAInstall from "./components/PWAInstall";
 initMonitoring();
-// Register PWA service worker
 if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
         navigator.serviceWorker
@@ -17,4 +15,6 @@ if ("serviceWorker" in navigator) {
             .catch(err => console.log("[PWA] SW registration failed:", err));
     });
 }
-ReactDOM.createRoot(document.getElementById("root")).render(_jsx(React.StrictMode, { children: _jsx(ErrorBoundary, { children: _jsxs(BrowserRouter, { children: [_jsx(App, {}), _jsx(PWAInstall, {})] }) }) }));
+ReactDOM.createRoot(document.getElementById("root")).render(
+// StrictMode أُزيل - كان يشغّل كل effect مرتين ويسبب History API flood
+_jsx(ErrorBoundary, { children: _jsxs(BrowserRouter, { children: [_jsx(App, {}), _jsx(PWAInstall, {})] }) }));
