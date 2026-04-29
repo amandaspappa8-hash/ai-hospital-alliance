@@ -2,6 +2,7 @@ import requests
 
 OPENFDA_LABEL = "https://api.fda.gov/drug/label.json"
 
+
 def openfda_label_by_generic_name(drug_name: str):
     search = f'openfda.generic_name:"{drug_name}"'
     r = requests.get(

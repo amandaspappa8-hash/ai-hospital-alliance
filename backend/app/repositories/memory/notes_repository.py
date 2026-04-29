@@ -1,5 +1,6 @@
 from typing import Any
 
+
 class InMemoryNotesRepository:
     def __init__(self, notes_store: dict[str, list[dict[str, Any]]]):
         self.notes_store = notes_store

@@ -1,7 +1,18 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, Float, Boolean, DateTime, ForeignKey, JSON
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Text,
+    Float,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    JSON,
+)
 from sqlalchemy.orm import relationship
 from .db import Base
+
 
 class Hospital(Base):
     __tablename__ = "hospitals"
@@ -13,6 +24,7 @@ class Hospital(Base):
     users = relationship("User", back_populates="hospital")
     patients = relationship("Patient", back_populates="hospital")
     doctors = relationship("Doctor", back_populates="hospital")
+
 
 class User(Base):
     __tablename__ = "users"
@@ -27,6 +39,7 @@ class User(Base):
     last_login = Column(DateTime, nullable=True)
     hospital = relationship("Hospital", back_populates="users")
 
+
 class Department(Base):
     __tablename__ = "departments"
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -35,6 +48,7 @@ class Department(Base):
     hospital_id = Column(String(20), ForeignKey("hospitals.id"))
     doctors = relationship("Doctor", back_populates="department")
     patients = relationship("Patient", back_populates="department")
+
 
 class Doctor(Base):
     __tablename__ = "doctors"
@@ -54,6 +68,7 @@ class Doctor(Base):
     hospital = relationship("Hospital", back_populates="doctors")
     assignments = relationship("DoctorAssignment", back_populates="doctor")
     appointments = relationship("Appointment", back_populates="doctor")
+
 
 class Patient(Base):
     __tablename__ = "patients"
@@ -83,6 +98,7 @@ class Patient(Base):
     lab_orders = relationship("LabOrder", back_populates="patient")
     radiology_orders = relationship("RadiologyOrder", back_populates="patient")
 
+
 class ClinicalNote(Base):
     __tablename__ = "clinical_notes"
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -92,6 +108,7 @@ class ClinicalNote(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     patient = relationship("Patient", back_populates="notes")
     author = relationship("User")
+
 
 class ClinicalOrder(Base):
     __tablename__ = "clinical_orders"
@@ -107,6 +124,7 @@ class ClinicalOrder(Base):
     patient = relationship("Patient", back_populates="orders")
     author = relationship("User")
 
+
 class Appointment(Base):
     __tablename__ = "appointments"
     id = Column(String(20), primary_key=True)
@@ -120,6 +138,7 @@ class Appointment(Base):
     patient = relationship("Patient", back_populates="appointments")
     doctor = relationship("Doctor", back_populates="appointments")
 
+
 class DoctorAssignment(Base):
     __tablename__ = "doctor_assignments"
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -130,6 +149,7 @@ class DoctorAssignment(Base):
     assigned_at = Column(DateTime, default=datetime.utcnow)
     doctor = relationship("Doctor", back_populates="assignments")
     patient = relationship("Patient", back_populates="assignments")
+
 
 class NursingVital(Base):
     __tablename__ = "nursing_vitals"
@@ -145,6 +165,7 @@ class NursingVital(Base):
     patient = relationship("Patient", back_populates="vitals")
     nurse = relationship("User")
 
+
 class NursingNote(Base):
     __tablename__ = "nursing_notes"
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -154,6 +175,7 @@ class NursingNote(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     patient = relationship("Patient", back_populates="nursing_notes")
     nurse = relationship("User")
+
 
 class MARItem(Base):
     __tablename__ = "mar_items"
@@ -171,6 +193,7 @@ class MARItem(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     patient = relationship("Patient", back_populates="mar_items")
 
+
 class Report(Base):
     __tablename__ = "reports"
     id = Column(String(20), primary_key=True)
@@ -184,6 +207,7 @@ class Report(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     patient = relationship("Patient", back_populates="reports")
     author = relationship("User")
+
 
 class LabOrder(Base):
     __tablename__ = "lab_orders"
@@ -199,6 +223,7 @@ class LabOrder(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     patient = relationship("Patient", back_populates="lab_orders")
     ordered_by_user = relationship("User")
+
 
 class RadiologyOrder(Base):
     __tablename__ = "radiology_orders"
@@ -217,6 +242,7 @@ class RadiologyOrder(Base):
     patient = relationship("Patient", back_populates="radiology_orders")
     ordered_by_user = relationship("User")
 
+
 class Alert(Base):
     __tablename__ = "alerts"
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -227,6 +253,7 @@ class Alert(Base):
     is_read = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     patient = relationship("Patient")
+
 
 class AIInferenceRun(Base):
     __tablename__ = "ai_inference_runs"
@@ -241,23 +268,25 @@ class AIInferenceRun(Base):
     patient = relationship("Patient")
     requested_by_user = relationship("User")
 
+
 class AuditLog(Base):
     __tablename__ = "audit_logs"
-    id          = Column(Integer, primary_key=True, autoincrement=True)
-    user_id     = Column(String(50), nullable=False)
-    action      = Column(String(100), nullable=False)
-    resource    = Column(String(100), nullable=False)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(50), nullable=False)
+    action = Column(String(100), nullable=False)
+    resource = Column(String(100), nullable=False)
     resource_id = Column(String(100), default="")
-    details     = Column(Text, default="")
-    ip_address  = Column(String(50), default="")
-    success     = Column(Boolean, default=True)
-    timestamp   = Column(DateTime, default=datetime.utcnow)
+    details = Column(Text, default="")
+    ip_address = Column(String(50), default="")
+    success = Column(Boolean, default=True)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+
 
 class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
-    id         = Column(Integer, primary_key=True, autoincrement=True)
-    user_id    = Column(String(50), nullable=False)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(50), nullable=False)
     token_hash = Column(String(200), nullable=False, unique=True)
     expires_at = Column(DateTime, nullable=False)
-    revoked    = Column(Boolean, default=False)
+    revoked = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)

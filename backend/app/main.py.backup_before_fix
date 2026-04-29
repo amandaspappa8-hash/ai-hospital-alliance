@@ -9,13 +9,7 @@ from urllib.request import urlopen, Request
 import json
 from urllib.request import urlopen
 from urllib.error import URLError, HTTPError
-from fastapi import (
-    Depends,
-    FastAPI,
-    WebSocket,
-    WebSocketDisconnect,
-    Request as FastAPIRequest,
-)
+from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect, Request as FastAPIRequest
 from .services.ai_engine import ask_ai
 from fastapi import Depends, HTTPException, Query
 from fastapi.responses import HTMLResponse
@@ -26,15 +20,15 @@ from pydantic import BaseModel
 from .api.clinical_route import router as clinical_route_router
 from .api.clinical_orders import router as clinical_orders_router
 
-app = FastAPI(title="AI Hospital Assistant API", version="1.0.0")
-
+app = FastAPI(
+    title="AI Hospital Assistant API",
+    version="1.0.0"
+)
 
 @app.on_event("startup")
 async def startup_event():
     from .db import create_tables
-
     create_tables()
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -58,7 +52,6 @@ app.add_middleware(
 )
 
 import os as _os
-
 USERS = {
     "admin": {
         "password": _os.environ.get("ADMIN_PASSWORD", "admin123"),
@@ -118,19 +111,22 @@ from .services.core.registry import build_services
 ORTHANC_DICOMWEB_URL = "http://127.0.0.1:8042/dicom-web/studies"
 DEMO_STUDY_UID = "1.2.826.0.1.3680043.8.498.40352611434452298538894524161059434702"
 
-
 def get_latest_study_uid():
     try:
         with urlopen(ORTHANC_DICOMWEB_URL, timeout=5) as response:
             payload = json.loads(response.read().decode("utf-8"))
             if isinstance(payload, list) and payload:
                 for item in reversed(payload):
-                    uid = item.get("0020000D", {}).get("Value", [None])[0]
+                    uid = (
+                        item.get("0020000D", {})
+                        .get("Value", [None])[0]
+                    )
                     if uid:
                         return uid
     except (URLError, HTTPError, TimeoutError, ValueError, OSError):
         pass
     return DEMO_STUDY_UID
+
 
 
 DOCTOR_ASSIGNMENTS = {
@@ -406,11 +402,14 @@ NURSING_NOTES = {
     "P-1001": [
         {
             "id": 1,
-            "text": "Patient stable. Chest pain reduced after initial management.",
+            "text": "Patient stable. Chest pain reduced after initial management."
         }
     ],
     "P-1002": [
-        {"id": 1, "text": "Fever ongoing. Fluids encouraged and observation continued."}
+        {
+            "id": 1,
+            "text": "Fever ongoing. Fluids encouraged and observation continued."
+        }
     ],
 }
 
@@ -422,8 +421,9 @@ RADIOLOGY_CATALOG = {
         "Pelvis X-Ray",
         "Spine X-Ray",
         "Skull X-Ray",
-        "Extremities X-Ray (Hand, Foot, Leg)",
+        "Extremities X-Ray (Hand, Foot, Leg)"
     ],
+
     "ct": [
         "CT Brain",
         "CT Chest",
@@ -431,8 +431,9 @@ RADIOLOGY_CATALOG = {
         "CT Pelvis",
         "CT Angiography",
         "CT Spine",
-        "CT Whole Body Trauma",
+        "CT Whole Body Trauma"
     ],
+
     "mri": [
         "MRI Brain",
         "MRI Spine",
@@ -440,29 +441,42 @@ RADIOLOGY_CATALOG = {
         "MRI Shoulder",
         "MRI Abdomen",
         "MRI Pelvis",
-        "MR Angiography",
+        "MR Angiography"
     ],
+
     "ultrasound": [
         "Abdominal Ultrasound",
         "Pelvic Ultrasound",
         "Obstetric Ultrasound",
         "Thyroid Ultrasound",
         "Doppler Ultrasound",
-        "Cardiac Echo (Echocardiography)",
+        "Cardiac Echo (Echocardiography)"
     ],
+
     "mammography": [
         "Screening Mammography",
         "Diagnostic Mammography",
-        "Breast Ultrasound",
+        "Breast Ultrasound"
     ],
-    "fluoroscopy": ["Barium Swallow", "Barium Enema", "Upper GI Study"],
-    "pet_ct": ["PET-CT Whole Body", "Oncology PET-CT", "Brain PET-CT"],
+
+    "fluoroscopy": [
+        "Barium Swallow",
+        "Barium Enema",
+        "Upper GI Study"
+    ],
+
+    "pet_ct": [
+        "PET-CT Whole Body",
+        "Oncology PET-CT",
+        "Brain PET-CT"
+    ],
+
     "interventional": [
         "Biopsy Imaging Guided",
         "Drainage Procedures",
         "Angiography",
-        "Stent Placement",
-    ],
+        "Stent Placement"
+    ]
 }
 
 RADIOLOGY_ORDERS = [
@@ -544,7 +558,7 @@ LAB_CATALOG = {
         "Troponin",
         "CK",
         "CK-MB",
-        "LDH",
+        "LDH"
     ],
     "specialized": [
         "Hormonal Panel",
@@ -606,7 +620,7 @@ LAB_CATALOG = {
         "Drug Monitoring",
         "Toxicology Screen",
         "Heavy Metal Screen",
-        "Allergy Panel",
+        "Allergy Panel"
     ],
     "genetics": [
         "Genetic Screening",
@@ -642,7 +656,7 @@ LAB_CATALOG = {
         "Cardiomyopathy Genetics Panel",
         "Hemoglobinopathy Genetics",
         "Thalassemia Mutation Analysis",
-        "Sickle Cell Mutation Analysis",
+        "Sickle Cell Mutation Analysis"
     ],
     "nucleic_acid": [
         "PCR",
@@ -678,8 +692,8 @@ LAB_CATALOG = {
         "Gene Fusion Detection",
         "Minimal Residual Disease Molecular Test",
         "Copy Number Variation Analysis",
-        "Methylation Analysis",
-    ],
+        "Methylation Analysis"
+    ]
 }
 
 LAB_ORDERS = [
@@ -706,6 +720,10 @@ LAB_ORDERS = [
 ]
 
 
+
+
+
+
 class NursingVitalRequest(BaseModel):
     temperature: str
     bloodPressure: str
@@ -717,7 +735,6 @@ class NursingVitalRequest(BaseModel):
 
 class NursingNoteRequest(BaseModel):
     text: str
-
 
 class RadiologyOrderCreateRequest(BaseModel):
     patientId: str
@@ -872,11 +889,7 @@ def get_doctors_summary():
 @app.get("/doctors/by-specialty/{name}")
 def get_doctors_by_specialty(name: str):
     normalized = name.strip().lower()
-    return [
-        doctor
-        for doctor in DOCTORS
-        if doctor["specialty"].strip().lower() == normalized
-    ]
+    return [doctor for doctor in DOCTORS if doctor["specialty"].strip().lower() == normalized]
 
 
 @app.get("/doctors/{doctor_id}")
@@ -899,8 +912,7 @@ def create_doctor_assignment(doctor_id: str, payload: DoctorAssignmentRequest):
 
     existing = next(
         (
-            item
-            for item in DOCTOR_ASSIGNMENTS[doctor_id]
+            item for item in DOCTOR_ASSIGNMENTS[doctor_id]
             if item["patientId"] == payload.patientId
         ),
         None,
@@ -953,7 +965,6 @@ def get_specialties_summary():
 def get_pacs_studies():
     return PACS_STUDIES
 
-
 @app.get("/nursing/vitals/{patient_id}")
 def get_nursing_vitals(patient_id: str):
     return SERVICES["nursing"].list_vitals(patient_id)
@@ -982,7 +993,6 @@ def get_nursing_notes(patient_id: str):
 @app.post("/nursing/notes/{patient_id}")
 def create_nursing_note(patient_id: str, payload: NursingNoteRequest):
     return SERVICES["nursing"].create_note(patient_id, payload.text)
-
 
 @app.get("/radiology/catalog")
 def get_radiology_catalog():
@@ -1026,6 +1036,8 @@ def create_radiology_report(order_id: str, payload: RadiologyReportRequest):
             order["status"] = payload.status or "Completed"
             return order
     raise HTTPException(status_code=404, detail="Radiology order not found")
+
+
 
 
 @app.get("/labs/catalog")
@@ -1072,22 +1084,41 @@ def create_lab_result(order_id: str, payload: LabResultRequest):
     raise HTTPException(status_code=404, detail="Lab order not found")
 
 
+
+
 app.include_router(clinical_route_router)
 app.include_router(clinical_orders_router)
 app.include_router(health_router)
 
 
+
 MED_RECONCILIATION = {
     "P-1001": {
-        "homeMeds": ["aspirin 81 mg", "atorvastatin 40 mg", "metoprolol 50 mg"],
-        "admissionMeds": ["aspirin 81 mg", "ibuprofen 400 mg"],
-        "dischargeMeds": ["aspirin 81 mg", "atorvastatin 40 mg"],
+        "homeMeds": [
+            "aspirin 81 mg",
+            "atorvastatin 40 mg",
+            "metoprolol 50 mg"
+        ],
+        "admissionMeds": [
+            "aspirin 81 mg",
+            "ibuprofen 400 mg"
+        ],
+        "dischargeMeds": [
+            "aspirin 81 mg",
+            "atorvastatin 40 mg"
+        ]
     },
     "P-1002": {
-        "homeMeds": ["paracetamol 500 mg"],
-        "admissionMeds": ["paracetamol 1 g"],
-        "dischargeMeds": ["paracetamol 500 mg"],
-    },
+        "homeMeds": [
+            "paracetamol 500 mg"
+        ],
+        "admissionMeds": [
+            "paracetamol 1 g"
+        ],
+        "dischargeMeds": [
+            "paracetamol 500 mg"
+        ]
+    }
 }
 
 
@@ -1096,14 +1127,11 @@ def _normalize_med_list(values: list[str]) -> list[str]:
 
 
 def _build_reconciliation_summary(patient_id: str):
-    raw = MED_RECONCILIATION.get(
-        patient_id,
-        {
-            "homeMeds": [],
-            "admissionMeds": [],
-            "dischargeMeds": [],
-        },
-    )
+    raw = MED_RECONCILIATION.get(patient_id, {
+        "homeMeds": [],
+        "admissionMeds": [],
+        "dischargeMeds": [],
+    })
 
     home = _normalize_med_list(raw.get("homeMeds", []))
     admission = _normalize_med_list(raw.get("admissionMeds", []))
@@ -1117,56 +1145,46 @@ def _build_reconciliation_summary(patient_id: str):
     findings = []
 
     for med in missing_on_admission:
-        findings.append(
-            {
-                "severity": "moderate",
-                "type": "missing_on_admission",
-                "title": "Possible chronic medication missing on admission",
-                "detail": med,
-            }
-        )
+        findings.append({
+            "severity": "moderate",
+            "type": "missing_on_admission",
+            "title": "Possible chronic medication missing on admission",
+            "detail": med,
+        })
 
     for med in missing_on_discharge:
-        findings.append(
-            {
-                "severity": "high",
-                "type": "missing_on_discharge",
-                "title": "Possible chronic medication missing on discharge",
-                "detail": med,
-            }
-        )
+        findings.append({
+            "severity": "high",
+            "type": "missing_on_discharge",
+            "title": "Possible chronic medication missing on discharge",
+            "detail": med,
+        })
 
     for med in added_in_hospital:
-        findings.append(
-            {
-                "severity": "moderate",
-                "type": "added_in_hospital",
-                "title": "Medication added during admission",
-                "detail": med,
-            }
-        )
+        findings.append({
+            "severity": "moderate",
+            "type": "added_in_hospital",
+            "title": "Medication added during admission",
+            "detail": med,
+        })
 
     for med in discharge_only:
-        findings.append(
-            {
-                "severity": "moderate",
-                "type": "new_discharge_med",
-                "title": "New medication planned at discharge",
-                "detail": med,
-            }
-        )
+        findings.append({
+            "severity": "moderate",
+            "type": "new_discharge_med",
+            "title": "New medication planned at discharge",
+            "detail": med,
+        })
 
     duplicate_groups = _match_ingredient_groups(admission + discharge)
     for ingredient, meds in duplicate_groups.items():
         if len(meds) > 1:
-            findings.append(
-                {
-                    "severity": "high",
-                    "type": "duplicate_therapy",
-                    "title": "Duplicate therapy detected across reconciliation lists",
-                    "detail": f"{ingredient}: " + ", ".join(meds),
-                }
-            )
+            findings.append({
+                "severity": "high",
+                "type": "duplicate_therapy",
+                "title": "Duplicate therapy detected across reconciliation lists",
+                "detail": f"{ingredient}: " + ", ".join(meds),
+            })
 
     return {
         "patientId": patient_id,
@@ -1176,11 +1194,9 @@ def _build_reconciliation_summary(patient_id: str):
         "findings": findings,
         "summary": {
             "high_risk_count": len([f for f in findings if f["severity"] == "high"]),
-            "moderate_risk_count": len(
-                [f for f in findings if f["severity"] == "moderate"]
-            ),
+            "moderate_risk_count": len([f for f in findings if f["severity"] == "moderate"]),
             "has_findings": len(findings) > 0,
-        },
+        }
     }
 
 
@@ -1192,23 +1208,18 @@ def get_medication_reconciliation(patient_id: str):
 def _default_take_time(med: str):
     med = _normalize_med_name(med)
     if "aspirin" in med:
-        return (
-            "After food, once daily in the morning unless your doctor changed the time."
-        )
+        return "After food, once daily in the morning unless your doctor changed the time."
     if "atorvastatin" in med:
         return "Once daily in the evening."
     if "metoprolol" in med:
         return "At the same time each day, usually after food."
     if "warfarin" in med:
-        return (
-            "At the same time every day. Follow INR monitoring instructions carefully."
-        )
+        return "At the same time every day. Follow INR monitoring instructions carefully."
     if "ibuprofen" in med:
         return "After food, only as directed, and not longer than recommended."
     if "paracetamol" in med:
         return "Every 6 to 8 hours as needed, without exceeding the daily maximum."
     return "Take exactly as prescribed by your clinician."
-
 
 def _default_avoid_text(med: str):
     med = _normalize_med_name(med)
@@ -1226,7 +1237,6 @@ def _default_avoid_text(med: str):
         return "Avoid duplicate acetaminophen/paracetamol products."
     return "Avoid self-adjusting the dose without medical advice."
 
-
 def _default_when_to_review(med: str):
     med = _normalize_med_name(med)
     if "aspirin" in med or "warfarin" in med:
@@ -1241,21 +1251,18 @@ def _default_when_to_review(med: str):
         return "Seek review if symptoms persist, worsen, or overdose is suspected."
     return "Return for medical review if symptoms worsen or side effects appear."
 
-
 def _build_discharge_counseling(patient_id: str):
     reconciliation = _build_reconciliation_summary(patient_id)
     discharge_meds = reconciliation.get("dischargeMeds", [])
 
     counseling = []
     for med in discharge_meds:
-        counseling.append(
-            {
-                "medication": med,
-                "take_time": _default_take_time(med),
-                "what_to_avoid": _default_avoid_text(med),
-                "when_to_seek_help": _default_when_to_review(med),
-            }
-        )
+        counseling.append({
+            "medication": med,
+            "take_time": _default_take_time(med),
+            "what_to_avoid": _default_avoid_text(med),
+            "when_to_seek_help": _default_when_to_review(med),
+        })
 
     general_points = [
         "Take medicines exactly as prescribed.",
@@ -1272,13 +1279,14 @@ def _build_discharge_counseling(patient_id: str):
         "summary": {
             "count": len(counseling),
             "has_discharge_meds": len(discharge_meds) > 0,
-        },
+        }
     }
 
 
 @app.get("/drug-intel/discharge-counseling/{patient_id}")
 def get_discharge_counseling(patient_id: str):
     return _build_discharge_counseling(patient_id)
+
 
 
 MAR = {
@@ -1351,50 +1359,30 @@ class MARUpdateRequest(BaseModel):
     givenAt: str | None = ""
 
 
+
+
 class DrugInteractionRequest(BaseModel):
     patientId: str | None = None
     medications: list[str] | None = None
 
 
 NSAID_KEYWORDS = [
-    "aspirin",
-    "ibuprofen",
-    "naproxen",
-    "diclofenac",
-    "ketorolac",
-    "indomethacin",
-    "meloxicam",
-    "celecoxib",
-    "etoricoxib",
+    "aspirin", "ibuprofen", "naproxen", "diclofenac", "ketorolac",
+    "indomethacin", "meloxicam", "celecoxib", "etoricoxib"
 ]
 
 ANTICOAGULANT_KEYWORDS = [
-    "warfarin",
-    "apixaban",
-    "rivaroxaban",
-    "dabigatran",
-    "edoxaban",
-    "heparin",
-    "enoxaparin",
+    "warfarin", "apixaban", "rivaroxaban", "dabigatran", "edoxaban", "heparin", "enoxaparin"
 ]
 
-ANTIPLATELET_KEYWORDS = ["clopidogrel", "ticagrelor", "prasugrel", "aspirin"]
+ANTIPLATELET_KEYWORDS = [
+    "clopidogrel", "ticagrelor", "prasugrel", "aspirin"
+]
 
 RENAL_CAUTION_KEYWORDS = [
-    "ibuprofen",
-    "naproxen",
-    "diclofenac",
-    "ketorolac",
-    "indomethacin",
-    "meloxicam",
-    "celecoxib",
-    "metformin",
-    "gentamicin",
-    "vancomycin",
-    "furosemide",
-    "spironolactone",
-    "lisinopril",
-    "losartan",
+    "ibuprofen", "naproxen", "diclofenac", "ketorolac", "indomethacin",
+    "meloxicam", "celecoxib", "metformin", "gentamicin", "vancomycin",
+    "furosemide", "spironolactone", "lisinopril", "losartan"
 ]
 
 
@@ -1415,67 +1403,50 @@ def _analyze_medication_list(medications: list[str]):
         seen[med] = seen.get(med, 0) + 1
     for med, count in seen.items():
         if count > 1:
-            findings.append(
-                {
-                    "severity": "moderate",
-                    "type": "duplicate_therapy",
-                    "title": "Duplicate therapy detected",
-                    "detail": f"{med} appears {count} times in the medication list.",
-                }
-            )
+            findings.append({
+                "severity": "moderate",
+                "type": "duplicate_therapy",
+                "title": "Duplicate therapy detected",
+                "detail": f"{med} appears {count} times in the medication list."
+            })
 
     has_nsaid = any(_contains_any(med, NSAID_KEYWORDS) for med in normalized)
-    has_anticoagulant = any(
-        _contains_any(med, ANTICOAGULANT_KEYWORDS) for med in normalized
-    )
-    has_antiplatelet = any(
-        _contains_any(med, ANTIPLATELET_KEYWORDS) for med in normalized
-    )
+    has_anticoagulant = any(_contains_any(med, ANTICOAGULANT_KEYWORDS) for med in normalized)
+    has_antiplatelet = any(_contains_any(med, ANTIPLATELET_KEYWORDS) for med in normalized)
 
     if has_nsaid and has_anticoagulant:
-        findings.append(
-            {
-                "severity": "high",
-                "type": "bleeding_risk",
-                "title": "Bleeding risk",
-                "detail": "NSAID + anticoagulant combination may increase gastrointestinal or systemic bleeding risk.",
-            }
-        )
+        findings.append({
+            "severity": "high",
+            "type": "bleeding_risk",
+            "title": "Bleeding risk",
+            "detail": "NSAID + anticoagulant combination may increase gastrointestinal or systemic bleeding risk."
+        })
 
     if has_nsaid and has_antiplatelet:
-        findings.append(
-            {
-                "severity": "high",
-                "type": "bleeding_risk",
-                "title": "Bleeding risk",
-                "detail": "NSAID + antiplatelet combination may increase bleeding risk.",
-            }
-        )
+        findings.append({
+            "severity": "high",
+            "type": "bleeding_risk",
+            "title": "Bleeding risk",
+            "detail": "NSAID + antiplatelet combination may increase bleeding risk."
+        })
 
     nsaid_meds = [med for med in normalized if _contains_any(med, NSAID_KEYWORDS)]
     if len(nsaid_meds) >= 2:
-        findings.append(
-            {
-                "severity": "high",
-                "type": "nsaid_warning",
-                "title": "Multiple NSAIDs detected",
-                "detail": "Using more than one NSAID may increase GI bleeding and kidney injury risk.",
-            }
-        )
+        findings.append({
+            "severity": "high",
+            "type": "nsaid_warning",
+            "title": "Multiple NSAIDs detected",
+            "detail": "Using more than one NSAID may increase GI bleeding and kidney injury risk."
+        })
 
-    renal_meds = [
-        med for med in normalized if _contains_any(med, RENAL_CAUTION_KEYWORDS)
-    ]
+    renal_meds = [med for med in normalized if _contains_any(med, RENAL_CAUTION_KEYWORDS)]
     if renal_meds:
-        findings.append(
-            {
-                "severity": "moderate",
-                "type": "renal_caution",
-                "title": "Renal caution",
-                "detail": "One or more medications may require renal function review: "
-                + ", ".join(sorted(set(renal_meds))),
-            }
-        )
+        findings.append({
+            "severity": "moderate",
+            "type": "renal_caution",
+            "title": "Renal caution",
+            "detail": "One or more medications may require renal function review: " + ", ".join(sorted(set(renal_meds)))
+        })
 
     return {
         "count": len(normalized),
@@ -1484,11 +1455,11 @@ def _analyze_medication_list(medications: list[str]):
         "summary": {
             "has_findings": len(findings) > 0,
             "high_risk_count": len([f for f in findings if f["severity"] == "high"]),
-            "moderate_risk_count": len(
-                [f for f in findings if f["severity"] == "moderate"]
-            ),
-        },
+            "moderate_risk_count": len([f for f in findings if f["severity"] == "moderate"]),
+        }
     }
+
+
 
 
 class DoseSafetyRequest(BaseModel):
@@ -1508,32 +1479,12 @@ MAX_DAILY_DOSE_RULES = {
 }
 
 HEPATIC_CAUTION_KEYWORDS = [
-    "acetaminophen",
-    "paracetamol",
-    "valproate",
-    "isoniazid",
-    "methotrexate",
-    "amiodarone",
+    "acetaminophen", "paracetamol", "valproate", "isoniazid", "methotrexate", "amiodarone"
 ]
 
 DUPLICATE_INGREDIENT_GROUPS = {
-    "aspirin": [
-        "aspirin",
-        "asa",
-        "excedrin",
-        "alka-seltzer",
-        "anacin",
-        "bufferin",
-        "ecotrin",
-    ],
-    "acetaminophen": [
-        "acetaminophen",
-        "paracetamol",
-        "apap",
-        "excedrin",
-        "panadol",
-        "tylenol",
-    ],
+    "aspirin": ["aspirin", "asa", "excedrin", "alka-seltzer", "anacin", "bufferin", "ecotrin"],
+    "acetaminophen": ["acetaminophen", "paracetamol", "apap", "excedrin", "panadol", "tylenol"],
     "ibuprofen": ["ibuprofen", "advil", "motrin"],
     "naproxen": ["naproxen", "aleve"],
 }
@@ -1541,9 +1492,8 @@ DUPLICATE_INGREDIENT_GROUPS = {
 
 def _extract_numeric_dose_mg(text: str) -> int | None:
     import re
-
     value = (text or "").lower()
-    m = re.search(r"(\d+(?:\.\d+)?)\s*mg", value)
+    m = re.search(r'(\d+(?:\.\d+)?)\s*mg', value)
     if not m:
         return None
     try:
@@ -1571,68 +1521,49 @@ def _analyze_dose_safety(medications: list[str], age: int | None):
 
     duplicate_groups = _match_ingredient_groups(normalized)
     for ingredient, meds in duplicate_groups.items():
-        findings.append(
-            {
-                "severity": "high",
-                "type": "duplicate_ingredient",
-                "title": "Duplicate active ingredient detected",
-                "detail": f"Multiple products may contain {ingredient}: "
-                + ", ".join(meds),
-            }
-        )
+        findings.append({
+            "severity": "high",
+            "type": "duplicate_ingredient",
+            "title": "Duplicate active ingredient detected",
+            "detail": f"Multiple products may contain {ingredient}: " + ", ".join(meds)
+        })
 
     for med in normalized:
         med_mg = _extract_numeric_dose_mg(med)
 
         for ingredient, rule in MAX_DAILY_DOSE_RULES.items():
             if ingredient in med:
-                if (
-                    age is not None
-                    and age < 12
-                    and not rule.get("pediatric_allowed", False)
-                ):
-                    findings.append(
-                        {
-                            "severity": "high",
-                            "type": "pediatric_adult_warning",
-                            "title": "Pediatric warning",
-                            "detail": f"{ingredient} may not be appropriate for pediatric use without specialist review.",
-                        }
-                    )
+                if age is not None and age < 12 and not rule.get("pediatric_allowed", False):
+                    findings.append({
+                        "severity": "high",
+                        "type": "pediatric_adult_warning",
+                        "title": "Pediatric warning",
+                        "detail": f"{ingredient} may not be appropriate for pediatric use without specialist review."
+                    })
 
-                if (
-                    med_mg is not None
-                    and rule.get("adult_mg") is not None
-                    and med_mg > rule["adult_mg"]
-                ):
-                    findings.append(
-                        {
-                            "severity": "high",
-                            "type": "max_daily_dose",
-                            "title": "Possible excessive dose",
-                            "detail": f"{med} exceeds adult reference threshold of {rule['adult_mg']} mg/day.",
-                        }
-                    )
+                if med_mg is not None and rule.get("adult_mg") is not None and med_mg > rule["adult_mg"]:
+                    findings.append({
+                        "severity": "high",
+                        "type": "max_daily_dose",
+                        "title": "Possible excessive dose",
+                        "detail": f"{med} exceeds adult reference threshold of {rule['adult_mg']} mg/day."
+                    })
 
         if _contains_any(med, RENAL_CAUTION_KEYWORDS):
-            findings.append(
-                {
-                    "severity": "moderate",
-                    "type": "renal_caution",
-                    "title": "Renal dose caution",
-                    "detail": f"{med} may require renal function review or dose adjustment.",
-                }
-            )
+            findings.append({
+                "severity": "moderate",
+                "type": "renal_caution",
+                "title": "Renal dose caution",
+                "detail": f"{med} may require renal function review or dose adjustment."
+            })
 
         if _contains_any(med, HEPATIC_CAUTION_KEYWORDS):
-            findings.append(
-                {
-                    "severity": "moderate",
-                    "type": "hepatic_caution",
-                    "title": "Hepatic dose caution",
-                    "detail": f"{med} may require liver function review or hepatic dose caution.",
-                }
-            )
+            findings.append({
+                "severity": "moderate",
+                "type": "hepatic_caution",
+                "title": "Hepatic dose caution",
+                "detail": f"{med} may require liver function review or hepatic dose caution."
+            })
 
     return {
         "age": age,
@@ -1642,11 +1573,11 @@ def _analyze_dose_safety(medications: list[str], age: int | None):
         "summary": {
             "has_findings": len(findings) > 0,
             "high_risk_count": len([f for f in findings if f["severity"] == "high"]),
-            "moderate_risk_count": len(
-                [f for f in findings if f["severity"] == "moderate"]
-            ),
-        },
+            "moderate_risk_count": len([f for f in findings if f["severity"] == "moderate"]),
+        }
     }
+
+
 
 
 class MedicationRecommendationRequest(BaseModel):
@@ -1667,40 +1598,35 @@ def _build_medication_recommendations(medications: list[str], age: int | None = 
         med_lower = med_name.lower()
 
         if "warfarin" in med_lower:
-            recommendations.append(
-                {
-                    "recommendation": f"Monitor INR closely for {med_name} and avoid unnecessary NSAID/aspirin combinations.",
-                    "message": f"High-risk anticoagulant review recommended for {med_name}.",
-                    "severity": "high",
-                }
-            )
+            recommendations.append({
+                "recommendation": f"Monitor INR closely for {med_name} and avoid unnecessary NSAID/aspirin combinations.",
+                "message": f"High-risk anticoagulant review recommended for {med_name}.",
+                "severity": "high"
+            })
         elif "metformin" in med_lower:
-            recommendations.append(
-                {
-                    "recommendation": f"Review renal function periodically while using {med_name}.",
-                    "message": f"Routine kidney function monitoring suggested for {med_name}.",
-                    "severity": "medium",
-                }
-            )
+            recommendations.append({
+                "recommendation": f"Review renal function periodically while using {med_name}.",
+                "message": f"Routine kidney function monitoring suggested for {med_name}.",
+                "severity": "medium"
+            })
         else:
-            recommendations.append(
-                {
-                    "recommendation": f"Review standard dosing and counseling for {med_name}.",
-                    "message": f"No special AI flags detected for {med_name}.",
-                    "severity": "low",
-                }
-            )
+            recommendations.append({
+                "recommendation": f"Review standard dosing and counseling for {med_name}.",
+                "message": f"No special AI flags detected for {med_name}.",
+                "severity": "low"
+            })
 
     if age is not None and age >= 65:
-        recommendations.append(
-            {
-                "recommendation": "Consider age-related dose adjustment and fall-risk review.",
-                "message": "Older adult safety review recommended.",
-                "severity": "medium",
-            }
-        )
+        recommendations.append({
+            "recommendation": "Consider age-related dose adjustment and fall-risk review.",
+            "message": "Older adult safety review recommended.",
+            "severity": "medium"
+        })
 
-    return {"recommendations": recommendations, "count": len(recommendations)}
+    return {
+        "recommendations": recommendations,
+        "count": len(recommendations)
+    }
 
 
 @app.get("/drug-intel/recommendations/{patient_id}")
@@ -1719,7 +1645,6 @@ def analyze_medication_recommendations(payload: MedicationRecommendationRequest)
     result["patientId"] = payload.patientId
     return result
 
-
 @app.get("/drug-intel/dose-safety/{patient_id}")
 def get_dose_safety_for_patient(patient_id: str, age: int | None = None):
     mar_items = MAR.get(patient_id, [])
@@ -1736,7 +1661,6 @@ def analyze_dose_safety(payload: DoseSafetyRequest):
     result["patientId"] = payload.patientId
     return result
 
-
 @app.get("/drug-intel/interactions/{patient_id}")
 def get_drug_interactions_for_patient(patient_id: str):
     mar_items = MAR.get(patient_id, [])
@@ -1752,7 +1676,6 @@ def analyze_drug_interactions(payload: DrugInteractionRequest):
     result = _analyze_medication_list(medications)
     result["patientId"] = payload.patientId
     return result
-
 
 @app.get("/mar/{patient_id}")
 def get_mar(patient_id: str):
@@ -1788,15 +1711,15 @@ def update_mar_item(patient_id: str, item_id: int, payload: MARUpdateRequest):
     raise HTTPException(status_code=404, detail="MAR item not found")
 
 
+
+
 class PharmacistReviewRequest(BaseModel):
     status: str
     note: str | None = ""
 
 
 @app.put("/mar/{patient_id}/{item_id}/pharmacist-review")
-def pharmacist_review_mar_item(
-    patient_id: str, item_id: int, payload: PharmacistReviewRequest
-):
+def pharmacist_review_mar_item(patient_id: str, item_id: int, payload: PharmacistReviewRequest):
     items = MAR.get(patient_id, [])
     for item in items:
         if item["id"] == item_id:
@@ -1805,7 +1728,6 @@ def pharmacist_review_mar_item(
             item["reviewedAt"] = datetime.now().strftime("%Y-%m-%d %H:%M")
             return item
     raise HTTPException(status_code=404, detail="MAR item not found")
-
 
 @app.put("/mar/{patient_id}/{item_id}/status")
 def update_mar_item_status(patient_id: str, item_id: int, payload: MARStatusRequest):
@@ -1818,6 +1740,7 @@ def update_mar_item_status(patient_id: str, item_id: int, payload: MARStatusRequ
     raise HTTPException(status_code=404, detail="MAR item not found")
 
 
+
 @app.get("/drug-intel/search")
 def drug_intel_search(q: str = Query(..., min_length=2)):
     encoded = urllib.parse.quote(q)
@@ -1828,19 +1751,13 @@ def drug_intel_search(q: str = Query(..., min_length=2)):
     openfda_data = {}
 
     try:
-        with urlopen(
-            Request(rxnorm_url, headers={"User-Agent": "AI-Hospital-Alliance"}),
-            timeout=12,
-        ) as response:
+        with urlopen(Request(rxnorm_url, headers={"User-Agent": "AI-Hospital-Alliance"}), timeout=12) as response:
             rxnorm_data = json.loads(response.read().decode("utf-8"))
     except Exception:
         rxnorm_data = {}
 
     try:
-        with urlopen(
-            Request(openfda_url, headers={"User-Agent": "AI-Hospital-Alliance"}),
-            timeout=12,
-        ) as response:
+        with urlopen(Request(openfda_url, headers={"User-Agent": "AI-Hospital-Alliance"}), timeout=12) as response:
             openfda_data = json.loads(response.read().decode("utf-8"))
     except Exception:
         openfda_data = {}
@@ -1858,10 +1775,7 @@ def drug_intel_dailymed(name: str = Query(..., min_length=2)):
     dailymed_url = f"https://dailymed.nlm.nih.gov/dailymed/services/v2/spls.json?drug_name={encoded}"
 
     try:
-        with urlopen(
-            Request(dailymed_url, headers={"User-Agent": "AI-Hospital-Alliance"}),
-            timeout=12,
-        ) as response:
+        with urlopen(Request(dailymed_url, headers={"User-Agent": "AI-Hospital-Alliance"}), timeout=12) as response:
             data = json.loads(response.read().decode("utf-8"))
             return data
     except Exception as exc:
@@ -1876,7 +1790,6 @@ def delete_mar_item(patient_id: str, item_id: int):
             deleted = items.pop(index)
             return {"deleted": True, "item": deleted}
     raise HTTPException(status_code=404, detail="MAR item not found")
-
 
 @app.get("/drug-intel/risk/{patient_id}")
 def get_risk(patient_id: str):
@@ -1916,7 +1829,11 @@ def get_risk(patient_id: str):
     else:
         level = "LOW"
 
-    return {"level": level, "score": score, "reasons": reasons}
+    return {
+        "level": level,
+        "score": score,
+        "reasons": reasons
+    }
 
 
 @app.post("/ai/chat")
@@ -1928,12 +1845,12 @@ def ai_chat(payload: dict):
     }
 
 
+
 # ===== Reports Create Endpoint =====
 try:
     REPORTS
 except NameError:
     REPORTS = []
-
 
 class ReportCreateRequest(BaseModel):
     title: str
@@ -1941,7 +1858,6 @@ class ReportCreateRequest(BaseModel):
     summary: str | None = ""
     content: str | None = ""
     status: str | None = "Draft"
-
 
 @app.post("/reports/{patient_id}")
 def create_report(patient_id: str, payload: ReportCreateRequest):
@@ -1962,12 +1878,13 @@ from fastapi import Depends, HTTPException
 
 VERIFIED_REPORTS = {}
 
-
 @app.post("/verify/register/{report_id}")
 def register_report(report_id: str):
-    VERIFIED_REPORTS[report_id] = {"status": "verified", "timestamp": "valid"}
+    VERIFIED_REPORTS[report_id] = {
+        "status": "verified",
+        "timestamp": "valid"
+    }
     return {"message": "Report registered", "report_id": report_id}
-
 
 @app.get("/verify/{report_id}")
 def verify_report(report_id: str):
@@ -1988,20 +1905,24 @@ import json
 
 REPORT_HASHES = {}
 
-
 def generate_report_hash(data: dict):
     content = json.dumps(data, sort_keys=True).encode()
     return hashlib.sha256(content).hexdigest()
-
 
 @app.post("/secure-report/{report_id}")
 def secure_report(report_id: str, payload: dict):
     report_hash = generate_report_hash(payload)
 
-    REPORT_HASHES[report_id] = {"hash": report_hash, "data": payload}
+    REPORT_HASHES[report_id] = {
+        "hash": report_hash,
+        "data": payload
+    }
 
-    return {"report_id": report_id, "hash": report_hash, "status": "secured"}
-
+    return {
+        "report_id": report_id,
+        "hash": report_hash,
+        "status": "secured"
+    }
 
 @app.post("/verify-secure/{report_id}")
 def verify_secure(report_id: str, payload: dict):
@@ -2013,21 +1934,25 @@ def verify_secure(report_id: str, payload: dict):
     new_hash = generate_report_hash(payload)
 
     if new_hash == existing["hash"]:
-        return {"status": "VALID", "security": "UNCHANGED"}
+        return {
+            "status": "VALID",
+            "security": "UNCHANGED"
+        }
     else:
-        return {"status": "TAMPERED", "security": "DATA MODIFIED"}
+        return {
+            "status": "TAMPERED",
+            "security": "DATA MODIFIED"
+        }
 
 
 def sign_data(data: bytes) -> str:
     import hmac, hashlib
-
     key = os.environ.get("SECRET_KEY", "aiha-super-secret-key-2026").encode()
     return hmac.new(key, data, hashlib.sha256).hexdigest()
 
 
 def verify_signature(data: bytes, signature: str) -> bool:
     import hmac
-
     expected = sign_data(data)
     return hmac.compare_digest(expected, signature)
 
@@ -2035,26 +1960,29 @@ def verify_signature(data: bytes, signature: str) -> bool:
 @app.post("/sign-report/{report_id}")
 def sign_report(report_id: str, payload: dict):
     import json
-
     data = json.dumps(payload, sort_keys=True).encode()
     signature = sign_data(data)
 
-    return {"report_id": report_id, "signature": signature, "status": "signed"}
-
+    return {
+        "report_id": report_id,
+        "signature": signature,
+        "status": "signed"
+    }
 
 @app.post("/verify-signature/{report_id}")
 def verify_report_signature(report_id: str, payload: dict, signature: str):
     import json
-
     data = json.dumps(payload, sort_keys=True).encode()
 
     valid = verify_signature(data, signature)
 
-    return {"status": "VALID" if valid else "INVALID", "security": "HMAC-SHA256"}
+    return {
+        "status": "VALID" if valid else "INVALID",
+        "security": "HMAC-SHA256"
+    }
 
 
 BLOCKCHAIN_LEDGER = {}
-
 
 @app.post("/blockchain/register/{report_id}")
 def blockchain_register(report_id: str, payload: dict):
@@ -2065,8 +1993,11 @@ def blockchain_register(report_id: str, payload: dict):
 
     BLOCKCHAIN_LEDGER[report_id] = hash_value
 
-    return {"report_id": report_id, "hash": hash_value, "blockchain": "registered"}
-
+    return {
+        "report_id": report_id,
+        "hash": hash_value,
+        "blockchain": "registered"
+    }
 
 @app.get("/blockchain/verify/{report_id}")
 def blockchain_verify(report_id: str, payload: dict):
@@ -2080,7 +2011,7 @@ def blockchain_verify(report_id: str, payload: dict):
 
     return {
         "status": "VALID" if stored == new_hash else "TAMPERED",
-        "layer": "BLOCKCHAIN",
+        "layer": "BLOCKCHAIN"
     }
 
 
@@ -2089,12 +2020,11 @@ def blockchain_verify(report_id: str, payload: dict):
 # =============================
 VERIFY_REPORTS = {}
 
-
 @app.post("/verify-secure/register/{visit_id}")
 def register_verify(visit_id: str):
     VERIFY_REPORTS[visit_id] = {
         "status": "registered",
-        "timestamp": str(datetime.now()),
+        "timestamp": str(datetime.now())
     }
     return {"status": "registered", "visit_id": visit_id}
 
@@ -2123,7 +2053,6 @@ def verify_report_page(visit_id: str):
 # =============================
 PATIENT_REPORTS = {}
 
-
 @app.post("/patient/report/{visit_id}")
 def save_patient_report(visit_id: str, payload: dict):
     PATIENT_REPORTS[visit_id] = payload
@@ -2137,11 +2066,13 @@ def get_patient_report(visit_id: str):
     if not report:
         return {"status": "NOT FOUND"}
 
-    return {"status": "FOUND", "visit_id": visit_id, "report": report}
-
+    return {
+        "status": "FOUND",
+        "visit_id": visit_id,
+        "report": report
+    }
 
 from .drug_external import openfda_label_by_generic_name
-
 
 @app.get("/drug-intel/fda-label/{drug_name}")
 def get_fda_label_lookup(drug_name: str):
@@ -2163,18 +2094,15 @@ def get_fda_label_lookup(drug_name: str):
                         "generic_name": [drug_name],
                         "brand_name": [drug_name],
                         "manufacturer_name": ["Fallback Local Data"],
-                        "route": ["unknown"],
+                        "route": ["unknown"]
                     },
-                    "warnings": [
-                        f"Could not fetch live FDA data for {drug_name}. Showing local fallback."
-                    ],
-                    "adverse_reactions": ["No live adverse reactions available."],
+                    "warnings": [f"Could not fetch live FDA data for {drug_name}. Showing local fallback."],
+                    "adverse_reactions": ["No live adverse reactions available."]
                 }
             ]
         }
 
     return result
-
 
 @app.get("/drug-intel/global/{drug}")
 def global_drug_info(drug: str):
@@ -2183,9 +2111,8 @@ def global_drug_info(drug: str):
         "WHO_ATC": "B01AA03",
         "category": "Anticoagulant",
         "fda_warning": "Risk of bleeding",
-        "global_note": "Monitor INR regularly",
+        "global_note": "Monitor INR regularly"
     }
-
 
 from .db import SessionLocal, get_db
 from sqlalchemy.orm import Session
@@ -2211,76 +2138,67 @@ def jwt_login(payload: dict):
         if not verify_password(password, user.password):
             return {"error": "Invalid credentials"}
 
-        token = create_token(
-            {"user_id": user.id, "role": user.role, "hospital_id": user.hospital_id}
-        )
+        token = create_token({
+            "user_id": user.id,
+            "role": user.role,
+            "hospital_id": user.hospital_id
+        })
 
         return {
             "access_token": token,
             "user": {
                 "username": user.username,
                 "role": user.role,
-                "hospital_id": user.hospital_id,
-            },
+                "hospital_id": user.hospital_id
+            }
         }
     except Exception as e:
         return {"error": f"JWT login failed: {str(e)}"}
-
 
 from .auth import get_current_user
 
 
 @app.post("/mar/{patient_id}/{index}/status")
-def update_mar_status(
-    patient_id: str,
-    index: int,
-    payload: dict,
-    current_user: dict = Depends(get_current_user),
-):
+def update_mar_status(patient_id: str, index: int, payload: dict, current_user: dict = Depends(get_current_user)):
     if patient_id not in MAR:
         return {"error": "Patient MAR not found"}
 
     if index < 0 or index >= len(MAR[patient_id]):
         return {"error": "Invalid MAR index"}
 
-    MAR[patient_id][index]["status"] = payload.get(
-        "status", MAR[patient_id][index].get("status")
-    )
+    MAR[patient_id][index]["status"] = payload.get("status", MAR[patient_id][index].get("status"))
     return {"status": "ok", "mar": MAR[patient_id]}
 
 
 @app.post("/mar/{patient_id}/{index}/pharmacy-review")
-def pharmacy_review_mar_item(
-    patient_id: str,
-    index: int,
-    payload: dict,
-    current_user: dict = Depends(get_current_user),
-):
+def pharmacy_review_mar_item(patient_id: str, index: int, payload: dict, current_user: dict = Depends(get_current_user)):
     if patient_id not in MAR:
         return {"error": "Patient MAR not found"}
 
     if index < 0 or index >= len(MAR[patient_id]):
         return {"error": "Invalid MAR index"}
 
-    MAR[patient_id][index]["pharmacy_review"] = payload.get(
-        "pharmacy_review", "Reviewed"
-    )
+    MAR[patient_id][index]["pharmacy_review"] = payload.get("pharmacy_review", "Reviewed")
     MAR[patient_id][index]["ai_flag"] = payload.get("ai_flag", "Safe")
     return {"status": "ok", "mar": MAR[patient_id]}
 
 
-RADIOLOGY = {"P-1001": [{"study": "CT Chest", "status": "Pending", "report": ""}]}
-
+RADIOLOGY = {
+    "P-1001": [
+        {
+            "study": "CT Chest",
+            "status": "Pending",
+            "report": ""
+        }
+    ]
+}
 
 @app.get("/radiology/{patient_id}")
 def get_radiology(patient_id: str, current_user: dict = Depends(get_current_user)):
     return RADIOLOGY.get(patient_id, [])
 
-
 @app.post("/radiology/{patient_id}")
-def add_radiology(
-    patient_id: str, payload: dict, current_user: dict = Depends(get_current_user)
-):
+def add_radiology(patient_id: str, payload: dict, current_user: dict = Depends(get_current_user)):
     if patient_id not in RADIOLOGY:
         RADIOLOGY[patient_id] = []
     RADIOLOGY[patient_id].append(payload)
@@ -2289,11 +2207,8 @@ def add_radiology(
 
 from .ai_radiology import analyze_ct_scan
 
-
 @app.post("/radiology/{patient_id}/{index}/analyze")
-def analyze_radiology(
-    patient_id: str, index: int, current_user: dict = Depends(get_current_user)
-):
+def analyze_radiology(patient_id: str, index: int, current_user: dict = Depends(get_current_user)):
     if patient_id not in RADIOLOGY:
         return {"error": "No studies"}
 
@@ -2301,20 +2216,18 @@ def analyze_radiology(
     result = analyze_ct_scan(study.get("study", ""))
 
     RADIOLOGY[patient_id][index]["ai"] = result
-
+    
     if result.get("priority") == "HIGH":
-        ALERTS.append(
-            {
-                "patient_id": patient_id,
-                "message": "Critical radiology finding",
-                "time": "NOW",
-            }
-        )
+        ALERTS.append({
+            "patient_id": patient_id,
+            "message": "Critical radiology finding",
+            "time": "NOW"
+        })
     return {"status": "ok", "result": result}
 
 
-ALERTS = []
 
+ALERTS = []
 
 @app.get("/alerts")
 def get_alerts():
@@ -2323,7 +2236,6 @@ def get_alerts():
 
 from .deep_ai_radiology import analyze_image
 from .dicom_utils import load_dicom
-
 
 @app.post("/ai/deep-radiology")
 def deep_radiology(payload: dict):
@@ -2335,45 +2247,49 @@ def deep_radiology(payload: dict):
     return {
         "status": "ok",
         "prediction": result,
-        "risk": "HIGH" if result["abnormal"] > 0.7 else "LOW",
+        "risk": "HIGH" if result["abnormal"] > 0.7 else "LOW"
     }
 
 
 from .ai_report import generate_radiology_report
-
 
 @app.post("/ai/deep-report")
 def deep_report(payload: dict):
     pred = payload.get("prediction")
     report = generate_radiology_report(pred)
 
-    return {"report": report}
+    return {
+        "report": report
+    }
 
 
 from .ai_inference import predict_image
-
 
 @app.post("/ai/predict")
 def predict(payload: dict):
     path = payload.get("path")
     result = predict_image(path)
 
-    return {"prediction": result, "risk": "HIGH" if result["abnormal"] > 0.7 else "LOW"}
+    return {
+        "prediction": result,
+        "risk": "HIGH" if result["abnormal"] > 0.7 else "LOW"
+    }
 
 
 from .unet_inference import segment_image
-
 
 @app.post("/ai/segment")
 def segment(payload: dict):
     path = payload.get("path")
     mask = segment_image(path)
 
-    return {"status": "ok", "mask": mask}
+    return {
+        "status": "ok",
+        "mask": mask
+    }
 
 
 from .unet3d_inference import segment_3d
-
 
 @app.post("/ai/3d-segmentation")
 def ai_3d(payload: dict):
@@ -2381,11 +2297,14 @@ def ai_3d(payload: dict):
 
     mask = segment_3d(folder)
 
-    return {"status": "ok", "message": "3D segmentation complete", "mask": mask}
+    return {
+        "status": "ok",
+        "message": "3D segmentation complete",
+        "mask": mask
+    }
 
 
 from .ai_diagnosis import auto_diagnose
-
 
 @app.post("/ai/diagnose")
 def diagnose(payload: dict):
@@ -2394,12 +2313,10 @@ def diagnose(payload: dict):
 
     return result
 
-
 # ── WebSocket Real-time Alerts ────────────────────────────────────────────────
 import asyncio
 import uuid
 from typing import List
-
 
 class ConnectionManager:
     def __init__(self):
@@ -2415,7 +2332,6 @@ class ConnectionManager:
 
     async def broadcast(self, data: dict):
         import json
-
         msg = json.dumps(data)
         for ws in self.active.copy():
             try:
@@ -2423,9 +2339,7 @@ class ConnectionManager:
             except Exception:
                 self.active.remove(ws)
 
-
 ws_manager = ConnectionManager()
-
 
 @app.websocket("/ws/alerts")
 async def websocket_alerts(websocket: WebSocket):
@@ -2433,51 +2347,23 @@ async def websocket_alerts(websocket: WebSocket):
     try:
         # Send demo alerts every 30 seconds
         import random, datetime
-
         demo_alerts = [
-            {
-                "type": "patient",
-                "message": "Patient P-1003 oxygen saturation dropped to 87%",
-                "severity": "critical",
-                "patientId": "P-1003",
-            },
-            {
-                "type": "lab",
-                "message": "Critical lab result: Troponin 1.2 ng/mL for P-1001",
-                "severity": "critical",
-                "patientId": "P-1001",
-            },
-            {
-                "type": "pharmacy",
-                "message": "Drug interaction detected: Warfarin + Aspirin for P-1001",
-                "severity": "high",
-                "patientId": "P-1001",
-            },
-            {
-                "type": "radiology",
-                "message": "AI detected abnormality in CT Chest — P-1002",
-                "severity": "high",
-                "patientId": "P-1002",
-            },
-            {
-                "type": "alert",
-                "message": "ICU bed capacity at 90% — critical threshold",
-                "severity": "moderate",
-            },
+            {"type": "patient",  "message": "Patient P-1003 oxygen saturation dropped to 87%", "severity": "critical", "patientId": "P-1003"},
+            {"type": "lab",      "message": "Critical lab result: Troponin 1.2 ng/mL for P-1001", "severity": "critical", "patientId": "P-1001"},
+            {"type": "pharmacy", "message": "Drug interaction detected: Warfarin + Aspirin for P-1001", "severity": "high", "patientId": "P-1001"},
+            {"type": "radiology","message": "AI detected abnormality in CT Chest — P-1002", "severity": "high", "patientId": "P-1002"},
+            {"type": "alert",    "message": "ICU bed capacity at 90% — critical threshold", "severity": "moderate"},
         ]
         while True:
             await asyncio.sleep(30)
             alert = random.choice(demo_alerts)
-            await ws_manager.broadcast(
-                {
-                    **alert,
-                    "id": str(uuid.uuid4()),
-                    "timestamp": datetime.datetime.utcnow().isoformat(),
-                }
-            )
+            await ws_manager.broadcast({
+                **alert,
+                "id": str(uuid.uuid4()),
+                "timestamp": datetime.datetime.utcnow().isoformat(),
+            })
     except WebSocketDisconnect:
         ws_manager.disconnect(websocket)
-
 
 @app.post("/claude/analyze", response_model=None)
 async def claude_analyze(req: FastAPIRequest):
@@ -2490,24 +2376,21 @@ async def claude_analyze(req: FastAPIRequest):
                 "anthropic-version": "2023-06-01",
                 "x-api-key": os.environ.get("ANTHROPIC_API_KEY", ""),
             },
-            json=body,
+            json=body
         )
     return res.json()
 
-
 # ── Patient CRUD ──────────────────────────────────────────────────────────────
-
 
 @app.post("/groq/chat")
 async def groq_chat(req: FastAPIRequest):
     import httpx
-
     body = await req.json()
     message = body.get("message", "")
     mode = body.get("mode", "default")
     language = body.get("language", "en")
     history = body.get("history", [])
-
+    
     prompts = {
         "triage": "You are an AI medical triage specialist. Assess symptoms: CRITICAL|URGENT|SEMI-URGENT|NON-URGENT.",
         "lab": "You are an AI lab interpreter. Flag HIGH/LOW/CRITICAL/NORMAL.",
@@ -2520,37 +2403,25 @@ async def groq_chat(req: FastAPIRequest):
         "pediatrics": "You are an expert AI pediatrician (AAP/WHO).",
         "pharmacy": "You are an expert AI clinical pharmacist (FDA/USP).",
     }
-    lang_suffix = {
-        "ar": "\n\nأجب باللغة العربية.",
-        "fr": "\n\nRépondez en français.",
-        "en": "",
-    }
+    lang_suffix = {"ar": "\n\nأجب باللغة العربية.", "fr": "\n\nRépondez en français.", "en": ""}
     system = prompts.get(mode, prompts["default"]) + lang_suffix.get(language, "")
-
+    
     messages = [{"role": "system", "content": system}]
     for m in history[-12:]:
-        if m.get("role") in ("user", "assistant"):
-            messages.append({"role": m["role"], "content": m.get("content", "")})
+        if m.get("role") in ("user","assistant"):
+            messages.append({"role": m["role"], "content": m.get("content","")})
     messages.append({"role": "user", "content": message})
-
+    
     import os
-
     groq_key = os.environ.get("GROQ_API_KEY", "")
     if not groq_key:
         return {"response": "AI unavailable — GROQ_API_KEY not set", "mode": mode}
-
+    
     async with httpx.AsyncClient(timeout=30.0) as client:
         res = await client.post(
             "https://api.groq.com/openai/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {groq_key}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": "llama-3.3-70b-versatile",
-                "messages": messages,
-                "max_tokens": 1500,
-            },
+            headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
+            json={"model": "llama-3.3-70b-versatile", "messages": messages, "max_tokens": 1500}
         )
         data = res.json()
         reply = data["choices"][0]["message"]["content"]
@@ -2561,92 +2432,70 @@ async def groq_chat(req: FastAPIRequest):
 def create_patient(data: dict, db: Session = Depends(get_db)):
     from .models import Patient
     import uuid
-
     p = Patient(
         id=f"P-{str(uuid.uuid4())[:6].upper()}",
-        name=data.get("name", ""),
-        age=data.get("age", 0),
-        gender=data.get("gender", "Male"),
-        phone=data.get("phone", ""),
-        condition=data.get("condition", ""),
+        name=data.get("name",""),
+        age=data.get("age",0),
+        gender=data.get("gender","Male"),
+        phone=data.get("phone",""),
+        condition=data.get("condition",""),
         department_id=None,
         hospital_id="H-001",
-        status=data.get("status", "Active"),
+        status=data.get("status","Active"),
     )
-    db.add(p)
-    db.commit()
-    db.refresh(p)
+    db.add(p); db.commit(); db.refresh(p)
     return {"id": p.id, "name": p.name, "status": p.status}
-
 
 @app.put("/patients/{patient_id}", response_model=None)
 def update_patient(patient_id: str, data: dict, db: Session = Depends(get_db)):
     from .models import Patient
-
     p = db.query(Patient).filter(Patient.id == patient_id).first()
     if not p:
         raise HTTPException(status_code=404, detail="Patient not found")
     for k, v in data.items():
-        if hasattr(p, k) and k not in ("id", "hospital_id"):
+        if hasattr(p, k) and k not in ("id","hospital_id"):
             setattr(p, k, v)
     db.commit()
     return {"success": True}
 
-
 @app.delete("/patients/{patient_id}", response_model=None)
 def delete_patient(patient_id: str, db: Session = Depends(get_db)):
     from .models import Patient
-
     p = db.query(Patient).filter(Patient.id == patient_id).first()
     if not p:
         raise HTTPException(status_code=404, detail="Patient not found")
-    db.delete(p)
-    db.commit()
+    db.delete(p); db.commit()
     return {"success": True}
-
 
 # ── FHIR R4 Endpoints ─────────────────────────────────────────────────────────
 from .fhir import patient_to_fhir, observation_to_fhir, bundle_response
-from .security import (
-    create_access_token,
-    create_refresh_token,
-    verify_refresh_token,
-    check_rate_limit,
-    AuditLogger,
-)
+from .security import create_access_token, create_refresh_token, verify_refresh_token, check_rate_limit, AuditLogger
 from .tenant import TenantContext
-
 
 @app.get("/fhir/R4/Patient", response_model=None)
 def fhir_patients(db: Session = Depends(get_db)):
     from .models import Patient
-
     patients = db.query(Patient).all()
     resources = [patient_to_fhir(p) for p in patients]
     return bundle_response(resources)
 
-
 @app.get("/fhir/R4/Patient/{patient_id}", response_model=None)
 def fhir_patient(patient_id: str, db: Session = Depends(get_db)):
     from .models import Patient
-
     p = db.query(Patient).filter(Patient.id == patient_id).first()
     if not p:
         raise HTTPException(404, "Patient not found")
     return patient_to_fhir(p)
 
-
 @app.get("/fhir/R4/Observation", response_model=None)
 def fhir_observations(patient: str = None, db: Session = Depends(get_db)):
     from .models import NursingVital
-
     q = db.query(NursingVital)
     if patient:
         q = q.filter(NursingVital.patient_id == patient)
     vitals = q.all()
     resources = [observation_to_fhir(v, v.patient_id) for v in vitals]
     return bundle_response(resources)
-
 
 @app.get("/fhir/R4/metadata", response_model=None)
 def fhir_capability():
@@ -2657,23 +2506,11 @@ def fhir_capability():
         "fhirVersion": "4.0.1",
         "format": ["json"],
         "software": {"name": "AI Hospital Alliance FHIR Server", "version": "1.0.0"},
-        "rest": [
-            {
-                "mode": "server",
-                "resource": [
-                    {
-                        "type": "Patient",
-                        "interaction": [{"code": "read"}, {"code": "search-type"}],
-                    },
-                    {
-                        "type": "Observation",
-                        "interaction": [{"code": "read"}, {"code": "search-type"}],
-                    },
-                ],
-            }
-        ],
+        "rest": [{"mode": "server", "resource": [
+            {"type": "Patient",     "interaction": [{"code": "read"}, {"code": "search-type"}]},
+            {"type": "Observation", "interaction": [{"code": "read"}, {"code": "search-type"}]},
+        ]}]
     }
-
 
 # ── Auth Refresh Token ────────────────────────────────────────────────────────
 @app.post("/auth/refresh", response_model=None)
@@ -2687,45 +2524,29 @@ def refresh_token(data: dict):
     new_refresh = create_refresh_token({"sub": username})
     return {"access_token": new_access, "refresh_token": new_refresh}
 
-
 # ── Audit Log endpoint ────────────────────────────────────────────────────────
 @app.get("/audit/logs", response_model=None)
 def get_audit_logs(limit: int = 50, db: Session = Depends(get_db)):
     try:
         from .models import AuditLog
-
         logs = db.query(AuditLog).order_by(AuditLog.timestamp.desc()).limit(limit).all()
-        return [
-            {
-                "id": l.id,
-                "user_id": l.user_id,
-                "action": l.action,
-                "resource": l.resource,
-                "success": l.success,
-                "timestamp": str(l.timestamp),
-                "ip": l.ip_address,
-            }
-            for l in logs
-        ]
+        return [{"id": l.id, "user_id": l.user_id, "action": l.action, "resource": l.resource,
+                 "success": l.success, "timestamp": str(l.timestamp), "ip": l.ip_address} for l in logs]
     except:
         return []
-
 
 # ── Multi-tenant info ────────────────────────────────────────────────────────
 @app.get("/tenant/{hospital_id}", response_model=None)
 def get_tenant_info(hospital_id: str):
     from .tenant import TENANT_REGISTRY
-
     tenant = TENANT_REGISTRY.get(hospital_id)
     if not tenant:
         raise HTTPException(404, "Tenant not found")
     return {"hospital_id": hospital_id, **tenant}
 
-
 @app.get("/tenants", response_model=None)
 def list_tenants():
     from .tenant import TENANT_REGISTRY
-
     return [{"id": k, **v} for k, v in TENANT_REGISTRY.items()]
 
 
@@ -2736,10 +2557,3 @@ def smart_ai(payload: dict):
     provider = payload.get("provider", "auto")
     return {"reply": ask_ai(msg, provider)}
 
-@app.get("/ready")
-def readiness_check():
-    return {
-        "status": "ready",
-        "backend": "ok",
-        "version": "2.0.0"
-    }

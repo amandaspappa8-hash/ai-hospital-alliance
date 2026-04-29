@@ -8,7 +8,11 @@ def chest_pain_orders(triage_level: str) -> List[Dict]:
         {"name": "CBC", "priority": "urgent", "category": "lab"},
         {"name": "CMP", "priority": "urgent", "category": "lab"},
         {"name": "Chest X-ray", "priority": "urgent", "category": "imaging"},
-        {"name": "Continuous vital monitoring", "priority": "stat", "category": "monitoring"},
+        {
+            "name": "Continuous vital monitoring",
+            "priority": "stat",
+            "category": "monitoring",
+        },
     ]
 
     if triage_level == "moderate":
@@ -26,8 +30,16 @@ def shortness_of_breath_orders(triage_level: str) -> List[Dict]:
         {"name": "CBC", "priority": "urgent", "category": "lab"},
         {"name": "CMP", "priority": "urgent", "category": "lab"},
         {"name": "ABG", "priority": "urgent", "category": "lab"},
-        {"name": "Respiratory therapy assessment", "priority": "urgent", "category": "consult"},
-        {"name": "Continuous vital monitoring", "priority": "stat", "category": "monitoring"},
+        {
+            "name": "Respiratory therapy assessment",
+            "priority": "urgent",
+            "category": "consult",
+        },
+        {
+            "name": "Continuous vital monitoring",
+            "priority": "stat",
+            "category": "monitoring",
+        },
     ]
 
     if triage_level == "moderate":

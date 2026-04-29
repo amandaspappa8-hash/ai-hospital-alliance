@@ -3,6 +3,7 @@ from monai.networks.nets import UNet
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
 def get_3d_model():
     model = UNet(
         spatial_dims=3,

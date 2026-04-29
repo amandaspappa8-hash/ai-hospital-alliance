@@ -1,6 +1,7 @@
 from typing import Any
 from datetime import datetime
 
+
 class InMemoryMarRepository:
     def __init__(self, mar_store: dict[str, list[dict[str, Any]]]):
         self.mar_store = mar_store

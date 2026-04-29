@@ -1,7 +1,12 @@
 from typing import Any
 
+
 class InMemoryNursingRepository:
-    def __init__(self, vitals_store: dict[str, list[dict[str, Any]]], notes_store: dict[str, list[dict[str, Any]]]):
+    def __init__(
+        self,
+        vitals_store: dict[str, list[dict[str, Any]]],
+        notes_store: dict[str, list[dict[str, Any]]],
+    ):
         self.vitals_store = vitals_store
         self.notes_store = notes_store
 

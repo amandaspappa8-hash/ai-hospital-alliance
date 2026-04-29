@@ -3,9 +3,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 def ask_claude(prompt: str):
     try:
         import anthropic
+
         api_key = os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
             return "Claude Error: ANTHROPIC_API_KEY missing"
@@ -13,7 +15,7 @@ def ask_claude(prompt: str):
         res = client.messages.create(
             model="claude-3-5-sonnet-latest",
             max_tokens=400,
-            messages=[{"role": "user", "content": prompt}]
+            messages=[{"role": "user", "content": prompt}],
         )
         out = []
         for item in res.content:
@@ -24,9 +26,11 @@ def ask_claude(prompt: str):
     except Exception as e:
         return f"Claude Error: {e}"
 
+
 def ask_gemini(prompt: str):
     try:
         import google.generativeai as genai
+
         api_key = os.getenv("GOOGLE_API_KEY")
         if not api_key:
             return "Gemini Error: GOOGLE_API_KEY missing"
@@ -37,10 +41,26 @@ def ask_gemini(prompt: str):
     except Exception as e:
         return f"Gemini Error: {e}"
 
+
 def ask_ai(prompt: str, provider: str = "auto"):
     provider = (provider or "auto").lower()
-    if provider == "claude":
-        return ask_claude(prompt)
     if provider == "gemini":
         return ask_gemini(prompt)
-    return ask_gemini(prompt)
+    if provider == "groq":
+        return ask_groq(prompt)
+    if provider == "claude" or provider == "anthropic":
+        return ask_claude(prompt)
+    return ask_groq(prompt)
+
+def ask_groq(prompt: str):
+    import os, requests
+    api_key = os.environ.get("GROQ_API_KEY", "")
+    if not api_key:
+        return "Groq API key not set"
+    res = requests.post(
+        "https://api.groq.com/openai/v1/chat/completions",
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        json={"model": "llama-3.1-8b-instant", "messages": [{"role": "user", "content": prompt}]}
+    )
+    data = res.json()
+    return data.get("choices", [{}])[0].get("message", {}).get("content", "No response")

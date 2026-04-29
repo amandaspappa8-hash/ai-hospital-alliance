@@ -1,5 +1,6 @@
 from fastapi import HTTPException
 
+
 class LabsService:
     def __init__(self, labs_repository):
         self.labs_repository = labs_repository
