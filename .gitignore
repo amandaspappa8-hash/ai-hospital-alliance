@@ -54,3 +54,4 @@ venv/
 .venv/
 __pycache__/
 dist/
+.env
