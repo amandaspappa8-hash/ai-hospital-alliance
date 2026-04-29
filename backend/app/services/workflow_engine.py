@@ -6,6 +6,7 @@ from ..services.order_engine import chest_pain_orders, shortness_of_breath_order
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_MODEL = "llama-3.3-70b-versatile"
 
+
 def ask_groq(prompt: str) -> dict:
     key = os.environ.get("GROQ_API_KEY", "")
     if not key:
@@ -13,17 +14,23 @@ def ask_groq(prompt: str) -> dict:
     try:
         res = httpx.post(
             GROQ_URL,
-            headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+            headers={
+                "Authorization": f"Bearer {key}",
+                "Content-Type": "application/json",
+            },
             json={
                 "model": GROQ_MODEL,
                 "messages": [
-                    {"role": "system", "content": "You are an expert clinical AI. Respond ONLY with valid JSON, no markdown."},
-                    {"role": "user", "content": prompt}
+                    {
+                        "role": "system",
+                        "content": "You are an expert clinical AI. Respond ONLY with valid JSON, no markdown.",
+                    },
+                    {"role": "user", "content": prompt},
                 ],
                 "max_tokens": 800,
                 "temperature": 0.3,
             },
-            timeout=20.0
+            timeout=20.0,
         )
         text = res.json()["choices"][0]["message"]["content"]
         text = text.strip().lstrip("```json").lstrip("```").rstrip("```").strip()
@@ -31,6 +38,7 @@ def ask_groq(prompt: str) -> dict:
     except Exception as e:
         print(f"Groq error: {e}")
         return {}
+
 
 def run_clinical_workflow(payload: Dict[str, Any]) -> Dict[str, Any]:
     chief = (payload.get("chief_complaint") or "").strip().lower()
@@ -63,7 +71,11 @@ Return JSON with these exact keys:
     if "chest pain" in chief or "chest pain" in symptoms:
         assessment = evaluate_chest_pain(payload)
         triage = assessment["triage_level"]
-        route_to = ["Emergency", "Cardiology"] if triage in ["urgent", "critical"] else ["Internal Medicine"]
+        route_to = (
+            ["Emergency", "Cardiology"]
+            if triage in ["urgent", "critical"]
+            else ["Internal Medicine"]
+        )
         return {
             "chief_complaint": payload.get("chief_complaint"),
             "triage_level": triage,
@@ -78,7 +90,11 @@ Return JSON with these exact keys:
     if "shortness of breath" in chief or "dyspnea" in chief:
         assessment = evaluate_shortness_of_breath(payload)
         triage = assessment["triage_level"]
-        route_to = ["Emergency", "Pulmonology"] if triage in ["urgent", "critical"] else ["Internal Medicine"]
+        route_to = (
+            ["Emergency", "Pulmonology"]
+            if triage in ["urgent", "critical"]
+            else ["Internal Medicine"]
+        )
         return {
             "chief_complaint": payload.get("chief_complaint"),
             "triage_level": triage,

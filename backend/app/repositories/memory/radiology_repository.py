@@ -1,7 +1,10 @@
 from typing import Any
 
+
 class InMemoryRadiologyRepository:
-    def __init__(self, catalog_store: dict[str, Any], orders_store: list[dict[str, Any]]):
+    def __init__(
+        self, catalog_store: dict[str, Any], orders_store: list[dict[str, Any]]
+    ):
         self.catalog_store = catalog_store
         self.orders_store = orders_store
 
@@ -12,7 +15,9 @@ class InMemoryRadiologyRepository:
         return list(self.orders_store)
 
     def list_orders_by_patient(self, patient_id: str) -> list[dict[str, Any]]:
-        return [order for order in self.orders_store if order.get("patientId") == patient_id]
+        return [
+            order for order in self.orders_store if order.get("patientId") == patient_id
+        ]
 
     def create_order(self, payload: dict[str, Any]) -> dict[str, Any]:
         next_id = len(self.orders_store) + 1
@@ -29,7 +34,9 @@ class InMemoryRadiologyRepository:
         self.orders_store.append(new_order)
         return new_order
 
-    def set_result(self, order_id: str | int, payload: dict[str, Any]) -> dict[str, Any] | None:
+    def set_result(
+        self, order_id: str | int, payload: dict[str, Any]
+    ) -> dict[str, Any] | None:
         for order in self.orders_store:
             if str(order.get("id")) == str(order_id):
                 order["result"] = payload.get("result", "")

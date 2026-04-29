@@ -1,5 +1,6 @@
 from fastapi import HTTPException
 
+
 class AuthService:
     def __init__(self, users_repository):
         self.users_repository = users_repository

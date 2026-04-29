@@ -6,11 +6,11 @@ from torch.utils.data import DataLoader
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
 def get_dataloader(data_dir):
-    transform = transforms.Compose([
-        transforms.Resize((224,224)),
-        transforms.ToTensor()
-    ])
+    transform = transforms.Compose(
+        [transforms.Resize((224, 224)), transforms.ToTensor()]
+    )
 
     dataset = datasets.ImageFolder(data_dir, transform=transform)
     loader = DataLoader(dataset, batch_size=8, shuffle=True)
@@ -46,6 +46,7 @@ def train_model(data_dir="ai-data/train"):
 
     torch.save(model.state_dict(), "backend/app/model.pth")
     print("Model saved!")
+
 
 if __name__ == "__main__":
     train_model()

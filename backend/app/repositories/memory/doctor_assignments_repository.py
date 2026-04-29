@@ -1,5 +1,6 @@
 from typing import Any
 
+
 class InMemoryDoctorAssignmentsRepository:
     def __init__(self, assignments_store: dict[str, list[dict[str, Any]]]):
         self.assignments_store = assignments_store
@@ -23,7 +24,9 @@ class InMemoryDoctorAssignmentsRepository:
         self.assignments_store[doctor_id].append(new_assignment)
         return new_assignment
 
-    def update_status(self, doctor_id: str, assignment_id: int, status: str) -> dict[str, Any] | None:
+    def update_status(
+        self, doctor_id: str, assignment_id: int, status: str
+    ) -> dict[str, Any] | None:
         for assignment in self.assignments_store.get(doctor_id, []):
             if assignment.get("id") == assignment_id:
                 assignment["status"] = status

@@ -12,6 +12,7 @@ from .doctor_assignments_service import DoctorAssignmentsService
 from ..ai.clinical_ai_service import ClinicalAIService
 from ..ai.drug_intel_service import DrugIntelService
 
+
 def build_services(repositories):
     return {
         "auth": AuthService(repositories["users"]),
@@ -24,7 +25,9 @@ def build_services(repositories):
         "mar": MarService(repositories["mar"]),
         "labs": LabsService(repositories["labs"]),
         "radiology": RadiologyService(repositories["radiology"]),
-        "doctor_assignments": DoctorAssignmentsService(repositories["doctor_assignments"]),
+        "doctor_assignments": DoctorAssignmentsService(
+            repositories["doctor_assignments"]
+        ),
         "clinical_ai": ClinicalAIService(repositories["orders"]),
         "drug_intel": DrugIntelService(repositories["mar"]),
     }

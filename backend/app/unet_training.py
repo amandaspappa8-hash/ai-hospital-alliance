@@ -8,6 +8,7 @@ from .unet_model import get_model
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
 class SegDataset(Dataset):
     def __init__(self, img_dir, mask_dir):
         self.imgs = os.listdir(img_dir)
@@ -21,8 +22,8 @@ class SegDataset(Dataset):
         img_path = os.path.join(self.img_dir, self.imgs[idx])
         mask_path = os.path.join(self.mask_dir, self.imgs[idx])
 
-        img = Image.open(img_path).convert("L").resize((256,256))
-        mask = Image.open(mask_path).convert("L").resize((256,256))
+        img = Image.open(img_path).convert("L").resize((256, 256))
+        mask = Image.open(mask_path).convert("L").resize((256, 256))
 
         img = np.array(img) / 255.0
         mask = np.array(mask) / 255.0
@@ -31,6 +32,7 @@ class SegDataset(Dataset):
         mask = torch.tensor(mask).unsqueeze(0).float()
 
         return img, mask
+
 
 def train():
     dataset = SegDataset("ai-data-seg/images", "ai-data-seg/masks")
@@ -58,6 +60,7 @@ def train():
 
     torch.save(model.state_dict(), "backend/app/unet.pth")
     print("UNet model saved!")
+
 
 if __name__ == "__main__":
     train()

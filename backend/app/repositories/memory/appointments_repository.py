@@ -1,5 +1,6 @@
 from typing import Any
 
+
 class InMemoryAppointmentsRepository:
     def __init__(self, appointments_store: list[dict[str, Any]]):
         self.appointments_store = appointments_store

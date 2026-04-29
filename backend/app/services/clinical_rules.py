@@ -1,6 +1,5 @@
 from typing import List, Dict, Any
 
-
 HIGH_RISK_CHEST_PAIN_SIGNS = {
     "sweating",
     "diaphoresis",
@@ -45,7 +44,9 @@ def evaluate_chest_pain(payload: Dict[str, Any]) -> Dict[str, Any]:
     matched_risk = symptoms.intersection(HIGH_RISK_CHEST_PAIN_SIGNS)
     if matched_risk:
         score += len(matched_risk)
-        rationale.append(f"High-risk associated symptoms present: {', '.join(sorted(matched_risk))}.")
+        rationale.append(
+            f"High-risk associated symptoms present: {', '.join(sorted(matched_risk))}."
+        )
         red_flags.extend(sorted(matched_risk))
 
     if age and age >= 40:
@@ -101,14 +102,21 @@ def evaluate_shortness_of_breath(payload: Dict[str, Any]) -> Dict[str, Any]:
     rationale = []
     red_flags = []
 
-    if "shortness of breath" in chief or "shortness of breath" in symptoms or "dyspnea" in chief or "dyspnea" in symptoms:
+    if (
+        "shortness of breath" in chief
+        or "shortness of breath" in symptoms
+        or "dyspnea" in chief
+        or "dyspnea" in symptoms
+    ):
         score += 3
         rationale.append("Shortness of breath identified as main complaint.")
 
     matched_risk = symptoms.intersection(HIGH_RISK_SOB_SIGNS)
     if matched_risk:
         score += len(matched_risk)
-        rationale.append(f"Associated respiratory risk symptoms present: {', '.join(sorted(matched_risk))}.")
+        rationale.append(
+            f"Associated respiratory risk symptoms present: {', '.join(sorted(matched_risk))}."
+        )
         red_flags.extend(sorted(matched_risk))
 
     if age and age >= 60:

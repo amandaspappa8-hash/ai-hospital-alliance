@@ -13,7 +13,10 @@ def clinical_route_and_create_orders(patient_id: str, payload: ClinicalRouteRequ
     arr = ORDERS.setdefault(patient_id, [])
 
     existing_keys = {
-        (str(order.get("type", "")).strip().lower(), str(order.get("status", "")).strip().lower())
+        (
+            str(order.get("type", "")).strip().lower(),
+            str(order.get("status", "")).strip().lower(),
+        )
         for order in arr
     }
 

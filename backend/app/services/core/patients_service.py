@@ -1,5 +1,6 @@
 from fastapi import HTTPException
 
+
 class PatientsService:
     def __init__(self, patients_repository):
         self.patients_repository = patients_repository

@@ -40,39 +40,112 @@ DEMO_USERS = {
     },
 }
 
+
 class LoginInput(BaseModel):
     username: str
     password: str
+
 
 @app.get("/")
 def root():
     return {"status": "ok", "service": "ai-hospital-alliance-api"}
 
+
 @app.get("/patients")
 def get_patients():
     return [
-        {"id": "P-1001", "name": "Mohamed Ali", "department": "Cardiology", "status": "In care"},
-        {"id": "P-1002", "name": "Sara Hassan", "department": "Radiology", "status": "Waiting"},
-        {"id": "P-1003", "name": "Omar Salem", "department": "ER", "status": "Discharged"},
+        {
+            "id": "P-1001",
+            "name": "Mohamed Ali",
+            "department": "Cardiology",
+            "status": "In care",
+        },
+        {
+            "id": "P-1002",
+            "name": "Sara Hassan",
+            "department": "Radiology",
+            "status": "Waiting",
+        },
+        {
+            "id": "P-1003",
+            "name": "Omar Salem",
+            "department": "ER",
+            "status": "Discharged",
+        },
     ]
+
 
 @app.get("/reports")
 def get_reports():
     return [
-        {"id": "R-7711", "title": "CT Head", "patient": "Patient A", "type": "Radiology", "status": "in-review"},
-        {"id": "R-7709", "title": "CBC Panel", "patient": "Patient C", "type": "Lab", "status": "pending"},
-        {"id": "R-7701", "title": "Discharge Summary", "patient": "Emily Brown", "type": "Discharge", "status": "completed"},
-        {"id": "R-7688", "title": "ER Triage", "patient": "Patient B", "type": "ER", "status": "pending"},
+        {
+            "id": "R-7711",
+            "title": "CT Head",
+            "patient": "Patient A",
+            "type": "Radiology",
+            "status": "in-review",
+        },
+        {
+            "id": "R-7709",
+            "title": "CBC Panel",
+            "patient": "Patient C",
+            "type": "Lab",
+            "status": "pending",
+        },
+        {
+            "id": "R-7701",
+            "title": "Discharge Summary",
+            "patient": "Emily Brown",
+            "type": "Discharge",
+            "status": "completed",
+        },
+        {
+            "id": "R-7688",
+            "title": "ER Triage",
+            "patient": "Patient B",
+            "type": "ER",
+            "status": "pending",
+        },
     ]
+
 
 @app.get("/appointments")
 def get_appointments():
     return [
-        {"id": "A-1021", "patient": "Sara Ali", "department": "Cardiology", "doctor": "Dr. Kareem", "time": "09:00", "status": "scheduled"},
-        {"id": "A-1022", "patient": "John Smith", "department": "Neurology", "doctor": "Dr. Nasser", "time": "10:30", "status": "checked-in"},
-        {"id": "A-1023", "patient": "Mira Omar", "department": "Radiology", "doctor": "Dr. Lina", "time": "12:00", "status": "completed"},
-        {"id": "A-1024", "patient": "Patient D", "department": "ER", "doctor": "Dr. Adel", "time": "14:15", "status": "cancelled"},
+        {
+            "id": "A-1021",
+            "patient": "Sara Ali",
+            "department": "Cardiology",
+            "doctor": "Dr. Kareem",
+            "time": "09:00",
+            "status": "scheduled",
+        },
+        {
+            "id": "A-1022",
+            "patient": "John Smith",
+            "department": "Neurology",
+            "doctor": "Dr. Nasser",
+            "time": "10:30",
+            "status": "checked-in",
+        },
+        {
+            "id": "A-1023",
+            "patient": "Mira Omar",
+            "department": "Radiology",
+            "doctor": "Dr. Lina",
+            "time": "12:00",
+            "status": "completed",
+        },
+        {
+            "id": "A-1024",
+            "patient": "Patient D",
+            "department": "ER",
+            "doctor": "Dr. Adel",
+            "time": "14:15",
+            "status": "cancelled",
+        },
     ]
+
 
 @app.post("/auth/login")
 def login(data: LoginInput):
@@ -93,12 +166,15 @@ def login(data: LoginInput):
         "user": TOKENS[token],
     }
 
+
 @app.get("/auth/me")
 def me(token: str):
     user = TOKENS.get(token)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid token")
     return user
+
+
 NOTES = {
     "P-1001": [
         {"id": 1, "text": "Chest pain under observation"},
@@ -109,12 +185,15 @@ NOTES = {
     ],
 }
 
+
 @app.get("/notes/{patient_id}")
 def get_notes(patient_id: str):
     return NOTES.get(patient_id, [])
 
+
 class NoteInput(BaseModel):
     text: str
+
 
 @app.post("/notes/{patient_id}")
 def add_note(patient_id: str, data: NoteInput):
@@ -125,15 +204,23 @@ def add_note(patient_id: str, data: NoteInput):
     }
     arr.append(note)
     return note
+
+
 REPORTS_BY_PATIENT = {
     "P-1001": [
-        {"id": "R-100", "title": "ECG Report", "type": "Cardiology", "status": "completed"},
+        {
+            "id": "R-100",
+            "title": "ECG Report",
+            "type": "Cardiology",
+            "status": "completed",
+        },
         {"id": "R-101", "title": "Blood Panel", "type": "Lab", "status": "pending"},
     ],
     "P-1002": [
         {"id": "R-102", "title": "CT Scan", "type": "Radiology", "status": "in-review"},
     ],
 }
+
 
 @app.get("/reports/{patient_id}")
 def get_patient_reports(patient_id: str):
@@ -142,14 +229,17 @@ def get_patient_reports(patient_id: str):
 
 ORDERS = {}
 
+
 class OrderInput(BaseModel):
     type: str
     department: str
     note: str = ""
 
+
 @app.get("/orders/{patient_id}")
 def get_orders(patient_id: str):
     return ORDERS.get(patient_id, [])
+
 
 @app.post("/orders/{patient_id}")
 def add_order(patient_id: str, data: OrderInput):
@@ -163,9 +253,13 @@ def add_order(patient_id: str, data: OrderInput):
     }
     arr.append(order)
     return order
+
+
 app.include_router(clinical_route_router)
 
 app.include_router(clinical_orders_router)
+
+
 @app.get("/pacs/studies")
 def pacs_studies():
     url = "http://127.0.0.1:8042/dicom-web/studies"
@@ -176,11 +270,9 @@ def pacs_studies():
             return Response(content=body, media_type=content_type)
     except urllib.error.HTTPError as e:
         return JSONResponse(
-            status_code=502,
-            content={"error": f"Orthanc HTTP error: {e.code}"}
+            status_code=502, content={"error": f"Orthanc HTTP error: {e.code}"}
         )
     except Exception as e:
         return JSONResponse(
-            status_code=502,
-            content={"error": f"Failed to reach Orthanc: {str(e)}"}
+            status_code=502, content={"error": f"Failed to reach Orthanc: {str(e)}"}
         )

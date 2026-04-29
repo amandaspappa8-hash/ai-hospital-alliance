@@ -5,7 +5,9 @@ class ClinicalAIService:
     def clinical_route(self, run_clinical_workflow, payload):
         return run_clinical_workflow(payload)
 
-    def clinical_route_and_create_orders(self, run_clinical_workflow, patient_id: str, payload):
+    def clinical_route_and_create_orders(
+        self, run_clinical_workflow, patient_id: str, payload
+    ):
         result = run_clinical_workflow(payload)
 
         created_orders = []

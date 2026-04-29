@@ -2,6 +2,7 @@ import os
 import pydicom
 import numpy as np
 
+
 def load_dicom_series(folder):
     files = [pydicom.dcmread(os.path.join(folder, f)) for f in os.listdir(folder)]
     files.sort(key=lambda x: float(x.ImagePositionPatient[2]))

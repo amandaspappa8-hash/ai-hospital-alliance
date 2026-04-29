@@ -10,6 +10,7 @@ from .memory.labs_repository import InMemoryLabsRepository
 from .memory.radiology_repository import InMemoryRadiologyRepository
 from .memory.doctor_assignments_repository import InMemoryDoctorAssignmentsRepository
 
+
 def build_repositories(
     users_store,
     patients_store,
@@ -33,9 +34,17 @@ def build_repositories(
         "orders": InMemoryOrdersRepository(orders_store),
         "appointments": InMemoryAppointmentsRepository(appointments_store or []),
         "reports": InMemoryReportsRepository(reports_store or []),
-        "nursing": InMemoryNursingRepository(nursing_vitals_store or {}, nursing_notes_store or {}),
+        "nursing": InMemoryNursingRepository(
+            nursing_vitals_store or {}, nursing_notes_store or {}
+        ),
         "mar": InMemoryMarRepository(mar_store or {}),
-        "labs": InMemoryLabsRepository(labs_catalog_store or {}, lab_orders_store or []),
-        "radiology": InMemoryRadiologyRepository(radiology_catalog_store or {}, radiology_orders_store or []),
-        "doctor_assignments": InMemoryDoctorAssignmentsRepository(doctor_assignments_store or {}),
+        "labs": InMemoryLabsRepository(
+            labs_catalog_store or {}, lab_orders_store or []
+        ),
+        "radiology": InMemoryRadiologyRepository(
+            radiology_catalog_store or {}, radiology_orders_store or []
+        ),
+        "doctor_assignments": InMemoryDoctorAssignmentsRepository(
+            doctor_assignments_store or {}
+        ),
     }

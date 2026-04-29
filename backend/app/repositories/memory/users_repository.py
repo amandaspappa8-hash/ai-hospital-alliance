@@ -1,5 +1,6 @@
 from typing import Any
 
+
 class InMemoryUsersRepository:
     def __init__(self, users_store: dict[str, Any]):
         self.users_store = users_store
