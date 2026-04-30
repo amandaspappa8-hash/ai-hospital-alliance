@@ -1,12 +1,12 @@
 fastapi
 uvicorn[standard]
-python-dotenv
 pydantic
+python-dotenv
 sqlalchemy
-passlib[bcrypt]
+psycopg2-binary
 python-jose[cryptography]
-httpx
+passlib[bcrypt]
 anthropic
+groq
 google-generativeai
 requests
-psycopg2-binary
