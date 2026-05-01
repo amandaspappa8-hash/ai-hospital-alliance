@@ -1,34 +1,14 @@
+import { safeStorage } from "./safe-storage";
 const TOKEN_KEY = "aiha_token";
 const USER_KEY = "aiha_user";
-function safeGet(key) {
-    try {
-        return localStorage.getItem(key);
-    }
-    catch {
-        return null;
-    }
-}
-function safeSet(key, value) {
-    try {
-        localStorage.setItem(key, value);
-    }
-    catch { }
-}
-function safeRemove(key) {
-    try {
-        localStorage.removeItem(key);
-    }
-    catch { }
-}
-export function saveAuth(token, user) {
-    safeSet(TOKEN_KEY, token);
-    safeSet(USER_KEY, JSON.stringify(user));
-}
 export function getToken() {
-    return safeGet(TOKEN_KEY);
+    return safeStorage.get(TOKEN_KEY);
+}
+export function setToken(token) {
+    safeStorage.set(TOKEN_KEY, token);
 }
 export function getUser() {
-    const raw = safeGet(USER_KEY);
+    const raw = safeStorage.get(USER_KEY);
     if (!raw)
         return null;
     try {
@@ -38,7 +18,20 @@ export function getUser() {
         return null;
     }
 }
+export function setUser(user) {
+    safeStorage.set(USER_KEY, JSON.stringify(user));
+}
+export function saveAuth(token, user) {
+    setToken(token);
+    setUser(user);
+}
+export function clearToken() {
+    safeStorage.remove(TOKEN_KEY);
+}
 export function clearAuth() {
-    safeRemove(TOKEN_KEY);
-    safeRemove(USER_KEY);
+    safeStorage.remove(TOKEN_KEY);
+    safeStorage.remove(USER_KEY);
+}
+export function logout() {
+    clearAuth();
 }

@@ -1,34 +1,42 @@
-import type { AuthUser } from "@/types/auth"
+import { safeStorage } from "./safe-storage"
 
 const TOKEN_KEY = "aiha_token"
 const USER_KEY = "aiha_user"
 
-function safeGet(key: string): string | null {
-  try { return localStorage.getItem(key) } catch { return null }
-}
-function safeSet(key: string, value: string) {
-  try { localStorage.setItem(key, value) } catch {}
-}
-function safeRemove(key: string) {
-  try { localStorage.removeItem(key) } catch {}
+import type { AuthUser } from "@/types/auth"
+
+export function getToken(): string | null {
+  return safeStorage.get(TOKEN_KEY)
 }
 
-export function saveAuth(token: string, user: AuthUser) {
-  safeSet(TOKEN_KEY, token)
-  safeSet(USER_KEY, JSON.stringify(user))
-}
-
-export function getToken() {
-  return safeGet(TOKEN_KEY)
+export function setToken(token: string): void {
+  safeStorage.set(TOKEN_KEY, token)
 }
 
 export function getUser(): AuthUser | null {
-  const raw = safeGet(USER_KEY)
+  const raw = safeStorage.get(USER_KEY)
   if (!raw) return null
   try { return JSON.parse(raw) as AuthUser } catch { return null }
 }
 
-export function clearAuth() {
-  safeRemove(TOKEN_KEY)
-  safeRemove(USER_KEY)
+export function setUser(user: AuthUser): void {
+  safeStorage.set(USER_KEY, JSON.stringify(user))
+}
+
+export function saveAuth(token: string, user: AuthUser): void {
+  setToken(token)
+  setUser(user)
+}
+
+export function clearToken(): void {
+  safeStorage.remove(TOKEN_KEY)
+}
+
+export function clearAuth(): void {
+  safeStorage.remove(TOKEN_KEY)
+  safeStorage.remove(USER_KEY)
+}
+
+export function logout(): void {
+  clearAuth()
 }

@@ -1,26 +1,27 @@
-import { useMemo } from "react"
-import { Navigate, useLocation } from "react-router-dom"
+import { useEffect, useRef } from "react"
+import { useNavigate, useLocation } from "react-router-dom"
 import { getToken, getUser } from "@/lib/auth-storage"
-import { hasAccess, type AppRoute } from "@/lib/rbac"
+import { hasAccess } from "@/lib/rbac"
 
-type ProtectedRouteProps = {
-  children: React.ReactNode
-  routeKey?: AppRoute
-}
-
-export default function ProtectedRoute({ children, routeKey }: ProtectedRouteProps) {
+export default function ProtectedRoute({ children, routeKey }: { children: React.ReactNode, routeKey?: string }) {
+  const navigate = useNavigate()
   const location = useLocation()
+  const redirected = useRef(false)
 
-  const token = useMemo(() => getToken(), [])
-  const user = useMemo(() => getUser(), [])
+  const token = getToken()
+  const user = getUser()
 
-  if (!token || !user) {
-    return <Navigate to="/login" replace state={{ from: location }} />
-  }
+  useEffect(() => {
+    if (redirected.current) return
+    if (!token || !user) {
+      redirected.current = true
+      navigate("/login", { replace: true, state: { from: location } })
+    } else if (routeKey && !hasAccess(user.role as any, routeKey as any)) {
+      redirected.current = true
+      navigate("/dashboard", { replace: true })
+    }
+  }, [token])
 
-  if (routeKey && !hasAccess(user.role, routeKey)) {
-    return <Navigate to="/dashboard" replace />
-  }
-
+  if (!token || !user) return null
   return <>{children}</>
 }
