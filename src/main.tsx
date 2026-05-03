@@ -9,7 +9,7 @@ import PWAInstall from "./components/PWAInstall"
 
 initMonitoring()
 
-if ("serviceWorker" in navigator) {
+if (false) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
       .register("/sw.js")
