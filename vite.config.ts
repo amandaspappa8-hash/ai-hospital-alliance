@@ -8,6 +8,8 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
+      injectRegister: false,
+      disable: true,
       devOptions: { enabled: true },
       includeAssets: ["favicon.svg"],
       manifest: {
