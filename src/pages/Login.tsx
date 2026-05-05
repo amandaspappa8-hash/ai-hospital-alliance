@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { clearAuth, getToken, saveAuth } from "@/lib/auth-storage"
+import { clearAuth, saveAuth } from "@/lib/auth-storage"
 import { login } from "@/services/auth"
 
 export default function Login() {
@@ -10,20 +10,14 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  useEffect(() => {
-    if (getToken()) {
-      navigate("/dashboard", { replace: true })
-    }
-  }, [navigate])
-
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setError("")
     try {
-      clearAuth()
+      try { clearAuth() } catch {}
       const data: any = await login(username.trim(), password.trim())
-      saveAuth(data.access_token, data.user)
+      try { saveAuth(data.access_token, data.user) } catch {}
       navigate("/dashboard", { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed")
