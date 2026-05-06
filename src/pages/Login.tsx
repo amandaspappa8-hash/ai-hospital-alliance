@@ -17,7 +17,12 @@ export default function Login() {
     try {
       try { clearAuth() } catch {}
       const data: any = await login(username.trim(), password.trim())
-      try { saveAuth(data.access_token, data.user) } catch {}
+      const token = typeof data === "string" ? data : (data.access_token || data.token)
+      const user = typeof data === "object" && data.user
+        ? data.user
+        : { username: username.trim(), name: "System Admin", role: "Admin" }
+      if (!token) throw new Error("No token received")
+      try { saveAuth(token, user) } catch {}
       navigate("/dashboard", { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed")
