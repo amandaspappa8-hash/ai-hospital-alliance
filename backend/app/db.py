@@ -16,7 +16,7 @@ engine = create_engine(
     DATABASE_URL,
     pool_pre_ping=True,
     **(
-        {"check_same_thread": False}
+        {"connect_args": {"check_same_thread": False}}
         if IS_SQLITE
         else {
             "pool_size": 20,
