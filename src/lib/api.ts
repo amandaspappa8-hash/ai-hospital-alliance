@@ -46,3 +46,9 @@ export async function apiPut<T = unknown>(path: string, body: unknown): Promise<
 export async function apiDelete<T = unknown>(path: string): Promise<T> {
   return request<T>(path, { method: "DELETE" })
 }
+
+
+export function getAuthHeaders(): Record<string, string> {
+  const token = getToken()
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
