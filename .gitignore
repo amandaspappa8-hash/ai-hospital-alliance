@@ -55,3 +55,38 @@ venv/
 __pycache__/
 dist/
 .env
+
+# ============================================
+# Phase 6 - Security & Cleanup Rules
+# ============================================
+
+# Backup and temp files - NEVER commit these
+*.bak
+*.bak.*
+*.backup
+*.backup_*
+*.fixbak
+*.disabled
+*.broken.*
+*.STABLE
+*.STABLE.*
+*.MILESTONE
+*.MILESTONE.*
+*.stable.*
+*.pre-discharge*
+*.phase0_ok
+*.tsbuildinfo
+tsc
+
+# Production env - use Railway secrets instead
+.env.production
+.env.local
+.env.*.local
+
+# Dev build artifacts
+dev-dist/
+
+# OS & editor
+.DS_Store
+Thumbs.db
+*.swp

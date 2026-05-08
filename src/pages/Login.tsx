@@ -8,8 +8,8 @@ export default function Login() {
   const existingToken = useMemo(() => getToken(), [])
   const navigate = useNavigate()
 
-  const [username, setUsername] = useState("admin")
-  const [password, setPassword] = useState("admin123")
+  const [username, setUsername] = useState("")
+  const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 

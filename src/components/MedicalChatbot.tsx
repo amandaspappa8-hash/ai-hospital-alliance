@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect } from "react"
 import { getUser } from "@/lib/auth-storage"
+import { getAuthHeaders } from "@/lib/api"
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || ""
 
 type Message = { role: "user" | "assistant"; content: string; time: string }
 
@@ -36,22 +39,11 @@ export default function MedicalChatbot() {
     setMessages(prev => [...prev, userMsg])
 
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch(`${API_BASE}/groq/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 600,
-          system: `You are an expert medical AI assistant integrated in AI Hospital Alliance platform.
-You help doctors and nurses with:
-- Interpreting lab results and imaging
-- Clinical decision support
-- Drug dosages and interactions
-- Medical terminology explanations
-- Treatment guidelines
-
-Always be concise, accurate, and professional. Respond in the same language as the user (Arabic or English).
-Include relevant clinical context when appropriate. Add ⚠️ for critical warnings.`,
+          mode: "medical",
           messages: [
             ...messages.filter(m => m.role !== "assistant" || messages.indexOf(m) > 0)
               .slice(-6)
@@ -61,7 +53,7 @@ Include relevant clinical context when appropriate. Add ⚠️ for critical warn
         })
       })
       const data = await res.json()
-      const reply = data.content?.[0]?.text ?? "عذراً، لم أتمكن من المعالجة."
+      const reply = data.response ?? data.content?.[0]?.text ?? "عذراً، لم أتمكن من المعالجة."
       setMessages(prev => [...prev, { role: "assistant", content: reply, time: new Date().toLocaleTimeString() }])
       if (!open) setUnread(u => u + 1)
     } catch {

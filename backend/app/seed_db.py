@@ -47,32 +47,34 @@ try:
     except:
         pw = lambda x: x
 
+    import os as _seed_os
+
     db.add_all(
         [
             User(
                 username="admin",
-                password=pw("admin123"),
+                password=pw(_seed_os.environ.get("ADMIN_PASSWORD", "")),
                 name="System Admin",
                 role="Admin",
                 hospital_id="H-001",
             ),
             User(
                 username="doctor",
-                password=pw("doctor123"),
+                password=pw(_seed_os.environ.get("DOCTOR_PASSWORD", "")),
                 name="Dr. Mohammed",
                 role="Doctor",
                 hospital_id="H-001",
             ),
             User(
                 username="nurse",
-                password=pw("nurse123"),
+                password=pw(_seed_os.environ.get("NURSE_PASSWORD", "")),
                 name="Nurse Sara",
                 role="Nurse",
                 hospital_id="H-001",
             ),
             User(
                 username="radiology",
-                password=pw("radio123"),
+                password=pw(_seed_os.environ.get("RADIOLOGY_PASSWORD", "")),
                 name="Radiology User",
                 role="Radiology",
                 hospital_id="H-001",

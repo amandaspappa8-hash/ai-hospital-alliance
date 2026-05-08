@@ -14,10 +14,12 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
-SECRET_KEY = os.environ.get(
-    "SECRET_KEY", "aiha-super-secret-key-2026-change-in-production"
-)
-REFRESH_SECRET = os.environ.get("REFRESH_SECRET", "aiha-refresh-secret-key-2026")
+SECRET_KEY = os.environ.get("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY environment variable is required")
+REFRESH_SECRET = os.environ.get("REFRESH_SECRET")
+if not REFRESH_SECRET:
+    raise RuntimeError("REFRESH_SECRET environment variable is required")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 REFRESH_TOKEN_EXPIRE_DAYS = 7

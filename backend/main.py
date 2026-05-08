@@ -20,21 +20,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+import os as _root_os
+
 TOKENS = {}
 
 DEMO_USERS = {
     "admin": {
-        "password": "admin123",
+        "password": _root_os.environ.get("ADMIN_PASSWORD"),
         "role": "Admin",
         "name": "System Admin",
     },
     "doctor": {
-        "password": "doctor123",
+        "password": _root_os.environ.get("DOCTOR_PASSWORD"),
         "role": "Doctor",
         "name": "Dr. Mohamed",
     },
     "radiology": {
-        "password": "radio123",
+        "password": _root_os.environ.get("RADIOLOGY_PASSWORD"),
         "role": "Radiology",
         "name": "Radiology User",
     },

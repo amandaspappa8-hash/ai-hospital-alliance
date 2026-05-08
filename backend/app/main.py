@@ -61,17 +61,17 @@ import os as _os
 
 USERS = {
     "admin": {
-        "password": _os.environ.get("ADMIN_PASSWORD", "admin123"),
+        "password": _os.environ.get("ADMIN_PASSWORD"),
         "name": "System Admin",
         "role": "Admin",
     },
     "doctor": {
-        "password": "doctor123",
+        "password": _os.environ.get("DOCTOR_PASSWORD"),
         "name": "Dr. Demo",
         "role": "Doctor",
     },
     "radiology": {
-        "password": "radio123",
+        "password": _os.environ.get("RADIOLOGY_PASSWORD"),
         "name": "Radiology User",
         "role": "Radiology",
     },
@@ -2021,7 +2021,9 @@ def verify_secure(report_id: str, payload: dict):
 def sign_data(data: bytes) -> str:
     import hmac, hashlib
 
-    key = os.environ.get("SECRET_KEY", "aiha-super-secret-key-2026").encode()
+    key = os.environ.get("SECRET_KEY", "").encode()
+    if not key:
+        raise RuntimeError("SECRET_KEY environment variable is required")
     return hmac.new(key, data, hashlib.sha256).hexdigest()
 
 

@@ -14,7 +14,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 def login_with_env(username: str, password: str):
     env_user = os.environ.get("ADMIN_USERNAME", "admin")
-    env_pass = os.environ.get("ADMIN_PASSWORD", "admin123")
+    env_pass = os.environ.get("ADMIN_PASSWORD")
     if username == env_user and password == env_pass:
         return create_access_token({"sub": username, "role": "Admin"})
     return None
