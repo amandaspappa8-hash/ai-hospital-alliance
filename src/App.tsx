@@ -5,6 +5,7 @@ import AppLayout from "@/layouts/AppLayout"
 import { useState } from "react"
 
 const Login                = lazy(() => import("@/pages/Login"))
+const RegisterPage         = lazy(() => import("@/pages/RegisterPage"))
 const LogoutPage           = lazy(() => import("@/pages/LogoutPage"))
 const Home                 = lazy(() => import("@/pages/Home"))
 const Dashboard            = lazy(() => import("@/pages/Dashboard"))
@@ -74,7 +75,8 @@ export default function App() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
-        <Route path="/login"  element={<Login />} />
+        <Route path="/login"    element={<Login />} />
+        <Route path="/register" element={<RegisterPage />} />
         <Route path="/logout" element={<LogoutPage />} />
         <Route path="/home"   element={<Home />} />
         <Route path="/"       element={<Navigate to="/dashboard" replace />} />

@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react"
-import { Navigate, useNavigate } from "react-router-dom"
+import { Navigate, useNavigate, Link } from "react-router-dom"
 import { clearAuth, getToken, saveAuth } from "@/lib/auth-storage"
 import { login } from "@/services/auth"
 
@@ -51,6 +51,13 @@ export default function Login() {
         </button>
 
         {error && <div style={{ color: "#fca5a5", marginTop: 14 }}>{error}</div>}
+
+        <div style={{ textAlign: "center", marginTop: 20, paddingTop: 16, borderTop: "1px solid #374151" }}>
+          <span style={{ color: "#6B7280", fontSize: 14 }}>New hospital? </span>
+          <Link to="/register" style={{ color: "#3B82F6", fontSize: 14, fontWeight: 600, textDecoration: "none" }}>
+            Register here →
+          </Link>
+        </div>
       </form>
     </div>
   )

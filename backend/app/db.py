@@ -44,6 +44,7 @@ def get_db():
 
 def create_tables():
     from . import models
+    from . import saas  # ensure Tenant table is included  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
     print(f"[DB] Tables ready — {DATABASE_URL[:50]}...")

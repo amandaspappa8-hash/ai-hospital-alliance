@@ -34,8 +34,8 @@ def hash_password(password: str) -> str:
 def verify_password(plain: str, hashed: str) -> bool:
     try:
         return pwd_context.verify(plain, hashed)
-    except:
-        return plain == hashed  # fallback for demo passwords
+    except Exception:
+        return False
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:

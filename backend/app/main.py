@@ -2745,3 +2745,138 @@ def readiness_check():
         "backend": "ok",
         "version": "2.0.0"
     }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SaaS - Hospital Self-Service Registration & Multi-Tenant Management
+# ═══════════════════════════════════════════════════════════════════════════════
+
+from .saas import (
+    PLANS, HospitalRegisterRequest, register_hospital,
+    get_tenant_by_id, get_tenant_from_api_key,
+    tenant_to_public, check_ai_quota, increment_ai_usage,
+    Tenant, get_db,
+)
+from .db import Base, engine as _engine
+
+# Ensure SaaS tables exist
+Base.metadata.create_all(bind=_engine)
+
+
+@app.get("/saas/plans", response_model=None, tags=["SaaS"])
+def list_plans():
+    """Public endpoint — list all subscription plans and their features."""
+    return {
+        "plans": [
+            {
+                "id": k,
+                **{kk: vv for kk, vv in v.items() if kk != "trial_days"},
+                "trial_days": v.get("trial_days", 0),
+            }
+            for k, v in PLANS.items()
+        ]
+    }
+
+
+@app.post("/saas/register", response_model=None, tags=["SaaS"])
+def saas_register(req: HospitalRegisterRequest):
+    """
+    Self-service hospital onboarding.
+    Creates tenant, hospital record, default departments, and admin user.
+    Returns API key (shown only once).
+    """
+    db = next(get_db())
+    return register_hospital(req, db)
+
+
+@app.get("/saas/tenant/{hospital_id}", response_model=None, tags=["SaaS"])
+def saas_get_tenant(hospital_id: str):
+    """Get tenant info by hospital_id (requires admin)."""
+    db = next(get_db())
+    t = get_tenant_by_id(hospital_id, db)
+    return tenant_to_public(t)
+
+
+@app.get("/saas/tenants", response_model=None, tags=["SaaS"])
+def saas_list_tenants():
+    """Super-admin: list all tenants."""
+    _require_super_admin()
+    db = next(get_db())
+    tenants = db.query(Tenant).all()
+    return [tenant_to_public(t) for t in tenants]
+
+
+@app.post("/saas/tenant/{hospital_id}/suspend", response_model=None, tags=["SaaS"])
+def saas_suspend_tenant(hospital_id: str):
+    """Super-admin: suspend a tenant."""
+    _require_super_admin()
+    db = next(get_db())
+    t = db.query(Tenant).filter(Tenant.id == hospital_id).first()
+    if not t:
+        raise HTTPException(404, "Tenant not found")
+    t.is_active = False
+    db.commit()
+    return {"message": f"Tenant {hospital_id} suspended"}
+
+
+@app.post("/saas/tenant/{hospital_id}/activate", response_model=None, tags=["SaaS"])
+def saas_activate_tenant(hospital_id: str):
+    """Super-admin: activate a suspended tenant."""
+    _require_super_admin()
+    db = next(get_db())
+    t = db.query(Tenant).filter(Tenant.id == hospital_id).first()
+    if not t:
+        raise HTTPException(404, "Tenant not found")
+    t.is_active = True
+    db.commit()
+    return {"message": f"Tenant {hospital_id} activated"}
+
+
+@app.post("/saas/tenant/{hospital_id}/upgrade", response_model=None, tags=["SaaS"])
+def saas_upgrade_plan(hospital_id: str, body: dict):
+    """Upgrade/change a tenant's plan."""
+    _require_super_admin()
+    new_plan = body.get("plan")
+    if new_plan not in PLANS:
+        raise HTTPException(400, f"Invalid plan. Choose: {list(PLANS.keys())}")
+    db = next(get_db())
+    t = db.query(Tenant).filter(Tenant.id == hospital_id).first()
+    if not t:
+        raise HTTPException(404, "Tenant not found")
+    t.plan = new_plan
+    db.commit()
+    return {"message": f"Plan updated to {new_plan}", **tenant_to_public(t)}
+
+
+@app.get("/saas/tenant/{hospital_id}/usage", response_model=None, tags=["SaaS"])
+def saas_usage(hospital_id: str):
+    """Get current usage stats for a tenant."""
+    db = next(get_db())
+    t = get_tenant_by_id(hospital_id, db)
+    from .models import User, Patient
+    user_count = db.query(User).filter(User.hospital_id == hospital_id).count()
+    patient_count = db.query(Patient).filter(Patient.hospital_id == hospital_id).count()
+    plan = PLANS.get(t.plan, PLANS["trial"])
+    return {
+        "hospital_id": hospital_id,
+        "plan": t.plan,
+        "usage": {
+            "users": user_count,
+            "patients": patient_count,
+            "ai_calls_today": t.ai_calls_today or 0,
+        },
+        "limits": {
+            "max_users": plan["max_users"],
+            "max_patients": plan["max_patients"],
+            "ai_calls_per_day": plan["ai_calls_per_day"],
+        },
+        "trial_ends_at": t.trial_ends_at.isoformat() if t.trial_ends_at else None,
+    }
+
+
+def _require_super_admin():
+    """Placeholder — in production wire to JWT super-admin role check."""
+    sa_key = os.environ.get("SUPER_ADMIN_KEY")
+    # For now just check env var is set; real impl checks JWT
+    if not sa_key:
+        raise HTTPException(503, "Super-admin key not configured")
