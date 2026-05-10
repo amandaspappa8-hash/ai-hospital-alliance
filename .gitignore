@@ -90,3 +90,7 @@ dev-dist/
 .DS_Store
 Thumbs.db
 *.swp
+venv/
+.venv/
+__pycache__/
+*.db
