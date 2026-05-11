@@ -1,8 +1,10 @@
+from fastapi import Depends
+from .deps import get_current_user
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
 
-router = APIRouter(prefix="/labs", tags=["Labs"])
+router = APIRouter(prefix="/labs", tags=["Labs"], dependencies=[Depends(get_current_user)])
 
 class LabOrderCreateRequest(BaseModel):
     patientId: str

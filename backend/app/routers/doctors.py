@@ -1,8 +1,10 @@
+from fastapi import Depends
+from .deps import get_current_user
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 
-router = APIRouter(tags=["Doctors"])
+router = APIRouter(tags=["Doctors"], dependencies=[Depends(get_current_user)])
 
 class DoctorAssignmentRequest(BaseModel):
     patientId: str

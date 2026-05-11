@@ -1,19 +1,21 @@
+from fastapi import Depends
+from .deps import get_current_user
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from ..db import get_db
 
-router = APIRouter(prefix="/patients", tags=["Patients"])
+router = APIRouter(prefix="/patients", tags=["Patients"], dependencies=[Depends(get_current_user)])
 
 # ── GET all patients ──────────────────────────────────────────────────────────
 @router.get("")
 def get_patients():
-    from ..repositories.registry import SERVICES
+    from ..main import SERVICES
     return SERVICES["patients"].list_patients()
 
 # ── GET single patient ────────────────────────────────────────────────────────
 @router.get("/{patient_id}")
 def get_patient(patient_id: str):
-    from ..repositories.registry import SERVICES
+    from ..main import SERVICES
     return SERVICES["patients"].get_patient(patient_id)
 
 # ── POST create patient ───────────────────────────────────────────────────────

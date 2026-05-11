@@ -1,3 +1,5 @@
+from fastapi import Depends
+from .deps import get_current_user
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional
@@ -6,7 +8,7 @@ import urllib.parse
 import json
 from urllib.request import urlopen, Request
 
-router = APIRouter(tags=["Pharmacy"])
+router = APIRouter(tags=["Pharmacy"], dependencies=[Depends(get_current_user)])
 
 class MARItemRequest(BaseModel):
     medication: str
@@ -32,12 +34,12 @@ class PharmacistReviewRequest(BaseModel):
 
 @router.get("/mar/{patient_id}")
 def get_mar(patient_id: str):
-    from ..repositories.registry import SERVICES
+    from ..main import SERVICES
     return SERVICES["mar"].list_items(patient_id)
 
 @router.post("/mar/{patient_id}")
 def create_mar_item(patient_id: str, payload: MARItemRequest):
-    from ..repositories.registry import SERVICES
+    from ..main import SERVICES
     return SERVICES["mar"].create_item(patient_id, {
         "medication": payload.medication,
         "dose": payload.dose,
