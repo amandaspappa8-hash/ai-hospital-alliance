@@ -1,5 +1,7 @@
 from .security_jwt import login_with_env, get_current_user
 from .routers.patients import router as patients_router
+from .routers.doctors import router as doctors_router
+from .routers.appointments import router as appointments_router
 import os
 import httpx
 from . import models
@@ -1077,6 +1079,8 @@ app.include_router(clinical_route_router)
 app.include_router(clinical_orders_router)
 app.include_router(health_router)
 app.include_router(patients_router)
+app.include_router(doctors_router)
+app.include_router(appointments_router)
 
 
 MED_RECONCILIATION = {
