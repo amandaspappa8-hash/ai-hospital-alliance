@@ -1,5 +1,7 @@
 from fastapi import Depends
 from .deps import get_current_user
+from fastapi import Depends
+from .deps import get_current_user, rate_limit_middleware
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional
@@ -8,7 +10,7 @@ import urllib.parse
 import json
 from urllib.request import urlopen, Request
 
-router = APIRouter(tags=["Pharmacy"], dependencies=[Depends(get_current_user)])
+router = APIRouter(tags=["Pharmacy"], dependencies=[Depends(get_current_user), Depends(rate_limit_middleware)])
 
 class MARItemRequest(BaseModel):
     medication: str
