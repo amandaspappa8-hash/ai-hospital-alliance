@@ -47,10 +47,10 @@ def ask_ai(prompt: str, provider: str = "auto"):
     if provider == "gemini":
         return ask_gemini(prompt)
     if provider == "groq":
-        return ask_groq(prompt)
+        return ask_ollama(prompt)
     if provider == "claude" or provider == "anthropic":
         return ask_claude(prompt)
-    return ask_groq(prompt)
+    return ask_ollama(prompt)
 
 def ask_groq(prompt: str):
     import os, requests
@@ -64,3 +64,15 @@ def ask_groq(prompt: str):
     )
     data = res.json()
     return data.get("choices", [{}])[0].get("message", {}).get("content", "No response")
+
+def ask_ollama(prompt: str, model: str = "tinyllama") -> str:
+    import requests
+    try:
+        res = requests.post(
+            "http://localhost:11434/api/generate",
+            json={"model": model, "prompt": prompt, "stream": False},
+            timeout=180
+        )
+        return res.json().get("response", "No response")
+    except Exception as e:
+        return f"Ollama error: {e}"

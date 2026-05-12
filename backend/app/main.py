@@ -6,6 +6,7 @@ from .routers.nursing import router as nursing_router
 from .routers.radiology import router as radiology_router
 from .routers.labs import router as labs_router
 from .routers.pharmacy import router as pharmacy_router
+from .routers.clinical_brain import router as clinical_brain_router
 import os
 import httpx
 from . import models
@@ -1080,6 +1081,7 @@ app.include_router(nursing_router)
 app.include_router(radiology_router)
 app.include_router(labs_router)
 app.include_router(pharmacy_router)
+app.include_router(clinical_brain_router)
 
 
 MED_RECONCILIATION = {
