@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from "react"
-import { getUser } from "@/lib/auth-storage"
 import { getAuthHeaders } from "@/lib/api"
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || ""
@@ -23,7 +22,6 @@ export default function MedicalChatbot() {
   const [loading, setLoading] = useState(false)
   const [unread, setUnread] = useState(0)
   const bottomRef = useRef<HTMLDivElement>(null)
-  const user = getUser()
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })

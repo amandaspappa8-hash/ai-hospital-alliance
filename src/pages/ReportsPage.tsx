@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState } from "react"
 import { apiGet } from "@/lib/api"
 import { getUser } from "@/lib/auth-storage"
 
@@ -25,7 +25,6 @@ export default function ReportsPage() {
   const [filterStatus, setFilterStatus] = useState("All")
   const [search, setSearch] = useState("")
   const [generating, setGenerating] = useState(false)
-  const printRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     Promise.all([

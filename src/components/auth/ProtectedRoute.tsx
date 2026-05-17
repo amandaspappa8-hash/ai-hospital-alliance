@@ -1,24 +1,21 @@
-import { useMemo } from "react"
-import { Navigate, useLocation } from "react-router-dom"
-import { getToken, getUser } from "@/lib/auth-storage"
+import { useLocation, Navigate } from "react-router-dom"
+import { getAuthState } from "@/lib/auth-storage"
 import { hasAccess, type AppRoute } from "@/lib/rbac"
 
-type ProtectedRouteProps = {
+type Props = {
   children: React.ReactNode
   routeKey?: AppRoute
 }
 
-export default function ProtectedRoute({ children, routeKey }: ProtectedRouteProps) {
+export default function ProtectedRoute({ children, routeKey }: Props) {
   const location = useLocation()
+  const auth = getAuthState()
 
-  const token = useMemo(() => getToken(), [])
-  const user = useMemo(() => getUser(), [])
-
-  if (!token || !user) {
-    return <Navigate to="/login" replace state={{ from: location }} />
+  if (!auth) {
+    return <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}` }} />
   }
 
-  if (routeKey && !hasAccess(user.role, routeKey)) {
+  if (routeKey && !hasAccess(auth.user.role, routeKey)) {
     return <Navigate to="/dashboard" replace />
   }
 

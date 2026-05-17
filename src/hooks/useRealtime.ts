@@ -39,7 +39,9 @@ export function useRealtime() {
               tag: data.id,
             })
           }
-        } catch {}
+        } catch {
+          console.warn("[WS] Ignored malformed realtime alert payload")
+        }
       }
 
       ws.onclose = () => {

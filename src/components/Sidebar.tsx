@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Link, useLocation } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 import { getUser, clearAuth } from "@/lib/auth-storage"
 
 type NavItem = {
@@ -67,6 +67,7 @@ const NAV: NavItem[] = [
 
 export default function Sidebar() {
   const { pathname } = useLocation()
+  const navigate = useNavigate()
   const user = getUser()
   const [expanded, setExpanded] = useState<string | null>(() => {
     for (const item of NAV) {
@@ -188,7 +189,7 @@ export default function Sidebar() {
 
       {/* Logout */}
       <div style={{ padding: "10px 8px", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-        <button onClick={() => { clearAuth(); window.location.href = "/login" }} style={{
+        <button onClick={() => { clearAuth(); navigate("/login", { replace: true }) }} style={{
           width: "100%", padding: "9px 10px", borderRadius: 10, fontSize: 12, fontWeight: 700,
           background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)",
           color: "#f87171", cursor: "pointer", textAlign: "left",

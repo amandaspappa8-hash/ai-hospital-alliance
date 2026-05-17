@@ -1,0 +1,303 @@
+[
+  {
+    "code": "CA40",
+    "title": "Community-acquired pneumonia",
+    "title_ar": "الالتهاب الرئوي المكتسب من المجتمع",
+    "chapter": "11",
+    "is_leaf": true
+  },
+  {
+    "code": "CA41",
+    "title": "Hospital-acquired pneumonia",
+    "title_ar": "الالتهاب الرئوي المستشفوي",
+    "chapter": "11",
+    "is_leaf": true
+  },
+  {
+    "code": "CA22",
+    "title": "Chronic obstructive pulmonary disease",
+    "title_ar": "مرض الانسداد الرئوي المزمن",
+    "chapter": "11",
+    "is_leaf": true
+  },
+  {
+    "code": "CA20",
+    "title": "Acute bronchitis",
+    "title_ar": "التهاب الشعب الهوائية الحاد",
+    "chapter": "11",
+    "is_leaf": true
+  },
+  {
+    "code": "CA23",
+    "title": "Asthma",
+    "title_ar": "الربو",
+    "chapter": "11",
+    "is_leaf": true
+  },
+  {
+    "code": "CB00",
+    "title": "Pulmonary embolism",
+    "title_ar": "الانسداد الرئوي",
+    "chapter": "11",
+    "is_leaf": true
+  },
+  {
+    "code": "CA42",
+    "title": "COVID-19",
+    "title_ar": "كوفيد-19",
+    "chapter": "11",
+    "is_leaf": true
+  },
+  {
+    "code": "BA80",
+    "title": "Essential hypertension",
+    "title_ar": "ارتفاع ضغط الدم الأساسي",
+    "chapter": "9",
+    "is_leaf": true
+  },
+  {
+    "code": "BA41",
+    "title": "Angina pectoris",
+    "title_ar": "الذبحة الصدرية",
+    "chapter": "9",
+    "is_leaf": true
+  },
+  {
+    "code": "BA60",
+    "title": "Acute myocardial infarction",
+    "title_ar": "احتشاء عضلة القلب الحاد",
+    "chapter": "9",
+    "is_leaf": true
+  },
+  {
+    "code": "BD10",
+    "title": "Stroke",
+    "title_ar": "السكتة الدماغية",
+    "chapter": "9",
+    "is_leaf": true
+  },
+  {
+    "code": "BC43",
+    "title": "Heart failure",
+    "title_ar": "قصور القلب",
+    "chapter": "9",
+    "is_leaf": true
+  },
+  {
+    "code": "BA84",
+    "title": "Atrial fibrillation",
+    "title_ar": "الرجفان الأذيني",
+    "chapter": "9",
+    "is_leaf": true
+  },
+  {
+    "code": "5A10",
+    "title": "Type 2 diabetes mellitus",
+    "title_ar": "السكري من النوع الثاني",
+    "chapter": "5",
+    "is_leaf": true
+  },
+  {
+    "code": "JA00",
+    "title": "Type 1 diabetes mellitus",
+    "title_ar": "السكري من النوع الأول",
+    "chapter": "5",
+    "is_leaf": true
+  },
+  {
+    "code": "5B55",
+    "title": "Obesity",
+    "title_ar": "السمنة",
+    "chapter": "5",
+    "is_leaf": true
+  },
+  {
+    "code": "5A00",
+    "title": "Hypothyroidism",
+    "title_ar": "قصور الغدة الدرقية",
+    "chapter": "5",
+    "is_leaf": true
+  },
+  {
+    "code": "5A20",
+    "title": "Hyperthyroidism",
+    "title_ar": "فرط نشاط الغدة الدرقية",
+    "chapter": "5",
+    "is_leaf": true
+  },
+  {
+    "code": "DA40",
+    "title": "Acute appendicitis",
+    "title_ar": "التهاب الزائدة الدودية الحاد",
+    "chapter": "10",
+    "is_leaf": true
+  },
+  {
+    "code": "DA91",
+    "title": "Peptic ulcer disease",
+    "title_ar": "مرض قرحة المعدة",
+    "chapter": "10",
+    "is_leaf": true
+  },
+  {
+    "code": "DB93",
+    "title": "Gallstones",
+    "title_ar": "حصوات المرارة",
+    "chapter": "10",
+    "is_leaf": true
+  },
+  {
+    "code": "DA20",
+    "title": "Acute gastroenteritis",
+    "title_ar": "التهاب المعدة والأمعاء الحاد",
+    "chapter": "10",
+    "is_leaf": true
+  },
+  {
+    "code": "GC08",
+    "title": "Urinary tract infection",
+    "title_ar": "التهاب المسالك البولية",
+    "chapter": "14",
+    "is_leaf": true
+  },
+  {
+    "code": "GB60",
+    "title": "Kidney stones",
+    "title_ar": "حصوات الكلى",
+    "chapter": "14",
+    "is_leaf": true
+  },
+  {
+    "code": "GC40",
+    "title": "Acute kidney injury",
+    "title_ar": "الفشل الكلوي الحاد",
+    "chapter": "14",
+    "is_leaf": true
+  },
+  {
+    "code": "GB61",
+    "title": "Chronic kidney disease",
+    "title_ar": "الفشل الكلوي المزمن",
+    "chapter": "14",
+    "is_leaf": true
+  },
+  {
+    "code": "MB24",
+    "title": "Fever",
+    "title_ar": "حمى",
+    "chapter": "21",
+    "is_leaf": true
+  },
+  {
+    "code": "MD12",
+    "title": "Abdominal pain",
+    "title_ar": "ألم في البطن",
+    "chapter": "21",
+    "is_leaf": true
+  },
+  {
+    "code": "MA01",
+    "title": "Headache",
+    "title_ar": "صداع",
+    "chapter": "21",
+    "is_leaf": true
+  },
+  {
+    "code": "MD81",
+    "title": "Nausea and vomiting",
+    "title_ar": "غثيان وقيء",
+    "chapter": "21",
+    "is_leaf": true
+  },
+  {
+    "code": "MD90",
+    "title": "Diarrhea",
+    "title_ar": "إسهال",
+    "chapter": "21",
+    "is_leaf": true
+  },
+  {
+    "code": "MA72",
+    "title": "Chest pain",
+    "title_ar": "ألم في الصدر",
+    "chapter": "21",
+    "is_leaf": true
+  },
+  {
+    "code": "MD21",
+    "title": "Shortness of breath",
+    "title_ar": "ضيق في التنفس",
+    "chapter": "21",
+    "is_leaf": true
+  },
+  {
+    "code": "MC10",
+    "title": "Back pain",
+    "title_ar": "ألم في الظهر",
+    "chapter": "21",
+    "is_leaf": true
+  },
+  {
+    "code": "6A70",
+    "title": "Major depressive disorder",
+    "title_ar": "اضطراب الاكتئاب الكبير",
+    "chapter": "6",
+    "is_leaf": true
+  },
+  {
+    "code": "6B00",
+    "title": "Generalised anxiety disorder",
+    "title_ar": "اضطراب القلق العام",
+    "chapter": "6",
+    "is_leaf": true
+  },
+  {
+    "code": "1C62",
+    "title": "Sepsis",
+    "title_ar": "الإنتان",
+    "chapter": "1",
+    "is_leaf": true
+  },
+  {
+    "code": "1C10",
+    "title": "Tuberculosis",
+    "title_ar": "السل",
+    "chapter": "1",
+    "is_leaf": true
+  },
+  {
+    "code": "1D41",
+    "title": "Malaria",
+    "title_ar": "الملاريا",
+    "chapter": "1",
+    "is_leaf": true
+  },
+  {
+    "code": "NB90",
+    "title": "Burn",
+    "title_ar": "حرق",
+    "chapter": "22",
+    "is_leaf": true
+  },
+  {
+    "code": "NA00",
+    "title": "Fracture of skull",
+    "title_ar": "كسر الجمجمة",
+    "chapter": "22",
+    "is_leaf": true
+  },
+  {
+    "code": "5A11",
+    "title": "Type 2 diabetes with complications",
+    "title_ar": "السكري من النوع الثاني مع مضاعفات",
+    "chapter": "5",
+    "is_leaf": true
+  },
+  {
+    "code": "BA80.1",
+    "title": "Hypertensive heart disease",
+    "title_ar": "مرض القلب الناجم عن ارتفاع ضغط الدم",
+    "chapter": "9",
+    "is_leaf": true
+  }
+]

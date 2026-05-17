@@ -1,4 +1,4 @@
-import { getToken } from "@/lib/auth-storage"
+import { clearAuth, getToken } from "@/lib/auth-storage"
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? ""
 
@@ -19,10 +19,20 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
   if (!res.ok) {
     const text = await res.text()
+
+    if (res.status === 401) {
+      clearAuth()
+    }
+
     throw new Error(`${res.status} ${res.statusText}: ${text}`)
   }
 
-  return res.json() as Promise<T>
+  if (res.status === 204) {
+    return undefined as T
+  }
+
+  const text = await res.text()
+  return (text ? JSON.parse(text) : undefined) as T
 }
 
 export function apiGet<T>(path: string) {

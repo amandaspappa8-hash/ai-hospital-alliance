@@ -1,0 +1,246 @@
+=== TypeScript ===
+=== ESLint ===
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/App.tsx
+   5:10  error  'useState' is defined but never used      @typescript-eslint/no-unused-vars
+  65:78  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/components/MedicalChatbot.tsx
+  23:9  error  'user' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/components/PWAInstall.tsx
+  16:7  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/components/PWAInstall.tsx:16:7
+  14 |     // Check if already installed
+  15 |     if (window.matchMedia("(display-mode: standalone)").matches) {
+> 16 |       setInstalled(true)
+     |       ^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  17 |       return
+  18 |     }
+  19 |  react-hooks/set-state-in-effect
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/components/PWAStatus.tsx
+  8:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/components/PWAStatus.tsx:8:5
+   6 |
+   7 |   useEffect(() => {
+>  8 |     setIsStandalone(window.matchMedia("(display-mode: standalone)").matches)
+     |     ^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+   9 |
+  10 |     const onOnline  = () => setIsOnline(true)
+  11 |     const onOffline = () => setIsOnline(false)  react-hooks/set-state-in-effect
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/components/RealtimePanel.tsx
+  2:28  error  'RealtimeAlert' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/hooks/useRealtime.ts
+  42:17  error  Empty block statement                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              no-empty
+  47:49  error  Error: Cannot access variable before it is declared
+
+`connect` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/hooks/useRealtime.ts:47:49
+  45 |       ws.onclose = () => {
+  46 |         setConnected(false)
+> 47 |         reconnectRef.current = setTimeout(() => connect(), 3000)
+     |                                                 ^^^^^^^ `connect` accessed before it is declared
+  48 |       }
+  49 |
+  50 |       ws.onerror = () => {
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/hooks/useRealtime.ts:18:3
+  16 |   const reconnectRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  17 |
+> 18 |   const connect = useCallback(() => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 19 |     try {
+     | ^^^^^^^^^
+> 20 |       const ws = new WebSocket("ws://127.0.0.1:8000/ws/alerts")
+     …
+     | ^^^^^^^^^
+> 56 |     }
+     | ^^^^^^^^^
+> 57 |   }, [])
+     | ^^^^^^^^^ `connect` is declared here
+  58 |
+  59 |   useEffect(() => {
+  60 |     // Request notification permission  react-hooks/immutability
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/layouts/AdminLayout.tsx
+  3:10   error  'LayoutDashboard' is defined but never used  @typescript-eslint/no-unused-vars
+  3:27   error  'Brain' is defined but never used            @typescript-eslint/no-unused-vars
+  3:34   error  'Activity' is defined but never used         @typescript-eslint/no-unused-vars
+  3:44   error  'ClipboardList' is defined but never used    @typescript-eslint/no-unused-vars
+  3:59   error  'Stethoscope' is defined but never used      @typescript-eslint/no-unused-vars
+  3:72   error  'Users' is defined but never used            @typescript-eslint/no-unused-vars
+  3:79   error  'CalendarDays' is defined but never used     @typescript-eslint/no-unused-vars
+  3:93   error  'FileText' is defined but never used         @typescript-eslint/no-unused-vars
+  3:103  error  'HeartPulse' is defined but never used       @typescript-eslint/no-unused-vars
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/lib/doctorAssignments.ts
+  1:27  error  'apiDelete' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/lib/medicalReportBlockchain.ts
+  5:16  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/lib/smartDecisionEngine.ts
+  3:49  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/lib/smartOrders.ts
+  3:43  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/lib/theme.tsx
+  31:17  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/lib/visitTimeline.ts
+  3:45  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/pages/AdminOverviewPage.tsx
+  152:14  error  Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/pages/AdminOverviewPage.tsx:152:14
+  150 |           </div>
+  151 |           {loading ? <div style={{ color: "#64748b" }}>Loading...</div> :
+> 152 |             <DonutChart data={statusCount} colors={STATUS_COLORS} />
+      |              ^^^^^^^^^^ This component is created during render
+  153 |           }
+  154 |           <div style={{ marginTop: 16, fontWeight: 800, fontSize: 13, color: "white", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+  155 |             <div style={{ width: 3, height: 16, background: "#ec4899", borderRadius: 2 }} />
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/pages/AdminOverviewPage.tsx:56:3
+   54 |   }
+   55 |
+>  56 |   function DonutChart({ data, colors }: { data: Record<string, number>; colors: Record<string, string> }) {
+      |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  57 |     const total = Object.values(data).reduce((s, v) => s + v, 0)
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  58 |     if (total === 0) return <div style={{ color: "#64748b", fontSize: 13 }}>No data</div>
+      …
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  96 |     )
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  97 |   }
+      | ^^^^ The component is created during render here
+   98 |
+   99 |   const STATUS_COLORS = { Active: "#4ade80", "Under Observation": "#fb923c", Critical: "#f87171", Discharged: "#94a3b8" }
+  100 |   const GENDER_COLORS = { Male: "#3b82f6", Female: "#ec4899" }  react-hooks/static-components
+  158:30  error  Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/pages/AdminOverviewPage.tsx:158:30
+  156 |             Gender Distribution
+  157 |           </div>
+> 158 |           {loading ? null : <DonutChart data={genderCount} colors={GENDER_COLORS} />}
+      |                              ^^^^^^^^^^ This component is created during render
+  159 |         </div>
+  160 |
+  161 |         {/* Doctor Performance */}
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/pages/AdminOverviewPage.tsx:56:3
+   54 |   }
+   55 |
+>  56 |   function DonutChart({ data, colors }: { data: Record<string, number>; colors: Record<string, string> }) {
+      |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  57 |     const total = Object.values(data).reduce((s, v) => s + v, 0)
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  58 |     if (total === 0) return <div style={{ color: "#64748b", fontSize: 13 }}>No data</div>
+      …
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  96 |     )
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  97 |   }
+      | ^^^^ The component is created during render here
+   98 |
+   99 |   const STATUS_COLORS = { Active: "#4ade80", "Under Observation": "#fb923c", Critical: "#f87171", Discharged: "#94a3b8" }
+  100 |   const GENDER_COLORS = { Male: "#3b82f6", Female: "#ec4899" }                                                                                                                                                                                                                            react-hooks/static-components
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/pages/ClinicalDecisionPage.tsx
+  14:40  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/pages/CtMriPage.tsx
+   7:36  error    Unexpected any. Specify a different type                                                                       @typescript-eslint/no-explicit-any
+  20:12  error    Unexpected any. Specify a different type                                                                       @typescript-eslint/no-explicit-any
+  24:6   warning  React Hook useEffect has a missing dependency: 'c.endpoint'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/pages/Dashboard.tsx
+  314:49  error  'i' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/pages/DoctorProfilePage.tsx
+  157:6  warning  React Hook useEffect has a missing dependency: 'loadDoctorProfile'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/pages/InteractionsPage.tsx
+   7:36  error    Unexpected any. Specify a different type                                                                       @typescript-eslint/no-explicit-any
+  20:12  error    Unexpected any. Specify a different type                                                                       @typescript-eslint/no-explicit-any
+  24:6   warning  React Hook useEffect has a missing dependency: 'c.endpoint'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/pages/LabOrdersPage.tsx
+   7:36  error    Unexpected any. Specify a different type                                                                       @typescript-eslint/no-explicit-any
+  20:12  error    Unexpected any. Specify a different type                                                                       @typescript-eslint/no-explicit-any
+  24:6   warning  React Hook useEffect has a missing dependency: 'c.endpoint'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/pages/LabPage.tsx
+   7:40  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  11:12  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/pages/LabsPage.tsx
+  156:14  error  'e' is defined but never used             @typescript-eslint/no-unused-vars
+  189:62  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/pages/MedicationsPage.tsx
+   7:36  error    Unexpected any. Specify a different type                                                                       @typescript-eslint/no-explicit-any
+  20:12  error    Unexpected any. Specify a different type                                                                       @typescript-eslint/no-explicit-any
+  24:6   warning  React Hook useEffect has a missing dependency: 'c.endpoint'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/pages/NotesPage.tsx
+   6:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  13:20  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  63:31  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/pages/NursesPage.tsx
+   98:6  warning  React Hook useEffect has missing dependencies: 'patientIdFromUrl' and 'setSearchParams'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  116:6  warning  React Hook useEffect has a missing dependency: 'setSearchParams'. Either include it or remove the dependency array                           react-hooks/exhaustive-deps
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/pages/OverviewPage.tsx
+  12:14  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  13:14  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  14:14  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  15:14  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/pages/PatientProfilePage.tsx
+   93:9  error    'openPatientPacs' is assigned a value but never used                                                                                     @typescript-eslint/no-unused-vars
+  144:9  error    'generateOfficialReport' is assigned a value but never used                                                                              @typescript-eslint/no-unused-vars
+  310:6  warning  React Hook useEffect has missing dependencies: 'selected.age' and 'selected.gender'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/pages/PatientsPage.tsx
+  31:20  error  'setMarCount' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/pages/RadiologyPage.tsx
+  95:14  error  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/pages/ReportsPage.tsx
+  28:9  error  'printRef' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/home/mohammed-elfallah/ai-hospital-alliance/src/pages/SmartPharmacyPage.tsx
+  302:34  warning  React Hook useEffect has a missing dependency: 'loadMAR'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+✖ 60 problems (51 errors, 9 warnings)
+
+=== Python ===
+OK

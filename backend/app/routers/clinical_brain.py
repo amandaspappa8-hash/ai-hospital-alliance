@@ -84,7 +84,7 @@ Respond ONLY with this JSON (no other text):
 }}"""
 
     try:
-        response = ask_ai(prompt, provider="auto")
+        response = ask_ai(prompt, provider="anthropic")
         # محاولة استخراج JSON من الرد
         json_match = re.search(r'\{.*\}', response, re.DOTALL)
         if json_match:

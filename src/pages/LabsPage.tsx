@@ -153,7 +153,7 @@ Format your response EXACTLY as JSON (no markdown, no preamble):
       } catch {
         setClaudeReport(JSON.stringify({ summary: text, critical: [], abnormal: [], normal: [], impression: "", recommendations: [], urgency: "MODERATE" }))
       }
-    } catch (e) {
+    } catch {
       setClaudeReport(JSON.stringify({
         summary: "Claude AI تحليل غير متاح حالياً. تم استخدام المحرك المحلي.",
         critical: ["Troponin 0.89 — Acute MI suspected"],

@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useRealtime, type RealtimeAlert } from "@/hooks/useRealtime"
+import { useRealtime } from "@/hooks/useRealtime"
 
 const SEVERITY_STYLE: Record<string, { bg: string; color: string; border: string }> = {
   critical: { bg: "rgba(239,68,68,0.12)",  color: "#f87171", border: "rgba(239,68,68,0.4)" },

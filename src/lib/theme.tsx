@@ -17,7 +17,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    try { localStorage.setItem("aiha_theme", theme) } catch {}
+    try { localStorage.setItem("aiha_theme", theme) } catch {
+      console.warn("[theme] unable to persist theme preference")
+    }
     document.documentElement.setAttribute("data-theme", theme)
     document.body.style.background = theme === "dark" ? "#020817" : "#f1f5f9"
     document.body.style.color = theme === "dark" ? "white" : "#0f172a"

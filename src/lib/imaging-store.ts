@@ -23,11 +23,15 @@ function safeLoad<T>(key: string, fallback: T): T {
     const raw = localStorage.getItem(key)
     if (!raw) return fallback
     return JSON.parse(raw) as T
-  } catch { return fallback }
+  } catch {
+    return fallback
+  }
 }
 
 function safeSave<T>(key: string, value: T) {
-  try { localStorage.setItem(key, JSON.stringify(value)) } catch {}
+  try { localStorage.setItem(key, JSON.stringify(value)) } catch {
+    console.warn("[imaging] unable to persist demo imaging data")
+  }
 }
 
 export function listOrders(): ImagingOrder[] { return safeLoad<ImagingOrder[]>(KEY_ORDERS, []) }
@@ -54,7 +58,9 @@ export function createOrder(input: Omit<ImagingOrder, "id" | "status" | "created
 }
 
 export function clearImagingDemo() {
-  try { localStorage.removeItem(KEY_ORDERS); localStorage.removeItem(KEY_STUDIES) } catch {}
+  try { localStorage.removeItem(KEY_ORDERS); localStorage.removeItem(KEY_STUDIES) } catch {
+    console.warn("[imaging] unable to clear demo imaging data")
+  }
 }
 
 export function getStudyById(studyId: string): ImagingStudy | undefined {

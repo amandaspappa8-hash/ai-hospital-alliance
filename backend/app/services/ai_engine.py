@@ -65,7 +65,7 @@ def ask_groq(prompt: str):
     data = res.json()
     return data.get("choices", [{}])[0].get("message", {}).get("content", "No response")
 
-def ask_ollama(prompt: str, model: str = "tinyllama") -> str:
+def ask_ollama(prompt: str, model: str = "llama3.2:3b") -> str:
     import requests
     try:
         res = requests.post(

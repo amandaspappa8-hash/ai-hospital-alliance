@@ -92,7 +92,7 @@ function AIImageAnalyzer() {
       })
       const data = await res.json()
       setResult(data)
-    } catch (e) {
+    } catch {
       // Simulate AI result for demo when model not loaded
       setResult({
         success: true,

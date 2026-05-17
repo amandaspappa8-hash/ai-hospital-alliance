@@ -5,25 +5,29 @@ import App from "./App"
 import "./index.css"
 import { initMonitoring } from "./lib/monitoring"
 import ErrorBoundary from "./components/system/ErrorBoundary"
-import PWAInstall from "./components/PWAInstall"
 
 initMonitoring()
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
-      .register("/sw.js")
-      .then(reg => console.log("[PWA] Service Worker registered:", reg.scope))
-      .catch(err => console.log("[PWA] SW registration failed:", err))
+      .getRegistrations()
+      .then((registrations) => registrations.forEach((registration) => registration.unregister()))
+      .catch(err => console.log("[PWA] SW cleanup failed:", err))
   })
 }
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
+const rootElement = document.getElementById("root")
+
+if (!rootElement) {
+  throw new Error("AI Hospital Alliance failed to start: missing #root element.")
+}
+
+ReactDOM.createRoot(rootElement).render(
   // StrictMode أُزيل - كان يشغّل كل effect مرتين ويسبب History API flood
   <ErrorBoundary>
     <BrowserRouter>
       <App />
-      <PWAInstall />
     </BrowserRouter>
   </ErrorBoundary>
 )

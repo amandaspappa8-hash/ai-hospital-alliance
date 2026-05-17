@@ -28,7 +28,7 @@ export default function PatientsPage() {
   const [error, setError] = useState("")
   const [selectedId, setSelectedId] = useState("")
   const [assigning, setAssigning] = useState(false)
-  const [marCount, setMarCount] = useState(0)
+  const [marCount] = useState(0)
 
   useEffect(() => {
     async function loadPatients() {

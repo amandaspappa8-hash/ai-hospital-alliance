@@ -2,7 +2,7 @@ import { lazy, Suspense, ReactNode } from "react"
 import { Routes, Route, Navigate } from "react-router-dom"
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import AppLayout from "@/layouts/AppLayout"
-import { useState } from "react"
+import type { AppRoute } from "@/lib/rbac"
 
 const Login                = lazy(() => import("@/pages/Login"))
 const RegisterPage         = lazy(() => import("@/pages/RegisterPage"))
@@ -63,7 +63,7 @@ function PageLoader() {
   )
 }
 
-function Protected({ children, routeKey }: { children: ReactNode; routeKey?: any }) {
+function Protected({ children, routeKey }: { children: ReactNode; routeKey?: AppRoute }) {
   return (
     <ProtectedRoute routeKey={routeKey}>
       <AppLayout>{children}</AppLayout>

@@ -311,7 +311,7 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {patients.slice(0, 6).map((p, i) => (
+                  {patients.slice(0, 6).map((p) => (
                     <tr key={p.id} style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
                       <td style={{ padding: "11px 0" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>

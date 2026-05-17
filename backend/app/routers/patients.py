@@ -1,66 +1,151 @@
-from fastapi import Depends
-from .deps import get_current_user
-from fastapi import Depends
-from .deps import get_current_user, rate_limit_middleware
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
-from ..db import get_db
+from pydantic import BaseModel
+from typing import Optional
+from datetime import date
+import uuid
 
-router = APIRouter(prefix="/patients", tags=["Patients"], dependencies=[Depends(get_current_user), Depends(rate_limit_middleware)])
+from .deps import get_current_user, rate_limit_middleware
+from ..tenant_isolation import get_db, get_tenant_context, get_tenant_db, TenantSession, TenantContext, audit
+from ..models import Patient, Gender
 
-# ── GET all patients ──────────────────────────────────────────────────────────
+router = APIRouter(
+    prefix="/patients",
+    tags=["Patients"],
+    dependencies=[Depends(get_current_user), Depends(rate_limit_middleware)]
+)
+
+class PatientCreate(BaseModel):
+    full_name: str
+    date_of_birth: date
+    gender: str
+    mrn: Optional[str] = None
+    phone: Optional[str] = None
+    blood_type: Optional[str] = None
+    allergies: Optional[list] = []
+    chronic_conditions: Optional[list] = []
+
+class PatientUpdate(BaseModel):
+    full_name: Optional[str] = None
+    phone: Optional[str] = None
+    blood_type: Optional[str] = None
+    allergies: Optional[list] = None
+    chronic_conditions: Optional[list] = None
+
 @router.get("")
-def get_patients():
-    from ..main import SERVICES
-    return SERVICES["patients"].list_patients()
+def get_patients(
+    tdb: TenantSession = Depends(get_tenant_db),
+    ctx: TenantContext = Depends(get_tenant_context),
+):
+    patients = tdb.query(Patient).all()
+    return [
+        {
+            "id": str(p.id),
+            "mrn": p.mrn,
+            "full_name": p.full_name,
+            "date_of_birth": str(p.date_of_birth),
+            "gender": p.gender.value if p.gender else None,
+            "phone": p.phone,
+            "blood_type": p.blood_type,
+            "allergies": p.allergies or [],
+            "chronic_conditions": p.chronic_conditions or [],
+        }
+        for p in patients
+    ]
 
-# ── GET single patient ────────────────────────────────────────────────────────
 @router.get("/{patient_id}")
-def get_patient(patient_id: str):
-    from ..main import SERVICES
-    return SERVICES["patients"].get_patient(patient_id)
+def get_patient(
+    patient_id: str,
+    request: Request,
+    tdb: TenantSession = Depends(get_tenant_db),
+    ctx: TenantContext = Depends(get_tenant_context),
+    db: Session = Depends(get_db),
+):
+    p = tdb.get_or_404(Patient, uuid.UUID(patient_id), "Patient")
+    audit(db, ctx, "patient.view", "Patient", p.id, request=request)
+    tdb.commit()
+    return {
+        "id": str(p.id),
+        "mrn": p.mrn,
+        "full_name": p.full_name,
+        "date_of_birth": str(p.date_of_birth),
+        "gender": p.gender.value if p.gender else None,
+        "phone": p.phone,
+        "blood_type": p.blood_type,
+        "allergies": p.allergies or [],
+        "chronic_conditions": p.chronic_conditions or [],
+        "current_medications": p.current_medications or [],
+        "insurance_provider": p.insurance_provider,
+    }
 
-# ── POST create patient ───────────────────────────────────────────────────────
 @router.post("", response_model=None)
-def create_patient(data: dict, db: Session = Depends(get_db)):
-    from ..models import Patient
-    import uuid
+def create_patient(
+    data: PatientCreate,
+    request: Request,
+    tdb: TenantSession = Depends(get_tenant_db),
+    ctx: TenantContext = Depends(get_tenant_context),
+    db: Session = Depends(get_db),
+):
+    mrn = data.mrn or f"MRN-{str(uuid.uuid4())[:8].upper()}"
+    existing = tdb.query(Patient).filter(Patient.mrn == mrn).first()
+    if existing:
+        raise HTTPException(status_code=400, detail=f"MRN {mrn} already exists")
     p = Patient(
-        id=f"P-{str(uuid.uuid4())[:6].upper()}",
-        name=data.get("name", ""),
-        age=data.get("age", 0),
-        gender=data.get("gender", "Male"),
-        phone=data.get("phone", ""),
-        condition=data.get("condition", ""),
-        department_id=None,
-        hospital_id="H-001",
-        status=data.get("status", "Active"),
+        id=uuid.uuid4(),
+        mrn=mrn,
+        full_name=data.full_name,
+        date_of_birth=data.date_of_birth,
+        gender=Gender(data.gender.lower()),
+        phone=data.phone,
+        blood_type=data.blood_type,
+        allergies=data.allergies or [],
+        chronic_conditions=data.chronic_conditions or [],
     )
-    db.add(p)
-    db.commit()
-    db.refresh(p)
-    return {"id": p.id, "name": p.name, "status": p.status}
+    tdb.add(p)
+    tdb.commit()
+    tdb.refresh(p)
+    audit(db, ctx, "patient.create", "Patient", p.id, {"mrn": mrn}, request=request)
+    tdb.commit()
+    return {"id": str(p.id), "mrn": p.mrn, "full_name": p.full_name}
 
-# ── PUT update patient ────────────────────────────────────────────────────────
 @router.put("/{patient_id}", response_model=None)
-def update_patient(patient_id: str, data: dict, db: Session = Depends(get_db)):
-    from ..models import Patient
-    p = db.query(Patient).filter(Patient.id == patient_id).first()
-    if not p:
-        raise HTTPException(status_code=404, detail="Patient not found")
-    for k, v in data.items():
-        if hasattr(p, k) and k not in ("id", "hospital_id"):
-            setattr(p, k, v)
-    db.commit()
-    return {"success": True}
+def update_patient(
+    patient_id: str,
+    data: PatientUpdate,
+    request: Request,
+    tdb: TenantSession = Depends(get_tenant_db),
+    ctx: TenantContext = Depends(get_tenant_context),
+    db: Session = Depends(get_db),
+):
+    p = tdb.get_or_404(Patient, uuid.UUID(patient_id), "Patient")
+    changes = {}
+    if data.full_name is not None:
+        changes["full_name"] = data.full_name
+        p.full_name = data.full_name
+    if data.phone is not None:
+        changes["phone"] = data.phone
+        p.phone = data.phone
+    if data.blood_type is not None:
+        p.blood_type = data.blood_type
+    if data.allergies is not None:
+        p.allergies = data.allergies
+    if data.chronic_conditions is not None:
+        p.chronic_conditions = data.chronic_conditions
+    tdb.commit()
+    audit(db, ctx, "patient.update", "Patient", p.id, changes, request=request)
+    tdb.commit()
+    return {"success": True, "id": str(p.id)}
 
-# ── DELETE patient ────────────────────────────────────────────────────────────
 @router.delete("/{patient_id}", response_model=None)
-def delete_patient(patient_id: str, db: Session = Depends(get_db)):
-    from ..models import Patient
-    p = db.query(Patient).filter(Patient.id == patient_id).first()
-    if not p:
-        raise HTTPException(status_code=404, detail="Patient not found")
-    db.delete(p)
-    db.commit()
+def delete_patient(
+    patient_id: str,
+    request: Request,
+    tdb: TenantSession = Depends(get_tenant_db),
+    ctx: TenantContext = Depends(get_tenant_context),
+    db: Session = Depends(get_db),
+):
+    p = tdb.get_or_404(Patient, uuid.UUID(patient_id), "Patient")
+    audit(db, ctx, "patient.delete", "Patient", p.id, request=request)
+    tdb.delete(p)
+    tdb.commit()
     return {"success": True}

@@ -1,11 +1,18 @@
 import { useEffect } from "react"
+import { useNavigate } from "react-router-dom"
 import { clearAuth } from "@/lib/auth-storage"
 
 export default function LogoutPage() {
+  const navigate = useNavigate()
+
   useEffect(() => {
     clearAuth()
-    setTimeout(() => { window.location.href = "/login" }, 1500)
-  }, [])
+    const timeout = window.setTimeout(() => {
+      navigate("/login", { replace: true })
+    }, 500)
+
+    return () => window.clearTimeout(timeout)
+  }, [navigate])
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", background: "#020817", color: "white", fontFamily: "Inter,Arial,sans-serif", gap: 16 }}>

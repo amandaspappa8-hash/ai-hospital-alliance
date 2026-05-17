@@ -615,9 +615,14 @@ This official draft was generated from the patient profile view. It summarizes t
                   )}
 
                   <Panel title="Clinical Report PDF">
-                    <button onClick={exportClinicalPDF} style={buttonStyle}>
-                      Export Clinical Report PDF
-                    </button>
+                    <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                      <button onClick={exportClinicalPDF} style={buttonStyle}>
+                        Export Clinical Report PDF
+                      </button>
+                      <button onClick={generateOfficialReport} style={secondaryButtonStyle}>
+                        Create Official Draft
+                      </button>
+                    </div>
 
                     <div
                       id="clinical-report"
@@ -820,6 +825,12 @@ This official draft was generated from the patient profile view. It summarizes t
                             <div style={{ opacity: 0.75, marginTop: "6px" }}>
                               Report: {order.report || "Not available yet"}
                             </div>
+                            <button
+                              onClick={() => openPatientPacs(order.studyUid)}
+                              style={{ ...secondaryButtonStyle, marginTop: "10px" }}
+                            >
+                              Open PACS
+                            </button>
                           </div>
                         ))}
                       </div>
@@ -898,6 +909,12 @@ const buttonStyle: React.CSSProperties = {
   color: "white",
   cursor: "pointer",
   fontWeight: 600,
+}
+
+const secondaryButtonStyle: React.CSSProperties = {
+  ...buttonStyle,
+  border: "1px solid #374151",
+  background: "#111827",
 }
 
 const labelStyle: React.CSSProperties = {

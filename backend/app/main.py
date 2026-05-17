@@ -34,7 +34,7 @@ from pydantic import BaseModel
 from .api.clinical_route import router as clinical_route_router
 from .api.clinical_orders import router as clinical_orders_router
 
-app = FastAPI(title="AI Hospital Assistant API", version="1.0.0")
+app = FastAPI(title="AI Hospital Alliance API", version="1.0.0")
 
 
 @app.on_event("startup")
@@ -800,10 +800,30 @@ def root():
 
 
 @app.post("/auth/login")
-def login(payload: dict):
+def login(payload: dict, db=None):
     username = payload.get("username", "")
     password = payload.get("password", "")
-    return login_with_env(username, password)
+    # Try env admin first (backward compat)
+    token = login_with_env(username, password)
+    if token:
+        return token
+    return {"detail": "Invalid credentials"}
+
+@app.post("/auth/db-login")
+def db_login(payload: dict):
+    from .tenant_isolation import SessionLocal
+    from .security_jwt import login_with_db
+    db = SessionLocal()
+    try:
+        email = payload.get("email", "")
+        password = payload.get("password", "")
+        result = login_with_db(email, password, db)
+        if not result:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        return result
+    finally:
+        db.close()
 
 
 
@@ -1082,6 +1102,8 @@ app.include_router(radiology_router)
 app.include_router(labs_router)
 app.include_router(pharmacy_router)
 app.include_router(clinical_brain_router)
+from .services.icd11_service import icd11_router
+app.include_router(icd11_router)
 
 
 MED_RECONCILIATION = {
