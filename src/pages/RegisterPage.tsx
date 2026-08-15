@@ -345,7 +345,7 @@ export default function RegisterPage() {
             </div>
 
             <button
-              onClick={() => navigate("/login")}
+              onClick={() => navigate("/ahos-login")}
               style={{ ...styles.btn, background: "#10B981", marginTop: 24, width: "100%" }}
             >
               Go to Login →

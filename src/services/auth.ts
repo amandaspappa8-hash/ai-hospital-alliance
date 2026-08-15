@@ -1,10 +1,33 @@
-import { apiGet, apiPost } from "@/lib/api"
-import type { AuthUser, LoginResponse } from "@/types/auth"
+import { apiPost } from "@/lib/api"
+import type { AuthUser } from "@/types/auth"
 
-export function login(username: string, password: string) {
-  return apiPost<LoginResponse>("/auth/jwt-login", { username, password })
+type LoginResult = {
+  access_token: string
+  user: AuthUser
 }
 
-export function getMe(token: string) {
-  return apiGet<AuthUser>(`/auth/me?token=${encodeURIComponent(token)}`)
+export async function login(username: string, password: string): Promise<LoginResult> {
+  const data = await apiPost<string | { access_token?: string; token?: string; user?: AuthUser }>(
+    "/auth/dev-login",
+    { username, password }
+  )
+
+
+  const token =
+    typeof data === "string"
+      ? data
+      : data?.access_token || data?.token || ""
+
+  if (!token) {
+    throw new Error("Login succeeded but the backend did not return a valid access token")
+  }
+
+  return {
+    access_token: token,
+    user: {
+      username,
+      role: username === "admin" ? "Admin" : "Doctor",
+      name: username,
+    } as AuthUser,
+  }
 }

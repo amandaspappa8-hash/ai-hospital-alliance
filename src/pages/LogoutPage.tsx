@@ -8,7 +8,7 @@ export default function LogoutPage() {
   useEffect(() => {
     clearAuth()
     const timeout = window.setTimeout(() => {
-      navigate("/login", { replace: true })
+      navigate("/ahos-login", { replace: true })
     }, 500)
 
     return () => window.clearTimeout(timeout)

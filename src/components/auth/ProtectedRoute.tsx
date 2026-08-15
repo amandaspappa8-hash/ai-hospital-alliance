@@ -12,7 +12,7 @@ export default function ProtectedRoute({ children, routeKey }: Props) {
   const auth = getAuthState()
 
   if (!auth) {
-    return <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}` }} />
+    return <Navigate to="/ahos-login" replace state={{ from: `${location.pathname}${location.search}` }} />
   }
 
   if (routeKey && !hasAccess(auth.user.role, routeKey)) {
