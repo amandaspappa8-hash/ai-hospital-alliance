@@ -1,0 +1,49 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "src/*"
+      ]
+    },
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noImplicitAny": false
+  },
+
+  "include": [
+    "src",
+    "vite.config.ts"
+  ],
+
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+
+    "src/**/*before*",
+    "src/**/routes.before-*",
+    "src/**/routes.before_*",
+
+    "src/**/*backup*",
+    "src/**/*.bak",
+    "src/**/*old*",
+    "src/**/*broken*",
+    "src/**/*fixbackup*",
+    "src/**/*layoutbak*",
+    "src/**/*enterprise-ui-bak*",
+    "src/**/*fda-ui-bak*"
+  ]
+}
