@@ -30,11 +30,11 @@ npm run build
 echo
 echo "[2/4] Stopping old local servers if any..."
 pkill -f "http.server 4173" || true
-pkill -f "uvicorn backend.app.main:app --host 127.0.0.1 --port 8000" || true
+pkill -f "uvicorn backend.app.main:app .*--port 8000" || true
 
 echo
 echo "[3/4] Starting backend..."
-gnome-terminal -- bash -lc "cd '$ROOT' && source venv/bin/activate && APP_ENV=production APP_NAME='AI Hospital Assistant API' ENABLE_DOCS=false LOG_LEVEL=info CORS_ORIGINS='http://127.0.0.1:4173,http://localhost:4173' uvicorn backend.app.main:app --host 127.0.0.1 --port 8000; exec bash" >/dev/null 2>&1 || true
+gnome-terminal -- bash -lc "cd '$ROOT' && source venv/bin/activate && APP_ENV=production APP_NAME='AI Hospital Assistant API' ENABLE_DOCS=false LOG_LEVEL=info CORS_ORIGINS='http://127.0.0.1:4173,http://localhost:4173' uvicorn backend.app.main:app --host 0.0.0.0 --port 8000; exec bash" >/dev/null 2>&1 || true
 
 echo
 echo "[4/4] Starting frontend static server..."
