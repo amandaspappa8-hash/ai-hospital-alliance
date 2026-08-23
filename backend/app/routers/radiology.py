@@ -20,22 +20,22 @@ class RadiologyReportRequest(BaseModel):
     report: str
     status: Optional[str] = "Completed"
 
-@router.get("/catalog")
+# AHOS-R13C17E disabled secondary route: @router.get("/catalog")
 def get_radiology_catalog():
     from ..main import RADIOLOGY_CATALOG
     return RADIOLOGY_CATALOG
 
-@router.get("/orders")
+# AHOS-R13C17E disabled secondary route: @router.get("/orders")
 def get_radiology_orders():
     from ..main import RADIOLOGY_ORDERS
     return RADIOLOGY_ORDERS
 
-@router.get("/orders/{patient_id}")
+# AHOS-R13C17E disabled secondary route: @router.get("/orders/{patient_id}")
 def get_radiology_orders_by_patient(patient_id: str):
     from ..main import RADIOLOGY_ORDERS
     return [o for o in RADIOLOGY_ORDERS if o["patientId"] == patient_id]
 
-@router.post("/orders")
+# AHOS-R13C17E disabled secondary route: @router.post("/orders")
 def create_radiology_order(payload: RadiologyOrderCreateRequest):
     from ..main import RADIOLOGY_ORDERS
     if not payload.studies:
@@ -53,7 +53,7 @@ def create_radiology_order(payload: RadiologyOrderCreateRequest):
     RADIOLOGY_ORDERS.append(new_order)
     return new_order
 
-@router.post("/results/{order_id}")
+# AHOS-R13C17E disabled secondary route: @router.post("/results/{order_id}")
 def create_radiology_report(order_id: str, payload: RadiologyReportRequest):
     from ..main import RADIOLOGY_ORDERS
     for order in RADIOLOGY_ORDERS:

@@ -12,8 +12,32 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 
 logger = logging.getLogger(__name__)
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://hospital_user:Hospital@2026@localhost:5432/hospital_db")
-ASYNC_DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
+
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql://aiha:aiha123@localhost:5432/aiha_db"
+)
+
+if DATABASE_URL.startswith("sqlite:///"):
+    ASYNC_DATABASE_URL = DATABASE_URL.replace(
+        "sqlite:///",
+        "sqlite+aiosqlite:///",
+        1
+    )
+elif DATABASE_URL.startswith("postgresql+psycopg2://"):
+    ASYNC_DATABASE_URL = DATABASE_URL.replace(
+        "postgresql+psycopg2://",
+        "postgresql+asyncpg://",
+        1
+    )
+elif DATABASE_URL.startswith("postgresql://"):
+    ASYNC_DATABASE_URL = DATABASE_URL.replace(
+        "postgresql://",
+        "postgresql+asyncpg://",
+        1
+    )
+else:
+    ASYNC_DATABASE_URL = DATABASE_URL
 
 engine = create_engine(DATABASE_URL, pool_size=20, max_overflow=40, pool_pre_ping=True, pool_recycle=3600, echo=False)
 async_engine = create_async_engine(ASYNC_DATABASE_URL, pool_size=20, max_overflow=40, pool_pre_ping=True, echo=False)
@@ -132,6 +156,15 @@ def create_access_token(data: dict, expires_delta=None) -> str:
 
 
 def set_rls_tenant(db: Session, tenant_id: uuid.UUID):
+    bind = db.get_bind()
+    dialect = getattr(bind, "dialect", None)
+    dialect_name = getattr(dialect, "name", "")
+
+    # PostgreSQL Row Level Security only.
+    # SQLite/dev mode does not support SET LOCAL, so skip safely.
+    if dialect_name != "postgresql":
+        return
+
     db.execute(text("SET LOCAL app.current_tenant_id = :tid"), {"tid": str(tenant_id)})
 
 
@@ -170,7 +203,15 @@ async def get_tenant_context(
     except (ValueError, KeyError):
         raise HTTPException(status_code=401, detail="Invalid token format")
 
+    is_dev_env = os.getenv("APP_ENV", "").strip().lower() in {"dev", "development", "local", "test"}
+
     tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+    if is_dev_env and not tenant and str(tenant_id) == "00000000-0000-0000-0000-000000000100":
+        class DevTenant:
+            id = tenant_id
+            slug = "dev-tenant"
+            status = TenantStatus.ACTIVE
+        tenant = DevTenant()
     if not tenant:
         raise HTTPException(status_code=401, detail="Tenant not found")
     if tenant.status == TenantStatus.SUSPENDED:
@@ -179,10 +220,18 @@ async def get_tenant_context(
         raise HTTPException(status_code=403, detail="Account cancelled.")
 
     user = db.query(User).filter(User.id == user_id, User.tenant_id == tenant_id, User.is_active == True).first()
+    if is_dev_env and not user and str(user_id) == "00000000-0000-0000-0000-000000000001":
+        class DevUser:
+            id = user_id
+            tenant_id = tenant_id
+            is_active = True
+            email = "admin@aiha.local"
+        user = DevUser()
     if not user:
         raise HTTPException(status_code=401, detail="User not found or inactive")
 
-    set_rls_tenant(db, tenant_id)
+    if not (is_dev_env and str(tenant_id) == "00000000-0000-0000-0000-000000000100"):
+        set_rls_tenant(db, tenant_id)
 
     ctx = TenantContext(tenant_id=tenant_id, tenant_slug=tenant.slug, user_id=user_id, user_role=role, tenant=tenant, user=user)
     request.state.tenant_ctx = ctx

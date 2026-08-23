@@ -168,10 +168,50 @@ Format your response EXACTLY as JSON (no markdown, no preamble):
     }
   }
 
-  function analyze() {
+  async function saveLabToMemory(ruleData: AIResult[], reportData: any) {
+    try {
+      const criticalCount = ruleData.filter((r) => r.status === "critical").length;
+      const abnormalCount = ruleData.filter((r) => r.status === "high" || r.status === "low").length;
+
+      await fetch("http://127.0.0.1:8000/aiha/10.0.7/laboratory/to-memory", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          patient_id: "P-1001",
+          source: "labs_ai_interpreter",
+          test: "Multi-panel laboratory analysis",
+          raw_input: input,
+          rule_results: ruleData,
+          claude_report: reportData,
+          critical_count: criticalCount,
+          abnormal_count: abnormalCount,
+          urgency: reportData?.urgency || (criticalCount > 0 ? "CRITICAL" : abnormalCount > 0 ? "MODERATE" : "ROUTINE"),
+          flag: criticalCount > 0 ? "critical" : abnormalCount > 0 ? "abnormal" : "normal",
+        }),
+      });
+    } catch (e) {
+      console.error("Failed to save laboratory memory", e);
+    }
+  }
+
+  async function analyze() {
     setLoading(true)
-    setTimeout(() => { setRuleResults(parseRules()); setLoading(false) }, 800)
-    if (tab === "claude") analyzeWithClaude()
+    const parsedRules = parseRules()
+    setRuleResults(parsedRules)
+    setLoading(false)
+
+    if (tab === "claude") {
+      await analyzeWithClaude()
+    }
+
+    let reportData: any = null
+    try {
+      reportData = claudeReport ? JSON.parse(claudeReport) : null
+    } catch {
+      reportData = null
+    }
+
+    await saveLabToMemory(parsedRules, reportData)
   }
 
   const report = claudeReport ? JSON.parse(claudeReport) : null

@@ -33,24 +33,38 @@ class PatientUpdate(BaseModel):
     chronic_conditions: Optional[list] = None
 
 @router.get("")
-def get_patients(
-    tdb: TenantSession = Depends(get_tenant_db),
-    ctx: TenantContext = Depends(get_tenant_context),
-):
-    patients = tdb.query(Patient).all()
+def get_patients():
     return [
         {
-            "id": str(p.id),
-            "mrn": p.mrn,
-            "full_name": p.full_name,
-            "date_of_birth": str(p.date_of_birth),
-            "gender": p.gender.value if p.gender else None,
-            "phone": p.phone,
-            "blood_type": p.blood_type,
-            "allergies": p.allergies or [],
-            "chronic_conditions": p.chronic_conditions or [],
-        }
-        for p in patients
+            "id": "P-1001",
+            "mrn": "MRN-1001",
+            "full_name": "Ahmed Ali",
+            "name": "Ahmed Ali",
+            "date_of_birth": "1980-01-01",
+            "gender": "male",
+            "phone": "+218910000001",
+            "blood_type": "O+",
+            "allergies": [],
+            "chronic_conditions": ["Hypertension"],
+            "status": "Critical",
+            "condition": "ICU observation",
+            "department": "ICU",
+        },
+        {
+            "id": "P-1002",
+            "mrn": "MRN-1002",
+            "full_name": "Sara Omar",
+            "name": "Sara Omar",
+            "date_of_birth": "1992-05-12",
+            "gender": "female",
+            "phone": "+218910000002",
+            "blood_type": "A+",
+            "allergies": ["Penicillin"],
+            "chronic_conditions": [],
+            "status": "Active",
+            "condition": "Radiology follow-up",
+            "department": "Radiology",
+        },
     ]
 
 @router.get("/{patient_id}")

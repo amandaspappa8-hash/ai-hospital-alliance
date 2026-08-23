@@ -73,3 +73,470 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* AHOS dashboard desktop safety fix */
+html, body, #root {
+  min-height: 100%;
+}
+
+/* Prevent the old command-center dashboard from collapsing on narrow viewport */
+body {
+  overflow-x: auto;
+}
+
+/* Desktop canvas width for AHOS command center */
+.ahos-dashboard-desktop-fix {
+  min-width: 1360px;
+  width: 100%;
+}
+
+/* AHOS Medical Hologram Avatar v3.0 - final professional polish */
+.ahos-v3-page,
+.medical-hologram-v3,
+.avatar-v3-page {
+  min-height: 100vh;
+  overflow-x: hidden;
+  background: radial-gradient(circle at 50% 35%, rgba(0, 212, 255, 0.12), transparent 35%),
+              linear-gradient(135deg, #020617, #0f172a, #020617);
+}
+
+.ahos-v3-page canvas,
+.medical-hologram-v3 canvas,
+.avatar-v3-page canvas {
+  display: block;
+  max-width: 100%;
+}
+
+.ahos-v3-panel,
+.medical-v3-panel {
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 900px) {
+  .ahos-v3-page,
+  .medical-hologram-v3,
+  .avatar-v3-page {
+    padding: 10px !important;
+  }
+
+  .ahos-v3-panel,
+  .medical-v3-panel {
+    position: relative !important;
+    inset: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-top: 10px !important;
+  }
+}
+
+/* Hide external builder badges if injected */
+.made-with-manus,
+[class*="made-with"],
+[id*="made-with"],
+[aria-label*="Manus"],
+[title*="Manus"] {
+  display: none !important;
+}
+
+/* AHOS Local Medical Hologram Avatar v3.0 */
+.ahos-v3-root {
+  min-height: 100vh;
+  background: #0b1424;
+  color: #dbeafe;
+  font-family: Arial, sans-serif;
+  overflow-x: hidden;
+  padding: 14px;
+}
+
+.ahos-v3-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.ahos-v3-header h1 {
+  color: #00d9ff;
+  font-size: 28px;
+  line-height: 1.05;
+  margin: 0;
+}
+
+.ahos-v3-header p {
+  color: #94a3b8;
+  margin: 5px 0 0;
+}
+
+.ahos-v3-lang {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ahos-v3-lang button,
+.ahos-v3-organs button,
+.ahos-v3-left button,
+.ahos-v3-bottom button {
+  border: 1px solid rgba(0,217,255,0.25);
+  background: #24334a;
+  color: #dbeafe;
+  border-radius: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.ahos-v3-lang button.active,
+.ahos-v3-organs button.active,
+.ahos-v3-bottom button.voice {
+  background: #00d9ff;
+  color: #04111f;
+}
+
+.ahos-v3-stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.ahos-v3-stats div,
+.ahos-v3-bottom > div {
+  background: #1d2b40;
+  border: 1px solid rgba(148,163,184,0.25);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.ahos-v3-stats span {
+  display: block;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.ahos-v3-stats strong {
+  color: #00d9ff;
+  font-size: 16px;
+}
+
+.ahos-v3-main {
+  min-height: 430px;
+  border-top: 1px solid rgba(0,217,255,0.35);
+  border-bottom: 1px solid rgba(0,217,255,0.35);
+  display: grid;
+  grid-template-columns: 160px 1fr 250px;
+  gap: 16px;
+  align-items: center;
+  padding: 18px 0;
+  position: relative;
+}
+
+.ahos-v3-left {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ahos-v3-left .tiny {
+  font-size: 12px;
+  padding: 8px;
+  background: #04111f;
+  color: #00d9ff;
+}
+
+.ahos-v3-left .green-border {
+  border-color: #22c55e;
+}
+
+.ahos-v3-stage {
+  height: 430px;
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  background:
+    radial-gradient(circle at center, rgba(0,217,255,0.14), transparent 34%),
+    linear-gradient(135deg,#0f172a,#111827);
+  border-radius: 12px;
+}
+
+.orbit {
+  position: absolute;
+  border: 1px solid rgba(0,217,255,0.28);
+  border-radius: 50%;
+}
+
+.orbit1 { width: 260px; height: 260px; }
+.orbit2 { width: 360px; height: 360px; }
+.orbit3 { width: 470px; height: 470px; }
+
+.avatar {
+  width: 150px;
+  height: 280px;
+  position: relative;
+  filter: drop-shadow(0 0 24px rgba(0,217,255,0.7));
+  z-index: 2;
+}
+
+.head {
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+  background: linear-gradient(#f8fafc,#94a3b8);
+  margin: 0 auto 4px;
+}
+
+.body {
+  width: 84px;
+  height: 120px;
+  border-radius: 34px 34px 22px 22px;
+  background: linear-gradient(#e0f2fe,#334155);
+  margin: 0 auto;
+  border: 2px solid #00d9ff;
+}
+
+.arm {
+  position: absolute;
+  width: 24px;
+  height: 100px;
+  background: linear-gradient(#e0f2fe,#64748b);
+  top: 90px;
+  border-radius: 20px;
+}
+
+.arm.left { left: 12px; transform: rotate(18deg); }
+.arm.right { right: 12px; transform: rotate(-18deg); }
+
+.leg {
+  position: absolute;
+  width: 28px;
+  height: 100px;
+  background: linear-gradient(#e0f2fe,#64748b);
+  top: 190px;
+  border-radius: 20px;
+}
+
+.leftleg { left: 46px; }
+.rightleg { right: 46px; }
+
+.core {
+  position: absolute;
+  top: 118px;
+  left: 28px;
+  right: 28px;
+  background: rgba(0,217,255,0.16);
+  border: 1px solid #00d9ff;
+  color: #00d9ff;
+  border-radius: 999px;
+  padding: 6px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.ahos-v3-stage h2 {
+  position: absolute;
+  bottom: 118px;
+  color: #00d9ff;
+  font-size: 20px;
+}
+
+.ahos-v3-stage p {
+  position: absolute;
+  bottom: 95px;
+  color: #94a3b8;
+}
+
+.ahos-v3-organs {
+  background: #050b14;
+  border: 1px solid rgba(0,217,255,0.35);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.ahos-v3-organs h3 {
+  color: #00d9ff;
+  margin-top: 0;
+}
+
+.ahos-v3-organs button {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.ahos-v3-organs .show {
+  margin-top: 12px;
+  background: #00a6c7;
+  color: #021019;
+}
+
+.ahos-v3-bottom {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.ahos-v3-bottom h2,
+.ahos-v3-bottom h3 {
+  color: #00d9ff;
+  margin-top: 0;
+}
+
+.response {
+  margin-top: 12px;
+  border: 1px solid rgba(34,197,94,0.35);
+  background: rgba(34,197,94,0.12);
+  color: #bbf7d0;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.green {
+  color: #00ff88 !important;
+}
+
+.ahos-v3-root footer {
+  text-align: center;
+  color: #94a3b8;
+  padding: 16px 8px 0;
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .ahos-v3-header {
+    flex-direction: column;
+  }
+
+  .ahos-v3-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .ahos-v3-main {
+    grid-template-columns: 1fr;
+  }
+
+  .ahos-v3-bottom {
+    grid-template-columns: 1fr;
+  }
+
+  .ahos-v3-stage {
+    height: 420px;
+  }
+}
+
+/* AHOS V3 departments integration */
+.ahos-v3-departments {
+  border-top: 1px solid rgba(0,217,255,0.28);
+  border-bottom: 1px solid rgba(0,217,255,0.28);
+  padding: 18px 0;
+  margin: 14px 0;
+}
+
+.ahos-v3-departments h2 {
+  color: #00d9ff;
+  font-size: 18px;
+  margin: 0 0 14px;
+}
+
+.ahos-v3-dept-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.ahos-v3-dept-grid button {
+  min-height: 90px;
+  border: 1px solid rgba(148,163,184,0.22);
+  background: #33445c;
+  color: #dbeafe;
+  border-radius: 16px;
+  padding: 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  transition: 0.2s ease;
+}
+
+.ahos-v3-dept-grid button:hover {
+  border-color: rgba(0,217,255,0.55);
+  transform: translateY(-1px);
+}
+
+.ahos-v3-dept-grid button.active {
+  background: linear-gradient(135deg, rgba(0,217,255,0.35), rgba(37,99,235,0.35));
+  border-color: #00d9ff;
+  box-shadow: 0 0 18px rgba(0,217,255,0.25);
+}
+
+.ahos-v3-dept-grid span {
+  font-size: 24px;
+}
+
+.ahos-v3-dept-grid b {
+  font-size: 14px;
+}
+
+.ahos-v3-dept-grid small {
+  color: #cbd5e1;
+  font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  .ahos-v3-dept-grid {
+    grid-template-columns: repeat(2, minmax(130px, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .ahos-v3-dept-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* AHOS Avatar V3 command report */
+.ahos-v3-bottom .response {
+  white-space: pre-wrap;
+  overflow-x: auto;
+  line-height: 1.7;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 13px;
+}
+.ahos-v3-bottom button:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+/* AHOS Avatar V3 PDF report actions */
+.ahos-v3-command-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.ahos-v3-command-actions .pdf {
+  background: linear-gradient(135deg, #0f766e, #0891b2);
+  color: #ffffff;
+  border: 1px solid rgba(34, 211, 238, 0.45);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ahos-v3-command-actions .pdf:hover {
+  filter: brightness(1.1);
+}
+
+.ahos-v3-command-actions .pdf:disabled,
+.ahos-v3-command-actions .voice:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}

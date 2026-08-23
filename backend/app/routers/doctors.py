@@ -18,18 +18,18 @@ class DoctorAssignmentRequest(BaseModel):
 class DoctorAssignmentStatusRequest(BaseModel):
     status: str
 
-@router.get("/doctors/summary")
+# AHOS-R13C17E disabled secondary route: @router.get("/doctors/summary")
 def get_doctors_summary():
     from ..main import DOCTORS
     return DOCTORS
 
-@router.get("/doctors/by-specialty/{name}")
+# AHOS-R13C17E disabled secondary route: @router.get("/doctors/by-specialty/{name}")
 def get_doctors_by_specialty(name: str):
     from ..main import DOCTORS
     normalized = name.strip().lower()
     return [d for d in DOCTORS if d["specialty"].strip().lower() == normalized]
 
-@router.get("/doctors/{doctor_id}")
+# AHOS-R13C17E disabled secondary route: @router.get("/doctors/{doctor_id}")
 def get_doctor_by_id(doctor_id: str):
     from ..main import DOCTORS
     for doctor in DOCTORS:
@@ -37,12 +37,12 @@ def get_doctor_by_id(doctor_id: str):
             return doctor
     raise HTTPException(status_code=404, detail="Doctor not found")
 
-@router.get("/doctor-assignments/{doctor_id}")
+# AHOS-R13C17E disabled secondary route: @router.get("/doctor-assignments/{doctor_id}")
 def get_doctor_assignments(doctor_id: str):
     from ..main import DOCTOR_ASSIGNMENTS
     return DOCTOR_ASSIGNMENTS.get(doctor_id, [])
 
-@router.post("/doctor-assignments/{doctor_id}")
+# AHOS-R13C17E disabled secondary route: @router.post("/doctor-assignments/{doctor_id}")
 def create_doctor_assignment(doctor_id: str, payload: DoctorAssignmentRequest):
     from ..main import DOCTOR_ASSIGNMENTS
     if doctor_id not in DOCTOR_ASSIGNMENTS:
@@ -61,7 +61,7 @@ def create_doctor_assignment(doctor_id: str, payload: DoctorAssignmentRequest):
     DOCTOR_ASSIGNMENTS[doctor_id].append(new_assignment)
     return new_assignment
 
-@router.post("/doctor-assignments/{doctor_id}/{assignment_id}/status")
+# AHOS-R13C17E disabled secondary route: @router.post("/doctor-assignments/{doctor_id}/{assignment_id}/status")
 def update_assignment_status(doctor_id: str, assignment_id: int, payload: DoctorAssignmentStatusRequest):
     from ..main import DOCTOR_ASSIGNMENTS
     for item in DOCTOR_ASSIGNMENTS.get(doctor_id, []):
@@ -70,7 +70,7 @@ def update_assignment_status(doctor_id: str, assignment_id: int, payload: Doctor
             return item
     raise HTTPException(status_code=404, detail="Assignment not found")
 
-@router.delete("/doctor-assignments/{doctor_id}/{assignment_id}")
+# AHOS-R13C17E disabled secondary route: @router.delete("/doctor-assignments/{doctor_id}/{assignment_id}")
 def delete_doctor_assignment(doctor_id: str, assignment_id: int):
     from ..main import DOCTOR_ASSIGNMENTS
     assignments = DOCTOR_ASSIGNMENTS.get(doctor_id, [])
@@ -79,7 +79,7 @@ def delete_doctor_assignment(doctor_id: str, assignment_id: int):
             return assignments.pop(index)
     raise HTTPException(status_code=404, detail="Assignment not found")
 
-@router.get("/specialties/summary")
+# AHOS-R13C17E disabled secondary route: @router.get("/specialties/summary")
 def get_specialties_summary():
     from ..main import SPECIALTIES_SUMMARY
     return SPECIALTIES_SUMMARY

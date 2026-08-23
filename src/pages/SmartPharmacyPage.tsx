@@ -95,8 +95,13 @@ function DrugSearch() {
     setSelected(null)
     setRxInteractions([])
     try {
+      const cleanQuery = query
+        .toLowerCase()
+        .replace(/\d+\s*(mg|mcg|g|ml|iu|units?)\b/g, "")
+        .trim()
+
       const res = await fetch(
-        `https://api.fda.gov/drug/label.json?search=openfda.generic_name:"${encodeURIComponent(query)}"&limit=5`
+        `https://api.fda.gov/drug/label.json?search=openfda.generic_name:${encodeURIComponent(cleanQuery)}&limit=5`
       )
       const data = await res.json()
       if (data.results) {
@@ -421,7 +426,21 @@ function InteractionChecker() {
             }
           }
         }
-        out.push({ drug, interactions: interactions.slice(0, 4) })
+        const limitedInteractions = interactions.slice(0, 4)
+        out.push({ drug, interactions: limitedInteractions })
+
+        await fetch("http://127.0.0.1:8000/aiha/10.0.7/pharmacy/to-decision", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            patient_id: "P-1001",
+            medicine: drug,
+            dose: "unknown",
+            source: "smart_pharmacy_interaction_checker",
+            interaction_count: limitedInteractions.length,
+            interactions: limitedInteractions,
+          }),
+        })
       } catch {
         out.push({ drug, interactions: [] })
       }

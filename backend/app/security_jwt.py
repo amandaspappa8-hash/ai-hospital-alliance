@@ -1,5 +1,5 @@
 # Compatibility shim — delegates to security.py
-from .security import (
+from .legacy_security import (
     create_access_token,
     verify_access_token,
     hash_password,

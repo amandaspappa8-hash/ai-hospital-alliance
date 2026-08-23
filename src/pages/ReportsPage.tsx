@@ -228,7 +228,7 @@ Write a professional medical report with: Summary, Findings, Assessment, Plan.`
                         {r.id} · Patient: <strong style={{ color: "#94a3b8" }}>{patient?.name ?? r.patient_id}</strong>
                         {patient && <span> · {patient.age}y · {patient.department}</span>}
                       </div>
-                      <div style={{ color: "#475569", fontSize: 12, marginTop: 6, lineHeight: 1.5 }}>{r.body.slice(0, 120)}...</div>
+                      <div style={{ color: "#475569", fontSize: 12, marginTop: 6, lineHeight: 1.5 }}>{(r.body || '').slice(0, 120)}...</div>
                     </div>
                     <div style={{ display: "flex", gap: 6, flexShrink: 0, marginLeft: 12 }}>
                       <button onClick={e => { e.stopPropagation(); generateAIReport(r) }} disabled={generating} style={{ padding: "6px 12px", borderRadius: 8, background: "rgba(124,58,237,0.1)", color: "#a78bfa", fontSize: 11, fontWeight: 700, border: "1px solid rgba(124,58,237,0.25)", cursor: "pointer" }}>

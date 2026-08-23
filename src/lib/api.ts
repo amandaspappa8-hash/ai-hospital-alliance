@@ -21,7 +21,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     const text = await res.text()
 
     if (res.status === 401) {
-      clearAuth()
+      // clearAuth() disabled to prevent auto logout during development
     }
 
     throw new Error(`${res.status} ${res.statusText}: ${text}`)

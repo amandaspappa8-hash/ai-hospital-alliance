@@ -20,22 +20,22 @@ class LabResultRequest(BaseModel):
     result: str
     status: Optional[str] = "Completed"
 
-@router.get("/catalog")
+# AHOS-R13C17E disabled secondary route: @router.get("/catalog")
 def get_labs_catalog():
     from ..main import LAB_CATALOG
     return LAB_CATALOG
 
-@router.get("/orders")
+# AHOS-R13C17E disabled secondary route: @router.get("/orders")
 def get_lab_orders():
     from ..main import LAB_ORDERS
     return LAB_ORDERS
 
-@router.get("/orders/{patient_id}")
+# AHOS-R13C17E disabled secondary route: @router.get("/orders/{patient_id}")
 def get_lab_orders_by_patient(patient_id: str):
     from ..main import LAB_ORDERS
     return [o for o in LAB_ORDERS if o["patientId"] == patient_id]
 
-@router.post("/orders")
+# AHOS-R13C17E disabled secondary route: @router.post("/orders")
 def create_lab_order(payload: LabOrderCreateRequest):
     from ..main import LAB_ORDERS
     if not payload.tests:
@@ -53,7 +53,7 @@ def create_lab_order(payload: LabOrderCreateRequest):
     LAB_ORDERS.append(new_order)
     return new_order
 
-@router.post("/results/{order_id}")
+# AHOS-R13C17E disabled secondary route: @router.post("/results/{order_id}")
 def create_lab_result(order_id: str, payload: LabResultRequest):
     from ..main import LAB_ORDERS
     for order in LAB_ORDERS:

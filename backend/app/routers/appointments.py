@@ -18,12 +18,12 @@ class AppointmentRequest(BaseModel):
     time: Optional[str] = ""
     status: Optional[str] = "Scheduled"
 
-@router.get("/appointments")
+# AHOS-R13C17E disabled secondary route: @router.get("/appointments")
 def get_appointments():
     from ..main import SERVICES
     return SERVICES["appointments"].list_appointments()
 
-@router.post("/appointments")
+# AHOS-R13C17E disabled secondary route: @router.post("/appointments")
 def create_appointment(payload: AppointmentRequest):
     from ..main import SERVICES
     return SERVICES["appointments"].create_appointment({

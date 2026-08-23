@@ -3,13 +3,11 @@
   "HttpServerEnabled": true,
   "OrthancExplorerEnabled": true,
   "HttpPort": 8042,
-  
   "AuthenticationEnabled": false,
   "RegisteredUsers": {},
   "RemoteAccessAllowed": true,
   "CorsEnabled": true,
   "WadoEnabled": true,
-
   "DicomWeb": {
     "Enable": true,
     "Root": "/dicom-web/",
@@ -17,16 +15,17 @@
     "EnableQido": true,
     "EnableStow": true
   },
-
   "Plugins": [
     "/usr/share/orthanc/plugins",
     "/usr/local/share/orthanc/plugins"
   ],
-
   "DicomServerEnabled": true,
   "DicomPort": 4242,
-  "WadoEnabled": true,
-
   "StorageDirectory": "/var/lib/orthanc/db",
-  "IndexDirectory": "/var/lib/orthanc/db"
+  "IndexDirectory": "/var/lib/orthanc/db",
+  "HttpHeaders": {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+  }
 }

@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { apiGet, apiPost } from "@/lib/api"
-import jsPDF from "jspdf"
-import html2canvas from "html2canvas"
+
+import Panel from "../components/patient-profile/Panel"
+import InfoCard from "../components/patient-profile/InfoCard"
+import TabButton from "../components/patient-profile/TabButton"
+
 import QRCode from "qrcode"
 
 type Patient = {
@@ -312,6 +315,11 @@ This official draft was generated from the patient profile view. It summarizes t
   const exportClinicalPDF = async () => {
     const input = document.getElementById("clinical-report")
     if (!input) return
+
+    const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+      import("html2canvas"),
+      import("jspdf"),
+    ])
 
     const canvas = await html2canvas(input, { scale: 2 })
     const imgData = canvas.toDataURL("image/png")
@@ -842,42 +850,6 @@ This official draft was generated from the patient profile view. It summarizes t
           )}
         </div>
       </div>
-    </div>
-  )
-}
-
-function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        padding: "10px 14px",
-        borderRadius: "10px",
-        border: "1px solid #374151",
-        background: active ? "#166534" : "#111827",
-        color: "white",
-        cursor: "pointer",
-      }}
-    >
-      {children}
-    </button>
-  )
-}
-
-function InfoCard({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div style={{ background: "#0b1220", border: "1px solid #374151", borderRadius: "10px", padding: "14px" }}>
-      <div style={{ opacity: 0.72, fontSize: "14px" }}>{label}</div>
-      <div style={{ marginTop: "8px", fontWeight: 700 }}>{value}</div>
-    </div>
-  )
-}
-
-function Panel({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div style={{ background: "#111827", border: "1px solid #374151", borderRadius: "12px", padding: "16px" }}>
-      <div style={{ fontSize: "18px", fontWeight: 700, marginBottom: "12px" }}>{title}</div>
-      {children}
     </div>
   )
 }

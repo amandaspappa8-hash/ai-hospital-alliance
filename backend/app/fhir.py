@@ -161,3 +161,57 @@ def bundle_response(resources: list, bundle_type: str = "searchset") -> dict:
             for r in resources
         ],
     }
+
+
+
+
+
+def medication_request_to_fhir(order) -> dict:
+    """Convert MedicationOrder to FHIR R4 MedicationRequest"""
+
+    patient_ref = "Patient/unknown"
+    if getattr(order, "encounter", None) is not None:
+        patient_id = getattr(order.encounter, "patient_id", None)
+        if patient_id:
+            patient_ref = f"Patient/{patient_id}"
+
+    return {
+        "resourceType": "MedicationRequest",
+        "id": str(order.id),
+        "status": "active" if getattr(order, "is_active", True) else "stopped",
+        "intent": "order",
+        "subject": {"reference": patient_ref},
+        "encounter": {"reference": f"Encounter/{order.encounter_id}"},
+        "authoredOn": (
+            order.created_at.isoformat() + "Z"
+            if getattr(order, "created_at", None)
+            else None
+        ),
+        "requester": {
+            "reference": f"Practitioner/{order.prescribed_by}"
+        },
+        "medicationCodeableConcept": {
+            "text": order.drug_name,
+            "coding": [
+                {
+                    "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+                    "display": order.generic_name or order.drug_name,
+                }
+            ],
+        },
+        "dosageInstruction": [
+            {
+                "text": f"{order.dose or ''} {order.route or ''} {order.frequency or ''}".strip(),
+                "route": {"text": order.route},
+                "timing": {"code": {"text": order.frequency}},
+            }
+        ],
+        "dispenseRequest": {
+            "quantity": {"value": order.quantity},
+            "expectedSupplyDuration": {
+                "value": order.duration_days,
+                "unit": "days",
+            },
+        },
+        "note": [{"text": "AIHA Smart Pharmacy medication workflow"}],
+    }

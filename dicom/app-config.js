@@ -1,25 +1,26 @@
 window.config = {
   routerBasename: '/',
   showStudyList: true,
-  extensions: [],
-  modes: [],
   dataSources: [
     {
       namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
-      sourceName: 'orthanc',
+      sourceName: 'Orthanc',
       configuration: {
         friendlyName: 'Orthanc',
-        name: 'orthanc',
+        name: 'Orthanc',
         qidoRoot: 'http://127.0.0.1:8042/dicom-web',
         wadoRoot: 'http://127.0.0.1:8042/dicom-web',
         wadoUriRoot: 'http://127.0.0.1:8042/wado',
-        staticWado: true,
-        singlepart: 'bulkdata',
-        enableStudyLazyLoad: true,
+        qidoSupportsIncludeField: true,
+        supportsWildcard: true,
         supportsFuzzyMatching: false,
-        supportsWildcard: true
-      }
-    }
+        supportsReject: false,
+        supportsBulkDataURI: true,
+        imageRendering: 'wadors',
+        thumbnailRendering: 'wadors',
+        enableStudyLazyLoad: true,
+      },
+    },
   ],
-  defaultDataSourceName: 'orthanc'
-};
+  defaultDataSourceName: 'Orthanc',
+}

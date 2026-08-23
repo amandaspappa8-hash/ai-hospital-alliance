@@ -3,12 +3,12 @@ Shared dependencies — import هذا في كل router
 """
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from ..security import verify_access_token
+from ..security_compat import validate_token
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
-    payload = verify_access_token(token)
+    payload = validate_token(token)
     if not payload:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -34,7 +34,7 @@ async def require_doctor(user: dict = Depends(get_current_user)):
     return user
 
 from fastapi import Request
-from ..security import check_rate_limit
+from ..legacy_security import check_rate_limit
 
 async def rate_limit_middleware(request: Request):
     client_ip = request.client.host

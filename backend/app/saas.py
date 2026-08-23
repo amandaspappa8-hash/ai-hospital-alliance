@@ -15,7 +15,7 @@ from sqlalchemy import Column, String, Boolean, DateTime, Integer, Text, JSON
 from sqlalchemy.orm import Session
 
 from .db import Base, SessionLocal
-from .security import hash_password
+from .legacy_security import hash_password
 
 
 # ─── Plans ───────────────────────────────────────────────────────────────────
@@ -67,6 +67,7 @@ PLANS = {
 
 class Tenant(Base):
     __tablename__ = "tenants"
+    __table_args__ = {"extend_existing": True}
     id = Column(String(20), primary_key=True)          # e.g. H-abc12
     name = Column(String(200), nullable=False)
     slug = Column(String(80), unique=True, nullable=False)  # url-safe name

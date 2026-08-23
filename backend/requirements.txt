@@ -12,3 +12,16 @@ anthropic
 groq
 google-generativeai
 requests
+numpy
+opencv-python-headless
+pillow
+pydicom
+scikit-image
+scipy
+python-multipart
+torch==2.5.1+cpu
+monai==1.5.2
+reportlab
+qrcode[pil]
+ultralytics
+aiosqlite

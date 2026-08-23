@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from "react-router-dom"
+import { NavLink, Link, useLocation } from "react-router-dom"
 import { useEffect, useState } from "react"
 import {
   FlaskConical,
@@ -20,7 +20,7 @@ import {
   BrainCircuit,
   Ambulance,
   ActivitySquare,
-  ScanLine,
+  ScanLine, Box,
   Baby,
   BarChart3,
 } from "lucide-react"
@@ -31,117 +31,177 @@ import { useAppLanguage } from "@/i18n/useAppLanguage"
 type Role = "Admin" | "Doctor" | "Radiology"
 
 type Item = {
-  titleKey: string
+  title: string
   to: string
   roles: Role[]
   icon: React.ReactNode
 }
 
 const items: Item[] = [
-  {
-    titleKey: "nav.dashboard",
+  
+{
+  title: "Live Bed Management",
+  to: "/live-bed-management",
+  icon: "🛏️",
+  roles: ["Admin", "Doctor"],
+},
+{
+  title: "ICU Intelligence Center",
+  to: "/icu-intelligence-center",
+  icon: "🫀",
+  roles: ["Admin", "Doctor"],
+},
+
+{
+  title: "Radiology Operations Center",
+  to: "/radiology-operations-center",
+  icon: <ScanLine />,
+  roles: ["Admin","Doctor","Radiology"],
+},
+
+{
+  title: "Laboratory Operations Center",
+  to: "/laboratory-operations-center",
+  icon: <FlaskConical />,
+  roles: ["Admin","Doctor","Radiology"],
+},
+
+{
+  title: "Emergency Command Center",
+  to: "/emergency-command-center",
+  icon: "🚑",
+  roles: ["Admin", "Doctor"],
+},
+
+{
+  title: "Autonomous Patient Flow",
+  to: "/autonomous-patient-flow",
+  icon: "🔄",
+  roles: ["Admin", "Doctor"],
+},
+
+{
+  title: "Hospital Operations Center",
+  to: "/hospital-operations-center",
+  icon: "🏥",
+  roles: ["Admin", "Doctor"],
+},
+{
+    title: "Dashboard",
     to: "/dashboard",
     roles: ["Admin", "Doctor", "Radiology"],
     icon: <LayoutDashboard size={18} />,
   },
   {
-    titleKey: "nav.adminOverview",
-    to: "/admin-overview",
+    title: "Admin Overview",
+    to: "/admin",
     roles: ["Admin"],
     icon: <BarChart3 size={18} />,
   },
   {
-    titleKey: "nav.aiRouting",
+    title: "AI Routing",
     to: "/ai-routing",
     roles: ["Admin", "Doctor", "Radiology"],
     icon: <Brain size={18} />,
   },
   {
-    titleKey: "nav.clinicalDecision",
-    to: "/clinical-decision",
+    title: "AI Clinical",
+    to: "/ai-clinical",
     roles: ["Admin", "Doctor", "Radiology"],
-    icon: <ShieldPlus size={18} />,
+    icon: <Brain size={18} />,
   },
   {
-    titleKey: "nav.orders",
+    title: "Orders",
     to: "/orders",
     roles: ["Admin", "Doctor", "Radiology"],
     icon: <ClipboardList size={18} />,
   },
   {
-    titleKey: "nav.doctors",
+    title: "Doctors",
     to: "/doctors",
     roles: ["Admin", "Doctor", "Radiology"],
     icon: <Stethoscope size={18} />,
   },
   {
-    titleKey: "nav.specialties",
+    title: "Specialties",
     to: "/specialties",
     roles: ["Admin", "Doctor", "Radiology"],
     icon: <Building2 size={18} />,
   },
   {
-    titleKey: "nav.patients",
+    title: "Patients",
     to: "/patients",
     roles: ["Admin", "Doctor"],
     icon: <Users size={18} />,
   },
   {
-    titleKey: "nav.patientProfile",
-    to: "/patient-profile",
-    roles: ["Admin", "Doctor"],
-    icon: <UserSquare2 size={18} />,
-  },
-  {
-    titleKey: "nav.appointments",
+    title: "Appointments",
     to: "/appointments",
     roles: ["Admin", "Doctor"],
     icon: <CalendarDays size={18} />,
   },
   {
-    titleKey: "nav.reports",
+    title: "Reports",
     to: "/reports",
     roles: ["Admin", "Doctor", "Radiology"],
     icon: <FileText size={18} />,
   },
   {
-    titleKey: "nav.notes",
+    title: "Clinical Notes",
     to: "/notes",
     roles: ["Admin", "Doctor"],
     icon: <NotebookPen size={18} />,
   },
   {
-    titleKey: "nav.pacs",
+    title: "PACS",
     to: "/pacs",
     roles: ["Admin", "Radiology"],
     icon: <ScanSearch size={18} />,
   },
   {
-    titleKey: "nav.labs",
+    title: "Laboratory",
     to: "/labs",
     roles: ["Admin", "Doctor", "Radiology"],
     icon: <FlaskConical size={18} />,
   },
   {
-    titleKey: "nav.nurses",
-    to: "/nurses",
+    title: "Nursing",
+    to: "/nursing",
     roles: ["Admin", "Doctor", "Radiology"],
     icon: <Users size={18} />,
   },
   {
-    titleKey: "nav.radiology",
+    title: "Radiology",
     to: "/radiology",
     roles: ["Admin", "Doctor", "Radiology"],
     icon: <ScanLine size={18} />,
   },
   {
-    titleKey: "nav.pharmacy",
+    title: "3D Viewer",
+    to: "/radiology-3d",
+    roles: ["Admin", "Doctor", "Radiology"],
+    icon: <ScanSearch size={18} />,
+  },
+  {
+    title: "VTK Volume",
+    to: "/medical-volume-vtk",
+    roles: ["Admin", "Doctor", "Radiology"],
+    icon: <Box size={18} />,
+  },
+  {
+    title: "Surgical AI",
+    to: "/real-medical-volume",
+    roles: ["Admin", "Doctor", "Radiology"],
+    icon: <Brain size={18} />,
+  },
+  {
+    title: "Pharmacy",
     to: "/pharmacy",
     roles: ["Admin", "Doctor", "Radiology"],
     icon: <Pill size={18} />,
   },
   {
-    titleKey: "nav.logout",
+    title: "Logout",
     to: "/logout",
     roles: ["Admin", "Doctor", "Radiology"],
     icon: <LogOut size={18} />,
@@ -156,6 +216,55 @@ const specialtyIconMap: Record<string, React.ReactNode> = {
   Radiology: <ScanLine size={16} />,
   Pediatrics: <Baby size={16} />,
 }
+
+const globalAhosNav = [
+  
+
+
+["AHOS 56.3 Safety Center", "/ahos/56.3/unified-safety-center"],
+["AHOS 56.1 Physician Review", "/ahos/56.1/physician-review"],
+["AHOS 56.0 Orchestration", "/ahos/56.0/avatar-orchestration"],
+["AHOS 55.9 Voice Memory", "/ahos/55.9/avatar-voice-memory-pipeline"],
+["AHOS 55.8 Avatar Memory", "/ahos/55.8/avatar-memory-audit"],
+["AHOS 55.7 Voice Context", "/ahos/55.7/voice-clinical-context"],
+["🏥 Operations","/hospital-operations-center"],
+  ["🛏️ Bed Management","/live-bed-management"],
+  ["🧠 ICU Intelligence","/icu-intelligence-center"],
+  ["🚨 Emergency Command","/emergency-command-center"],
+  ["👥 Patient Flow","/autonomous-patient-flow"],
+  ["🩻 Radiology Ops","/radiology-operations-center"],
+  ["🧪 Laboratory Ops","/laboratory-operations-center"],
+  ["💊 Pharmacy Ops","/pharmacy-operations-center"],
+  
+["🤖 Medical AI Avatar","/medical-ai-avatar"],
+["🧑‍⚕️ Arabic Avatar Command","/arabic-avatar-command"],
+["AHOS 55.6 Real Avatar", "/ahos/55.6/real-digital-human-avatar"],
+["👩‍⚕️ Digital Human Avatar","/digital-human-avatar"],
+["🧠 Enterprise Avatar","/enterprise-avatar-dashboard"],
+["🎤 Voice & Video Avatar","/realtime-medical-avatar"],
+["🧠 AHOS Brain","/ahos-26-0-autonomous-brain"],
+
+  ["🌍 Situation Room","/ahos-25-8-situation-room"],
+  ["🚨 Crisis Command","/ahos-25-9-crisis-command-center"],
+  ["🌐 Federation 3D","/ahos-25-7-global-federation-3d-map"],
+  ["🧬 Neural Network","/ahos-25-6-neural-network"],
+  ["❤️ Cardiology","/specialties/cardiology"],
+  ["🧠 Neurology","/specialties/neurology"],
+  ["🚑 Emergency","/specialties/emergency"],
+  ["🏥 ICU","/specialties/icu"],
+  ["👶 Pediatrics","/specialties/pediatrics"],
+  ["🩻 Radiology","/radiology"],
+  ["🧊 Radiology 3D","/radiology-3d"],
+  ["🧬 CT/MRI Engine","/medical-volume-vtk"],
+  ["📡 Real Medical Volume","/real-medical-volume"],
+  ["📺 PACS","/pacs"],
+  ["🧪 Labs","/labs"],
+  ["💊 Smart Pharmacy","/pharmacy"],
+  ["📡 AI Ultrasound","/ai-ultrasound-x"],
+  ["🤖 AI Clinical","/ai-clinical"],
+  ["🧭 AI Routing","/ai-routing"],
+  ["🧠 Clinical Decision","/clinical-decision"]
+];
 
 export default function AppSidebar() {
   const { t, language, setLanguage } = useAppLanguage()
@@ -181,6 +290,8 @@ export default function AppSidebar() {
 
   const visibleItems = role ? items.filter((item) => item.roles.includes(role)) : []
   const showSpecialtyChildren = location.pathname.startsWith("/specialties")
+  const showPharmacyChildren = location.pathname.startsWith("/pharmacy")
+  
 
   return (
     <aside
@@ -203,10 +314,10 @@ export default function AppSidebar() {
         }}
       >
         <div style={{ fontWeight: 800, fontSize: 22, letterSpacing: 0.2 }}>
-          {t("app.name")}
+          AI Hospital Alliance
         </div>
         <div style={{ fontSize: 13, opacity: 0.7, marginTop: 6 }}>
-          {t("app.tagline")}
+          Healthcare Command Center
         </div>
       </div>
 
@@ -220,7 +331,7 @@ export default function AppSidebar() {
         }}
       >
         <div style={{ fontSize: 13, opacity: 0.7, marginBottom: 6 }}>
-          {t("user.signedInAs")}
+          Signed in as
         </div>
         <div style={{ fontWeight: 700 }}>
           {user ? user.name : t("user.guest")}
@@ -240,7 +351,7 @@ export default function AppSidebar() {
         }}
       >
         <div style={{ fontSize: 13, opacity: 0.7, marginBottom: 8 }}>
-          {t("label.language")}
+          Language
         </div>
         <select
           value={language}
@@ -260,6 +371,46 @@ export default function AppSidebar() {
           <option value="it">Italiano</option>
           <option value="tzm">Tamaziɣt</option>
         </select>
+      <div style={{marginTop:24}}>
+        <div style={{
+          color:"#67e8f9",
+          fontWeight:900,
+          marginBottom:12,
+          borderTop:"1px solid rgba(255,255,255,0.08)",
+          paddingTop:14,
+          letterSpacing:1
+        }}>
+          🌍 Global AHOS Navigation
+        </div>
+
+        <div style={{
+          maxHeight:420,
+          overflowY:"auto",
+          display:"grid",
+          gap:8,
+          paddingRight:4
+        }}>
+          {globalAhosNav.map(([label,to])=>(
+            <Link
+              key={to}
+              to={to}
+              style={{
+                textDecoration:"none",
+                color:"#e2e8f0",
+                background:"rgba(15,23,42,0.65)",
+                border:"1px solid rgba(34,211,238,0.15)",
+                borderRadius:12,
+                padding:"8px 12px",
+                fontSize:13,
+                fontWeight:700
+              }}
+            >
+              {label}
+            </Link>
+          ))}
+        </div>
+      </div>
+
       </div>
 
       <nav style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -284,55 +435,58 @@ export default function AppSidebar() {
                 })}
               >
                 {item.icon}
-                <span>{t(item.titleKey)}</span>
+                <span>{item.title}</span>
               </NavLink>
 
+              {item.to === "/pharmacy" && showPharmacyChildren && (
+                <div style={{ marginTop: 8, marginLeft: 12, paddingLeft: 12, borderLeft: "1px dashed #334155", display: "flex", flexDirection: "column", gap: 8 }}>
+                  {[
+                    { title: "Medications", to: "/pharmacy/medications" },
+                    { title: "Drug Formulary", to: "/pharmacy/formulary" },
+                    { title: "Drug Interactions", to: "/pharmacy/interactions" },
+                    { title: "Discharge Meds", to: "/pharmacy/discharge" },
+                    { title: "Prescriptions", to: "/pharmacy/prescriptions" },
+                  ].map((child) => (
+                    <NavLink key={child.to} to={child.to} style={({ isActive }) => ({
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      color: isActive ? "#ffffff" : "#cbd5e1",
+                      background: isActive ? "#1d4ed8" : "#0b1220",
+                      textDecoration: "none",
+                      fontSize: 14,
+                      border: "1px solid #1e293b",
+                    })}>
+                      <Pill size={16} />
+                      <span>{child.title}</span>
+                    </NavLink>
+                  ))}
+                </div>
+              )}
+
               {isSpecialtiesRoot && showSpecialtyChildren && (
-                <div
-                  style={{
-                    marginTop: 8,
-                    marginLeft: 12,
-                    paddingLeft: 12,
-                    borderLeft: "1px dashed #334155",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 8,
-                  }}
-                >
+                <div style={{ marginTop: 8, marginLeft: 12, paddingLeft: 12, borderLeft: "1px dashed #334155", display: "flex", flexDirection: "column", gap: 8 }}>
                   {specialties.map((specialty) => (
-                    <NavLink
-                      key={specialty.title}
-                      to={specialty.route}
-                      style={({ isActive }) => ({
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: 10,
-                        padding: "10px 12px",
-                        borderRadius: 10,
-                        color: isActive ? "#ffffff" : "#cbd5e1",
-                        background: isActive ? "#1d4ed8" : "#0b1220",
-                        textDecoration: "none",
-                        fontSize: 14,
-                        border: "1px solid #1e293b",
-                      })}
-                    >
+                    <NavLink key={specialty.title} to={specialty.route} style={({ isActive }) => ({
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 10,
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      color: isActive ? "#ffffff" : "#cbd5e1",
+                      background: isActive ? "#1d4ed8" : "#0b1220",
+                      textDecoration: "none",
+                      fontSize: 14,
+                      border: "1px solid #1e293b",
+                    })}>
                       <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         {specialtyIconMap[specialty.title] ?? <Building2 size={16} />}
                         {specialty.title}
                       </span>
-                      <span
-                        style={{
-                          minWidth: 28,
-                          textAlign: "center",
-                          padding: "2px 8px",
-                          borderRadius: 999,
-                          background: "#0f172a",
-                          color: "#7dd3fc",
-                          fontSize: 12,
-                          fontWeight: 700,
-                        }}
-                      >
+                      <span style={{ minWidth: 28, textAlign: "center", padding: "2px 8px", borderRadius: 999, background: "#0f172a", color: "#7dd3fc", fontSize: 12, fontWeight: 700 }}>
                         {specialty.activeCases}
                       </span>
                     </NavLink>
@@ -343,6 +497,7 @@ export default function AppSidebar() {
           )
         })}
       </nav>
+
     </aside>
   )
 }

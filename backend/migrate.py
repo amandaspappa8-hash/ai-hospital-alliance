@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 logger = logging.getLogger(__name__)
 
 SQLITE_URL = os.getenv("SQLITE_URL", "sqlite:///./hospital.db")
-POSTGRES_URL = os.getenv("DATABASE_URL", "postgresql://hospital_user:Hospital@2026@localhost:5432/hospital_db")
+POSTGRES_URL = os.getenv("DATABASE_URL", "postgresql://aiha:aiha123@localhost:5432/aiha_db")
 
 ALEMBIC_ENV = '''
 from logging.config import fileConfig
@@ -47,7 +47,7 @@ else:
 
 ALEMBIC_INI = """[alembic]
 script_location = migrations
-sqlalchemy.url = postgresql://hospital_user:Hospital@2026@localhost:5432/hospital_db
+sqlalchemy.url = postgresql://aiha:aiha123@localhost:5432/aiha_db
 
 [loggers]
 keys = root,sqlalchemy,alembic

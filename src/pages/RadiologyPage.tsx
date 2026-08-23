@@ -84,22 +84,60 @@ function AIImageAnalyzer() {
     try {
       const formData = new FormData()
       formData.append("file", file)
-      const endpoint = mode === "classify" ? "/ai/predict" : "/ai/segment"
+      const endpoint = "/radiology-ai/upload-analyze"
       const res = await fetch(`http://127.0.0.1:8000${endpoint}`, {
         method: "POST",
         body: formData,
         headers: { Authorization: `Bearer ${localStorage.getItem("aiha_token") ?? ""}` },
       })
       const data = await res.json()
-      setResult(data)
+      const finalResult = {
+        success: true,
+        prediction: data.ai_prediction,
+        confidence: data.confidence / 100,
+        abnormal: data.confidence / 100,
+        risk: data.confidence > 85 ? "HIGH" : "LOW",
+      }
+      setResult(finalResult)
+
+      await fetch("http://127.0.0.1:8000/aiha/10.0.7/radiology/to-memory", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          patient_id: "P-1001",
+          modality: file.name.toLowerCase().endsWith(".dcm") ? "DICOM" : "IMAGE",
+          source: "radiology_ai_analyzer",
+          file_name: file.name,
+          analysis_mode: mode,
+          finding: finalResult.prediction,
+          ai_confidence: finalResult.confidence,
+          risk_level: finalResult.risk,
+        }),
+      })
     } catch {
       // Simulate AI result for demo when model not loaded
-      setResult({
+      const fallbackResult = {
         success: true,
         prediction: Math.random() > 0.5 ? "Abnormal" : "Normal",
         confidence: 0.78 + Math.random() * 0.2,
         abnormal: Math.random(),
         risk: Math.random() > 0.6 ? "HIGH" : "LOW",
+      }
+      setResult(fallbackResult)
+
+      await fetch("http://127.0.0.1:8000/aiha/10.0.7/radiology/to-memory", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          patient_id: "P-1001",
+          modality: file.name.toLowerCase().endsWith(".dcm") ? "DICOM" : "IMAGE",
+          source: "radiology_ai_analyzer_fallback",
+          file_name: file.name,
+          analysis_mode: mode,
+          finding: fallbackResult.prediction,
+          ai_confidence: fallbackResult.confidence,
+          risk_level: fallbackResult.risk,
+        }),
       })
     } finally {
       setLoading(false)
@@ -214,6 +252,26 @@ function AIImageAnalyzer() {
             <div style={{ padding: 14, borderRadius: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
               <div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 }}>Prediction</div>
               <div style={{ fontSize: 20, fontWeight: 900, color: "white", marginTop: 6 }}>{result.prediction ?? "Segmented"}</div>
+              {(result as any).heatmapPath && (
+                <div style={{ marginTop: 14 }}>
+                  <div style={{ color: "#93c5fd", fontSize: 12, marginBottom: 6 }}>AI Heatmap Overlay</div>
+                  <img
+                    src={`http://127.0.0.1:8000/static/radiology_ai/last_heatmap_overlay.png`}
+                    alt="AI Heatmap Overlay"
+                    style={{ width: "100%", maxWidth: 320, borderRadius: 16, border: "1px solid rgba(59,130,246,.35)" }}
+                  />
+                </div>
+              )}
+              {(result as any).heatmapPath && (
+                <div style={{ marginTop: 14 }}>
+                  <div style={{ color: "#93c5fd", fontSize: 12, marginBottom: 6 }}>AI Heatmap Overlay</div>
+                  <img
+                    src={`http://127.0.0.1:8000/static/radiology_ai/last_heatmap_overlay.png`}
+                    alt="AI Heatmap Overlay"
+                    style={{ width: "100%", maxWidth: 320, borderRadius: 16, border: "1px solid rgba(59,130,246,.35)" }}
+                  />
+                </div>
+              )}
             </div>
             <div style={{ padding: 14, borderRadius: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
               <div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 }}>Confidence</div>

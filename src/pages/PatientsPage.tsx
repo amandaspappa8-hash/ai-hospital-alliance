@@ -284,7 +284,6 @@ export default function PatientsPage() {
                   Open Nursing Station
                 </button>
 
-
                 {doctorName && (
                   <button
                     onClick={handleAssignPatient}

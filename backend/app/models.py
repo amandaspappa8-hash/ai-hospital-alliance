@@ -330,3 +330,14 @@ class AuditLog(Base, TenantMixin):
     user_agent = Column(String(500))
     changes = Column(JSONB)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+class Alert(Base):
+    __tablename__ = "alerts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    patient_id = Column(String(20), ForeignKey("patients.id"), nullable=True)
+    message = Column(Text, nullable=False)
+    severity = Column(String(20), nullable=True)
+    source = Column(String(80), nullable=True)
+    is_read = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)

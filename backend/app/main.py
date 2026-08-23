@@ -1,4 +1,247 @@
-from .security_jwt import login_with_env, get_current_user
+from backend.app.security.middleware.audit_middleware import AuditMiddleware
+
+# AHOS Official Ophthalmology Intelligence System
+try:
+    from app.ophthalmology_unique.router import router as ophthalmology_unique_router
+except Exception:
+    from backend.app.ophthalmology_unique.router import router as ophthalmology_unique_router
+
+from backend.app.ophthalmology_ai.router import router as ophthalmology_ai_router
+from backend.app.api.dicom_viewer import router as dicom_viewer_router
+from backend.app.ahos_53_2.multi_agent_clinical_reasoning_platform import router as ahos_53_2_router
+from backend.app.ahos_53_1.autonomous_clinical_decision_support_platform import router as ahos_53_1_router
+from backend.app.ahos_53_0.real_time_clinical_command_center_platform import router as ahos_53_0_router
+from backend.app.ahos_52_9.clinical_safety_alert_engine_platform import router as ahos_52_9_router
+from backend.app.ahos_52_8.persistent_clinical_event_store_platform import router as ahos_52_8_router
+from backend.app.ahos_52_7.real_redis_backend_integration_platform import router as ahos_52_7_router
+from backend.app.ahos_52_6.redis_streams_clinical_event_bus_platform import router as ahos_52_6_router
+from backend.app.ahos_52_5.clinical_event_bus_platform import router as ahos_52_5_router
+from backend.app.ahos_52_4.fhir_subscription_realtime_streaming_platform import router as ahos_52_4_router
+from backend.app.ahos_52_3.smart_on_fhir_authentication_platform import router as ahos_52_3_router
+from backend.app.ahos_52_2.live_hapi_fhir_integration_platform import router as ahos_52_2_router
+from backend.app.ahos_52_1.real_fhir_server_connector_platform import router as ahos_52_1_router
+from backend.app.ahos_52_0.real_hospital_pilot_deployment_platform import router as ahos_52_0_router
+from backend.app.ahos_51_6.global_verification_final_qa_platform import router as ahos_51_6_router
+from backend.app.ahos_51_5.global_digital_health_civilization_platform import router as ahos_51_5_router
+from backend.app.ahos_51_4.global_healthcare_federation_platform import router as ahos_51_4_router
+from backend.app.ahos_51_3.global_healthcare_exchange_platform import router as ahos_51_3_router
+from backend.app.ahos_51_2.global_healthcare_marketplace_platform import router as ahos_51_2_router
+from backend.app.ahos_51_0.international_sales_government_partnership_platform import router as ahos_51_1_router
+from backend.app.ahos_51_0.global_commercial_launch_platform import router as ahos_51_0_global_commercial_launch_router
+from backend.app.ahos_50_0.enterprise_investor_data_room_platform import router as ahos_50_9_router
+from backend.app.ahos_50_0.regulatory_evidence_audit_dossier_platform import router as ahos_50_8_regulatory_evidence_router
+from backend.app.ahos_50_0.secrets_zero_trust_runtime_platform import router as ahos_50_7_zero_trust_router
+from backend.app.ahos_50_0.global_multiregion_disaster_recovery_platform import router as ahos_50_6_multiregion_dr_router
+from backend.app.ahos_50_0.global_production_kubernetes_platform import router as ahos_50_5_k8s_router
+from backend.app.ahos_50_0.enterprise_observability_incident_response_platform import router as ahos_50_4_observability_router
+from backend.app.ahos_50_0.security_audit_compliance_platform import router as ahos_50_3_security_compliance_router
+from backend.app.ahos_50_0.api_validation_load_testing_platform import router as ahos_50_2_api_validation_load_testing_router
+from backend.app.ahos_50_0.migrations_cicd_testing_platform import router as ahos_50_1_migrations_cicd_router
+from backend.app.ahos_50_0.production_hardening_platform import router as ahos_50_0_production_hardening_router
+from backend.app.ahos_49_0.autonomous_global_healthcare_ecosystem import router as ahos_49_0_8_global_ecosystem_router
+from backend.app.ahos_49_0.strategic_partnership_platform import router as ahos_49_0_7_strategic_partnership_router
+from backend.app.ahos_49_0.rwe_continuous_learning_platform import router as ahos_49_0_6_rwe_learning_router
+from backend.app.ahos_49_0.global_healthcare_monitoring_platform import router as ahos_49_0_5_global_monitoring_router
+from backend.app.ahos_49_0.autonomous_hospital_orchestrator import router as ahos_49_0_4_autonomous_hospital_orchestrator_router
+from backend.app.ahos_49_0.real_hospital_integration_platform import router as ahos_49_0_3_real_hospital_integration_router
+from backend.app.ahos_49_0.identity_rbac_platform import router as ahos_49_0_2_identity_rbac_router
+from backend.app.ahos_41_0_4.router_2000 import router as ahos_41_1_router
+from backend.app.ahos_47_2.real_clinical_data_integration_hospital_fhir_dicom_deployment_platform import router as ahos_47_2_router
+from backend.app.ahos_47_1.real_hospital_pilot_operations_clinical_adoption_platform import router as ahos_47_1_router
+from backend.app.ahos_47_0.global_healthcare_enterprise_launch_real_world_deployment_platform import router as ahos_47_0_router
+from backend.app.ahos_46_9.autonomous_global_healthcare_commercialization_market_access_platform import router as ahos_46_9_router
+from backend.app.ahos_46_8.autonomous_global_healthcare_evidence_regulatory_submission_platform import router as ahos_46_8_router
+from backend.app.ahos_46_7.autonomous_global_healthcare_compliance_certification_platform import router as ahos_46_7_router
+from backend.app.ahos_46_6.autonomous_global_healthcare_governance_policy_intelligence_platform import router as ahos_46_6_router
+from backend.app.ahos_46_5.autonomous_global_healthcare_strategic_command_execution_platform import router as ahos_46_5_router
+from backend.app.ahos_46_4.autonomous_global_healthcare_simulation_predictive_decision_platform import router as ahos_46_4_router
+from backend.app.ahos_46_3.autonomous_global_healthcare_digital_twin_network import router as ahos_46_3_router
+from backend.app.ahos_46_2.autonomous_global_healthcare_operating_network import router as ahos_46_2_router
+from backend.app.ahos_46_1.global_healthcare_intelligence_platform import router as ahos_46_1_router
+from backend.app.ahos_46_0.autonomous_global_healthcare_enterprise_ecosystem import router as ahos_46_0_router
+from backend.app.ahos_45_3.global_digital_health_infrastructure_platform import router as ahos_45_3_router
+from backend.app.ahos_45_2.sovereign_healthcare_investment_platform import router as ahos_45_2_router
+from backend.app.ahos_45_1.international_stock_exchange_preparation_platform import router as ahos_45_1_router
+from backend.app.ahos_45_0.autonomous_global_healthcare_corporation_platform import router as ahos_45_0_router
+from backend.app.ahos_44_5.global_healthcare_ipo_public_markets_readiness_platform import router as ahos_44_5_router
+from backend.app.ahos_44_4.global_healthcare_ecosystem_strategic_investment_platform import router as ahos_44_4_router
+from backend.app.ahos_44_3.enterprise_partner_deployment_strategic_alliances_platform import router as ahos_44_3_router
+from backend.app.ahos_44_2.global_healthcare_operations_managed_services_platform import router as ahos_44_2_router
+from backend.app.ahos_44_1.global_production_deployment_hospital_adoption_program import router as ahos_44_1_router
+from backend.app.ahos_44_0.global_commercial_launch_platform import router as ahos_44_0_router
+from backend.app.ahos_43_5.global_hospital_pilot_program import router as ahos_43_5_router
+from backend.app.ahos_43_4.regulatory_approval_readiness_platform import router as ahos_43_4_router
+from backend.app.ahos_43_3.commercial_healthcare_saas_platform import router as ahos_43_3_router
+from backend.app.ahos_43_2.clinical_validation_real_hospital_pilot_platform import router as ahos_43_2_router
+from backend.app.ahos_43_1.enterprise_interoperability_clinical_integration_platform import router as ahos_43_1_router
+from backend.app.ahos_42_8.autonomous_universal_medical_agi_self_evolving_healthcare_civilization_platform import router as ahos_42_8_router
+from backend.app.ahos_42_7.autonomous_interplanetary_healthcare_intelligence_universal_medical_knowledge_platform import router as ahos_42_7_router
+from backend.app.ahos_42_6.autonomous_global_healthcare_governance_planetary_medical_civilization_platform import router as ahos_42_6_router
+from backend.app.ahos_42_5.autonomous_planetary_healthcare_coordination_crisis_management_platform import router as ahos_42_5_router
+from backend.app.ahos_42_4.autonomous_global_health_intelligence_early_warning_system import router as ahos_42_4_router
+from backend.app.ahos_42_3.federated_population_health_intelligence_platform import router as ahos_42_3_router
+from backend.app.ahos_42_2.real_world_evidence_analytics_platform import router as ahos_42_2_router
+from backend.app.ahos_41_0_4.router import router as ahos_41_0_4_router
+from backend.app.ahos_28_1.autonomous_enterprise_saas_revenue_operations_core import router as ahos_28_1_router
+from backend.app.ahos_24_0.pharmacy_operations_center import router as pharmacy_operations_router
+from backend.app.ahos_24_0.laboratory_operations_center import router as laboratory_operations_router
+from backend.app.ahos_24_0.radiology_operations_center import router as radiology_operations_router
+from backend.app.ahos_24_0.autonomous_icu_intelligence import router as autonomous_icu_router
+from backend.app.ahos_24_0.emergency_command_center import router as emergency_command_router
+from backend.app.ahos_24_0.autonomous_patient_flow_engine import router as patient_flow_router
+from backend.app.ahos_24_0.live_bed_management import router as live_bed_router
+from backend.app.ahos_24_0.hospital_operations_core import router as hospital_operations_24_router
+from backend.app.ahos_24_0.surgical_operations_center import router as surgical_operations_router
+from backend.app.ahos_24_1.executive_command_center import router as executive_command_24_1_router
+from backend.app.ahos_24_2.financial_operations_center import router as financial_operations_router
+from backend.app.ahos_24_3.supply_chain_intelligence_center import router as supply_chain_router
+from backend.app.ahos_24_4.unified_hospital_digital_twin import router as unified_digital_twin_router
+from backend.app.ahos_24_5.autonomous_hospital_brain import router as hospital_brain_router
+from backend.app.ahos_24_6.unified_executive_command_center import router as unified_executive_router
+from backend.app.ahos_24_8.global_multi_hospital_federation import router as federation_24_8_router
+from backend.app.ahos_24_9.global_digital_twin_command_network import router as digital_twin_24_9_router
+from backend.app.aghos_25_0.aghos_core import router as aghos_core_router
+from backend.app.aghos_25_1.clinical_intelligence_mesh import router as clinical_mesh_router
+from backend.app.ahos_26_1.predictive_intelligence_grid import router as ahos26_1_router
+from backend.app.ahos_26_3.resource_optimization_matrix import router as ahos26_3_router
+from backend.app.ahos_26_4.executive_ai_forecast_center import router as ahos26_4_router
+from backend.app.ahos_26_5.autonomous_multi_hospital_command_grid import router as ahos26_5_router
+from backend.app.ahos_26_7.autonomous_global_medical_operations_center import router as ahos26_7_router
+from backend.app.ahos_26_6.unified_executive_intelligence import router as ahos26_6_router
+from backend.app.ahos_26_2.autonomous_strategy_engine import router as ahos26_2_router
+from backend.app.aghos_25_2.realtime_event_monitoring_center import router as realtime_event_monitor_router
+from backend.app.aghos_25_3.unified_clinical_data_exchange_hub import router as data_exchange_25_3_router
+from backend.app.ahos_22_0.first_pilot_hospital_deployment import router as first_pilot_router
+from backend.app.ahos_22_0.real_multi_tenant_saas import router as real_multi_tenant_router
+from backend.app.ahos_22_0.real_laboratory_database import router as real_laboratory_database_router
+from backend.app.ahos_22_0.real_drug_database import router as real_drug_database_router
+from backend.app.ahos_22_0.real_ohif_viewer_integration import router as real_ohif_viewer_router
+from backend.app.ahos_22_0.real_orthanc_dicom_integration import router as real_orthanc_dicom_router
+from backend.app.ahos_22_0.real_fhir_resource_storage import router as real_fhir_storage_router
+from backend.app.ahos_22_0.real_postgresql_schema import router as real_postgresql_schema_router
+from backend.app.ahos_22_0.real_hospital_deployment_program import router as real_deployment_router
+from backend.app.ahos_21_0.cicd_production_pipeline import router as cicd_router
+from backend.app.ahos_21_0.prometheus_grafana_monitoring import router as monitoring_router
+from backend.app.ahos_21_0.audit_logs_security_events import router as audit_security_router
+from backend.app.ahos_21_0.orthanc_ohif_production_stack import router as orthanc_ohif_router
+from backend.app.ahos_21_0.hapi_fhir_server_bridge import router as hapi_fhir_bridge_router
+from backend.app.ahos_21_0.keycloak_rbac_sso import router as keycloak_rbac_router
+from backend.app.ahos_21_0.docker_production_stack import router as docker_stack_router
+from backend.app.ahos_21_0.postgresql_production_database import router as postgresql_production_router
+from backend.app.ahos_21_0.production_real_implementation import router as real_implementation_router
+from backend.app.ahos_20_0.global_healthcare_platform import router as global_platform_router
+from backend.app.ahos_19_0.global_medical_intelligence_exchange import router as global_medical_exchange_router
+from backend.app.ahos_19_0.national_healthcare_cloud_edition import router as national_cloud_router
+from backend.app.ahos_19_0.enterprise_ai_command_suite import router as enterprise_command_suite_router
+from backend.app.ahos_19_0.enterprise_edition import router as enterprise_edition_router
+from backend.app.ahos_18_3.healthcare_marketplace_ecosystem import router as marketplace_router
+from backend.app.ahos_18_2.global_healthcare_operations_network import router as global_operations_router
+from backend.app.ahos_18_1.customer_success_platform import router as customer_success_router
+from backend.app.ahos_18_0.commercial_production_release import router as production_router
+from backend.app.ahos_17_0.global_launch_program import router as global_launch_router
+from backend.app.ahos_17_0.international_expansion_framework import router as expansion_router
+from backend.app.ahos_17_0.government_healthcare_proposal_pack import router as government_router
+from backend.app.ahos_17_0.enterprise_sales_partnership_kit import router as enterprise_sales_router
+from backend.app.ahos_17_0.investor_pitch_deck_generator import router as investor_pitch_router
+from backend.app.ahos_17_0.investor_enterprise_pack import router as investor_pack_router
+from backend.app.ahos_16_0.pilot_hospital_deployment_pack import router as pilot_deployment_router
+from backend.app.ahos_16_0.clinical_validation_pack import router as clinical_validation_router
+from backend.app.ahos_16_0.saas_multi_tenant_architecture import router as saas_router
+from backend.app.ahos_16_0.pharmacy_production_engine import router as pharmacy_router
+from backend.app.ahos_16_0.lis_laboratory_integration import router as lis_router
+from backend.app.ahos_16_0.pacs_production_bridge import router as pacs_bridge_router
+from backend.app.ahos_16_0.hl7_v2_parser import router as hl7_v2_router
+from backend.app.ahos_16_0.real_fhir_r4_connector import router as real_fhir_r4_router
+from backend.app.ahos_16_0.enterprise_real_execution import router as enterprise_real_execution_router
+from backend.app.ahos_15_0.medical_singularity_command_brain import router as singularity_router
+from backend.app.ahos_15_0.planetary_healthcare_optimization_core import router as planetary_optimization_router
+from backend.app.ahos_15_0.universal_medical_knowledge_engine import router as universal_knowledge_router
+from backend.app.ahos_15_0.autonomous_global_medical_governance import router as global_governance_router
+from backend.app.ahos_15_0.self_evolving_medical_intelligence import router as self_evolving_router
+from backend.app.ahos_14_0.universal_healthcare_intelligence_network import router as universal_network_router
+from backend.app.ahos_14_0.global_medical_digital_twin import router as digital_twin_router
+from backend.app.ahos_14_0.planetary_medical_intelligence_grid import router as intelligence_grid_router
+from backend.app.ahos_14_0.autonomous_medical_civilization import router as medical_civilization_router
+from backend.app.ahos_14_0.global_medical_ai_brain import router as global_ai_brain_router
+from backend.app.ahos_13_0.planetary_healthcare_command_center import router as planetary_command_router
+from backend.app.ahos_13_0.global_clinical_intelligence_exchange import router as clinical_exchange_router
+from backend.app.ahos_13_0.worldwide_disease_surveillance import router as disease_surveillance_router
+from backend.app.ahos_13_0.global_medical_knowledge_graph import router as global_medical_kg_router
+from backend.app.ahos_13_0.global_hospital_federation import router as global_hospital_federation_router
+from backend.app.ahos_12_6.enterprise_deployment import router as enterprise_deployment_router
+from backend.app.ahos_12_5.real_hospital_data_integration import router as real_data_router
+from backend.app.ahos_12_4.clinical_validation_regulatory import router as clinical_validation_router
+from backend.app.ahos_12_3.cybersecurity_compliance_audit import router as security_compliance_router
+from backend.app.ahos_12_2.fhir_hl7_interoperability import router as fhir_hl7_router
+from backend.app.ahos_12_1.production_readiness import router as production_readiness_router
+from backend.app.ahos_12_0.ahos_core import router as ahos_core_router
+from backend.app.ahos_11_5.executive_command_brain import router as executive_command_brain_router
+from backend.app.ahos_11_5.executive_risk_intelligence import router as executive_risk_router
+from backend.app.ahos_11_5.executive_forecast_intelligence import router as executive_forecast_router
+from backend.app.ahos_11_5.strategic_healthcare_decision_engine import router as strategic_router
+from backend.app.ahos_11_5.executive_healthcare_intelligence import router as executive_intelligence_router
+from backend.app.ahos_11_4.radiology_orchestrator import router as radiology_orchestrator_router
+from backend.app.ahos_11_4.laboratory_orchestrator import router as laboratory_orchestrator_router
+from backend.app.ahos_11_4.pharmacy_orchestrator import router as pharmacy_orchestrator_router
+from backend.app.ahos_11_4.icu_orchestrator import router as icu_orchestrator_router
+from backend.app.ahos_11_4.emergency_orchestrator import router as emergency_orchestrator_router
+from backend.app.ahos_11_4.resource_orchestrator import router as resource_orchestrator_router
+from backend.app.ahos_11_4.care_path_orchestrator import router as care_path_router
+from backend.app.ahos_11_4.autonomous_workflow_engine import router as workflow_router
+from backend.app.ahos_11_4.autonomous_hospital_orchestration import router as orchestration_router
+from backend.app.ahos_11_3.global_healthcare_federation_command import router as global_federation_command_router
+from backend.app.ahos_11_3.federated_resource_optimization import router as federated_resource_router
+from backend.app.ahos_11_3.federated_clinical_consensus import router as federated_consensus_router
+from backend.app.ahos_11_3.federated_medical_intelligence import router as federated_medical_router
+from backend.app.ahos_11_3.healthcare_federation_core import router as federation_core_router
+from backend.app.ahos_11_2.national_healthcare_command import router as national_command_router
+from backend.app.ahos_11_2.pandemic_intelligence_engine import router as pandemic_router
+from backend.app.ahos_11_2.population_health_intelligence import router as population_router
+from backend.app.ahos_11_2.regional_healthcare_intelligence import router as regional_intelligence_router
+from backend.app.ahos_11_2.inter_hospital_resource_exchange import router as inter_hospital_router
+from backend.app.ahos_11_1.autonomous_resource_optimizer import router as resource_optimizer_router
+from backend.app.ahos_11_1.hospital_capacity_predictor import router as capacity_router
+from backend.app.ahos_11_1.resource_forecast_engine import router as resource_forecast_router
+from backend.app.medical_command_brain.medical_command_brain_110 import router as medical_command_brain_110_router
+from backend.app.outcome_prediction_105 import router as outcome_prediction_105_router
+from backend.app.care_plan_104 import router as care_plan_104_router
+from backend.app.clinical_reasoning_103 import router as clinical_reasoning_103_router
+from backend.app.clinical_story_102 import router as clinical_story_102_router
+from backend.app.clinical_timeline_101 import router as clinical_timeline_101_router
+from backend.app.real_data_integration_1007 import router as real_data_integration_1007_router
+from backend.app.hospital_command_center.hospital_command_center import router as hospital_command_router
+from backend.app.icu_decision_engine.icu_decision_engine import router as icu_decision_router
+from backend.app.patient_monitoring.patient_monitoring_engine import router as patient_monitoring_router
+from backend.app.workflow_orchestrator.clinical_workflow_orchestrator import router as clinical_workflow_orchestrator_router
+from backend.app.treatment_planning.treatment_planning_engine import router as treatment_planning_router
+from backend.app.medical_intelligence.knowledge_graph_engine import router as knowledge_graph_router
+from backend.app.medical_intelligence.multi_agent_reasoning_engine import router as multi_agent_reasoning_router
+from backend.app.superintelligence.superintelligence_engine import router as superintelligence_router
+from backend.app.medical_intelligence.medical_intelligence_engine import router as medical_intelligence_router
+from backend.app.medical_intelligence.diagnostic_consensus_engine import router as diagnostic_consensus_router
+from backend.app.medical_intelligence.real_clinical_case_simulator import router as real_case_simulator_router
+from backend.app.neural_civilization.neural_civilization_engine import router as neural_civilization_router
+from backend.app.global_mesh.global_mesh_engine import router as global_mesh_router
+from backend.app.metaverse.metaverse_engine import router as metaverse_router
+from backend.app.surgical_brain.surgical_brain_engine import router as surgical_brain_router
+from backend.app.cognitive_grid.cognitive_engine import router as cognitive_router
+from backend.app.ai_ultrasound.monai_stream import router as monai_stream_router
+from backend.app.ws.clinical_ws import router as clinical_ws_router
+from backend.app.api.ai_ultrasound_x_66 import router as ai_ultrasound_x_66_router
+from backend.app.api.ai_ultrasound_x_65 import router as ai_ultrasound_x_65_router
+from backend.app.api.ai_ultrasound_x_64 import router as ai_ultrasound_x_64_router
+from backend.app.api.ai_ultrasound_x_63 import router as ai_ultrasound_x_63_router
+from backend.app.api.ai_ultrasound_x_62 import router as ai_ultrasound_x_62_router
+import backend.app.api.ai_ultrasound_inference as ai_ultrasound_inference
+import backend.app.api.ai_ultrasound_dicom as ai_ultrasound_dicom
+import backend.app.api.ai_ultrasound_pdf as ai_ultrasound_pdf
+from backend.app.ai_ultrasound_x.routes import router as ai_ultrasound_x_router
+from backend.app.api import ai_ultrasound_reports
+from backend.app.api.ultrasound_ai import router as ultrasound_ai_router
+from backend.app.api.ai_engine import router as ai_engine_router
+
+from backend.app.api.radiology_upload import router as radiology_upload_router
+from .security_compat import login_with_env, get_current_user
 from .routers.patients import router as patients_router
 from .routers.doctors import router as doctors_router
 from .routers.appointments import router as appointments_router
@@ -17,12 +260,24 @@ from urllib.request import urlopen, Request
 import json
 from urllib.request import urlopen
 from urllib.error import URLError, HTTPError
+from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi.responses import JSONResponse
+
 from fastapi import (
     Depends,
     FastAPI,
     WebSocket,
     WebSocketDisconnect,
     Request as FastAPIRequest,
+)
+from .route_security_registry import classify
+from .route_security_policy_generated import classify_generated
+from .route_security_policy_approved import classify_approved
+from .shadow_decision_logging import (
+    get_recent_shadow_decisions,
+    get_shadow_metrics,
+    record_shadow_decision,
 )
 from .services.ai_engine import ask_ai
 from fastapi import Depends, HTTPException, Query
@@ -34,7 +289,124 @@ from pydantic import BaseModel
 from .api.clinical_route import router as clinical_route_router
 from .api.clinical_orders import router as clinical_orders_router
 
+from backend.app.resource_allocation.resource_allocation_engine import router as resource_allocation_router
+from backend.app.hospital_digital_twin.digital_twin_engine import router as digital_twin_router
+from backend.app.autonomous_healthcare_os.autonomous_healthcare_os import router as ahos_router
+from backend.app.autonomous_healthcare_os.cross_engine_bus import router as cross_engine_bus_router
+from backend.app.autonomous_healthcare_os.autonomous_decision_supervisor import router as autonomous_decision_supervisor_router
+from backend.app.autonomous_healthcare_os.global_patient_state_engine import router as global_patient_state_router
 app = FastAPI(title="AI Hospital Alliance API", version="1.0.0")
+
+app.add_middleware(AuditMiddleware)
+
+
+
+PUBLIC_PATHS = {
+    "/api/ophthalmology/phase-25/dashboard-card",
+    "/health",
+    "/docs",
+    "/openapi.json",
+    "/redoc",
+}
+
+class GlobalAuthenticationMiddleware(BaseHTTPMiddleware):
+
+    async def dispatch(self, request, call_next):
+
+        path = request.url.path
+
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
+
+        route_class = classify(path)
+        audit_class = classify_generated(path)
+
+        request.state.route_class = route_class
+        request.state.audit_class = audit_class
+
+        shadow_policy_class = classify_approved(path)
+        request.state.shadow_policy_class = shadow_policy_class
+
+        request.state.shadow_policy_match = (
+            shadow_policy_class == audit_class
+        )
+
+        request.state.shadow_decision = {
+            "runtime": audit_class,
+            "approved": shadow_policy_class,
+            "match": shadow_policy_class == audit_class
+        }
+
+        record_shadow_decision(
+            path=path,
+            method=request.method,
+            runtime_classification=audit_class,
+            approved_classification=(
+                shadow_policy_class
+            ),
+        )
+
+
+
+        if route_class == "PUBLIC":
+            return await call_next(request)
+
+        if path in PUBLIC_PATHS:
+            return await call_next(request)
+
+        if path.startswith("/static"):
+            return await call_next(request)
+
+        if path.startswith("/public"):
+            return await call_next(request)
+
+        auth = request.headers.get("Authorization","")
+
+        if not auth.startswith("Bearer "):
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "detail":"Authentication required"
+                }
+            )
+
+        return await call_next(request)
+
+
+app.add_middleware(GlobalAuthenticationMiddleware)
+
+app.include_router(ahos_28_1_router)
+app.include_router(resource_allocation_router)
+app.include_router(real_data_integration_1007_router)
+app.include_router(digital_twin_router)
+app.include_router(ahos_router)
+app.include_router(cross_engine_bus_router)
+app.include_router(autonomous_decision_supervisor_router)
+app.include_router(global_patient_state_router)
+app.include_router(hospital_command_router)
+app.include_router(icu_decision_router)
+app.include_router(patient_monitoring_router)
+app.include_router(clinical_workflow_orchestrator_router)
+app.include_router(treatment_planning_router)
+app.include_router(superintelligence_router)
+app.include_router(medical_intelligence_router)
+app.include_router(diagnostic_consensus_router)
+app.include_router(real_case_simulator_router)
+app.include_router(neural_civilization_router)
+app.include_router(global_mesh_router)
+app.include_router(metaverse_router)
+app.include_router(surgical_brain_router)
+app.include_router(cognitive_router)
+app.include_router(monai_stream_router)
+app.include_router(clinical_ws_router)
+app.include_router(ai_ultrasound_x_66_router)
+app.include_router(ai_ultrasound_x_65_router)
+app.include_router(ai_ultrasound_x_64_router)
+app.include_router(ai_ultrasound_x_63_router)
+app.include_router(ai_ultrasound_x_router)
+
+app.include_router(ai_engine_router)
 
 
 @app.on_event("startup")
@@ -803,16 +1175,27 @@ def root():
 def login(payload: dict, db=None):
     username = payload.get("username", "")
     password = payload.get("password", "")
-    # Try env admin first (backward compat)
+
     token = login_with_env(username, password)
+
     if token:
-        return token
+        return {
+            "access_token": token,
+            "token_type": "bearer",
+            "role": "Admin",
+            "username": username,
+            "user": {
+                "username": username,
+                "role": "Admin"
+            }
+        }
+
     return {"detail": "Invalid credentials"}
 
 @app.post("/auth/db-login")
 def db_login(payload: dict):
     from .tenant_isolation import SessionLocal
-    from .security_jwt import login_with_db
+    from .security_compat import login_with_db
     db = SessionLocal()
     try:
         email = payload.get("email", "")
@@ -1783,12 +2166,12 @@ def analyze_drug_interactions(payload: DrugInteractionRequest):
     return result
 
 
-@app.get("/mar/{patient_id}")
+# AHOS-R13C17E disabled secondary route: @app.get("/mar/{patient_id}")
 def get_mar(patient_id: str):
     return SERVICES["mar"].list_items(patient_id)
 
 
-@app.post("/mar/{patient_id}")
+# AHOS-R13C17E disabled secondary route: @app.post("/mar/{patient_id}")
 def create_mar_item(patient_id: str, payload: MARItemRequest):
     return SERVICES["mar"].create_item(
         patient_id,
@@ -1802,7 +2185,7 @@ def create_mar_item(patient_id: str, payload: MARItemRequest):
     )
 
 
-@app.put("/mar/{patient_id}/{item_id}")
+# AHOS-R13C17E disabled secondary route: @app.put("/mar/{patient_id}/{item_id}")
 def update_mar_item(patient_id: str, item_id: int, payload: MARUpdateRequest):
     items = MAR.get(patient_id, [])
     for item in items:
@@ -1822,7 +2205,7 @@ class PharmacistReviewRequest(BaseModel):
     note: str | None = ""
 
 
-@app.put("/mar/{patient_id}/{item_id}/pharmacist-review")
+# AHOS-R13C17E disabled secondary route: @app.put("/mar/{patient_id}/{item_id}/pharmacist-review")
 def pharmacist_review_mar_item(
     patient_id: str, item_id: int, payload: PharmacistReviewRequest
 ):
@@ -1836,7 +2219,7 @@ def pharmacist_review_mar_item(
     raise HTTPException(status_code=404, detail="MAR item not found")
 
 
-@app.put("/mar/{patient_id}/{item_id}/status")
+# AHOS-R13C17E disabled secondary route: @app.put("/mar/{patient_id}/{item_id}/status")
 def update_mar_item_status(patient_id: str, item_id: int, payload: MARStatusRequest):
     items = MAR.get(patient_id, [])
     for item in items:
@@ -1847,7 +2230,7 @@ def update_mar_item_status(patient_id: str, item_id: int, payload: MARStatusRequ
     raise HTTPException(status_code=404, detail="MAR item not found")
 
 
-@app.get("/drug-intel/search")
+# AHOS-R13C17E disabled secondary route: @app.get("/drug-intel/search")
 def drug_intel_search(q: str = Query(..., min_length=2)):
     encoded = urllib.parse.quote(q)
     rxnorm_url = f"https://rxnav.nlm.nih.gov/REST/drugs.json?name={encoded}"
@@ -1881,7 +2264,7 @@ def drug_intel_search(q: str = Query(..., min_length=2)):
     }
 
 
-@app.get("/drug-intel/dailymed")
+# AHOS-R13C17E disabled secondary route: @app.get("/drug-intel/dailymed")
 def drug_intel_dailymed(name: str = Query(..., min_length=2)):
     encoded = urllib.parse.quote(name)
     dailymed_url = f"https://dailymed.nlm.nih.gov/dailymed/services/v2/spls.json?drug_name={encoded}"
@@ -1897,7 +2280,7 @@ def drug_intel_dailymed(name: str = Query(..., min_length=2)):
         raise HTTPException(status_code=502, detail=f"DailyMed fetch failed: {exc}")
 
 
-@app.delete("/mar/{patient_id}/{item_id}")
+# AHOS-R13C17E disabled secondary route: @app.delete("/mar/{patient_id}/{item_id}")
 def delete_mar_item(patient_id: str, item_id: int):
     items = MAR.get(patient_id, [])
     for index, item in enumerate(items):
@@ -2552,9 +2935,11 @@ async def groq_chat(req: FastAPIRequest):
         "pharmacy": "You are an expert AI clinical pharmacist (FDA/USP).",
     }
     lang_suffix = {
-        "ar": "\n\nأجب باللغة العربية.",
-        "fr": "\n\nRépondez en français.",
         "en": "",
+        "ar": "",
+        "fr": "",
+        "it": "",
+        "sv": "",
     }
     system = prompts.get(mode, prompts["default"]) + lang_suffix.get(language, "")
 
@@ -2594,8 +2979,8 @@ async def groq_chat(req: FastAPIRequest):
 
 
 # ── FHIR R4 Endpoints ─────────────────────────────────────────────────────────
-from .fhir import patient_to_fhir, observation_to_fhir, bundle_response
-from .security import (
+from .fhir import patient_to_fhir, observation_to_fhir, medication_request_to_fhir, bundle_response
+from .legacy_security import (
     create_access_token,
     create_refresh_token,
     verify_refresh_token,
@@ -2633,6 +3018,108 @@ def fhir_observations(patient: str = None, db: Session = Depends(get_db)):
         q = q.filter(NursingVital.patient_id == patient)
     vitals = q.all()
     resources = [observation_to_fhir(v, v.patient_id) for v in vitals]
+    return bundle_response(resources)
+
+
+
+
+
+
+@app.get("/fhir/R4/MedicationRequest", response_model=None)
+def fhir_medication_requests(db: Session = Depends(get_db)):
+
+    rows = db.execute(text("""
+
+        SELECT
+            id,
+            patient_id,
+            drug_name,
+            generic_name,
+            dose,
+            route,
+            frequency,
+            duration_days,
+            quantity,
+            is_active,
+            created_at
+
+        FROM medication_orders_simple
+
+        ORDER BY id DESC
+        LIMIT 50
+
+    """)).mappings().all()
+
+    resources = []
+
+    for r in rows:
+
+        resources.append({
+
+            "resourceType": "MedicationRequest",
+
+            "id": str(r["id"]),
+
+            "status": (
+                "active"
+                if r["is_active"]
+                else "stopped"
+            ),
+
+            "intent": "order",
+
+            "subject": {
+                "reference": (
+                    f'Patient/{r["patient_id"]}'
+                )
+            },
+
+            "authoredOn": (
+                r["created_at"].isoformat() + "Z"
+                if r["created_at"]
+                else None
+            ),
+
+            "medicationCodeableConcept": {
+                "text": r["drug_name"],
+
+                "coding": [
+                    {
+                        "system": (
+                            "http://www.nlm.nih.gov/"
+                            "research/umls/rxnorm"
+                        ),
+
+                        "display": (
+                            r["generic_name"]
+                            or r["drug_name"]
+                        ),
+                    }
+                ],
+            },
+
+            "dosageInstruction": [
+                {
+                    "text": (
+                        f'{r["dose"]} '
+                        f'{r["route"]} '
+                        f'{r["frequency"]}'
+                    )
+                }
+            ],
+
+            "dispenseRequest": {
+                "quantity": {
+                    "value": r["quantity"]
+                },
+
+                "expectedSupplyDuration": {
+                    "value": r["duration_days"],
+                    "unit": "days",
+                },
+            },
+        })
+
     return bundle_response(resources)
 
 
@@ -2866,3 +3353,1558 @@ def _require_super_admin():
     # For now just check env var is set; real impl checks JWT
     if not sa_key:
         raise HTTPException(503, "Super-admin key not configured")
+
+# ===== AI Clinical Router =====
+try:
+    from backend.app.api.ai_clinical import router as ai_clinical_router
+except Exception:
+    from backend.app.api.ai_clinical import router as ai_clinical_router
+
+app.include_router(ai_clinical_router)
+
+# ===== Medical Standards Router =====
+try:
+    from backend.app.api.medical_standards import router as medical_standards_router
+except Exception:
+    from backend.app.api.medical_standards import router as medical_standards_router
+
+app.include_router(medical_standards_router)
+
+# ===== Smart Pharmacy Module Router =====
+try:
+    from backend.app.api.smart_pharmacy_module import router as smart_pharmacy_module_router
+except Exception:
+    from backend.app.api.smart_pharmacy_module import router as smart_pharmacy_module_router
+
+app.include_router(smart_pharmacy_module_router)
+
+# ===== Smart Pharmacy Real Engine Router =====
+try:
+    from backend.app.api.smart_pharmacy_real import router as smart_pharmacy_real_router
+except Exception:
+    from backend.app.api.smart_pharmacy_real import router as smart_pharmacy_real_router
+
+app.include_router(smart_pharmacy_real_router)
+
+# ===== Clinical AI Pipeline Router =====
+try:
+    from backend.app.api.clinical_ai_pipeline import router as clinical_ai_pipeline_router
+except Exception:
+    from backend.app.api.clinical_ai_pipeline import router as clinical_ai_pipeline_router
+
+app.include_router(clinical_ai_pipeline_router)
+
+# ===== Production Clinical AI Engines =====
+try:
+    from backend.app.engines.clinical_drug_profile import router as clinical_drug_router
+    from backend.app.engines.multi_drug_interactions import router as multi_drug_router
+    from backend.app.engines.dose_safety_ai import router as dose_safety_router
+    from backend.app.engines.audit_trail import router as audit_router
+except Exception:
+    from backend.app.engines.clinical_drug_profile import router as clinical_drug_router
+    from backend.app.engines.multi_drug_interactions import router as multi_drug_router
+    from backend.app.engines.dose_safety_ai import router as dose_safety_router
+    from backend.app.engines.audit_trail import router as audit_router
+
+app.include_router(clinical_drug_router)
+app.include_router(multi_drug_router)
+app.include_router(dose_safety_router)
+app.include_router(audit_router)
+
+# ===== Real Patient Data Layer Router =====
+try:
+    from backend.app.api.real_patient_layer import router as real_patient_layer_router
+except Exception:
+    from backend.app.api.real_patient_layer import router as real_patient_layer_router
+
+app.include_router(real_patient_layer_router)
+
+# ===== Clinical Database v1 Router =====
+try:
+    from backend.app.api.clinical_db_v1 import router as clinical_db_v1_router
+except Exception:
+    from backend.app.api.clinical_db_v1 import router as clinical_db_v1_router
+
+app.include_router(clinical_db_v1_router)
+
+# ===== Clinical Lifecycle v1 Router =====
+try:
+    from backend.app.api.clinical_lifecycle_v1 import router as clinical_lifecycle_v1_router
+except Exception:
+    from backend.app.api.clinical_lifecycle_v1 import router as clinical_lifecycle_v1_router
+
+app.include_router(clinical_lifecycle_v1_router)
+
+# ===== Clinical Timeline v1 Router =====
+try:
+    from backend.app.api.clinical_timeline_v1 import router as clinical_timeline_v1_router
+except Exception:
+    from backend.app.api.clinical_timeline_v1 import router as clinical_timeline_v1_router
+
+app.include_router(clinical_timeline_v1_router)
+
+# ===== AI Longitudinal Patient Memory Router =====
+try:
+    from backend.app.api.patient_memory_v1 import router as patient_memory_v1_router
+except Exception:
+    from backend.app.api.patient_memory_v1 import router as patient_memory_v1_router
+
+app.include_router(patient_memory_v1_router)
+
+# =========================================================
+# ENTERPRISE CLINICAL SYSTEM
+# =========================================================
+
+try:
+    from backend.app.api.auth_enterprise import router as auth_enterprise_router
+    from backend.app.api.mar_engine import router as mar_engine_router
+    from backend.app.api.risk_engine import router as risk_engine_router
+    from backend.app.api.realtime_events import router as realtime_events_router
+except Exception:
+    from backend.app.api.auth_enterprise import router as auth_enterprise_router
+    from backend.app.api.mar_engine import router as mar_engine_router
+    from backend.app.api.risk_engine import router as risk_engine_router
+    from backend.app.api.realtime_events import router as realtime_events_router
+
+app.include_router(auth_enterprise_router)
+app.include_router(mar_engine_router)
+app.include_router(risk_engine_router)
+app.include_router(realtime_events_router)
+
+
+# ===== Enterprise Live Clinical Operations Routers =====
+try:
+    from backend.app.api.enterprise_notifications import router as enterprise_notifications_router
+    from backend.app.api.enterprise_dashboard import router as enterprise_dashboard_router
+    from backend.app.api.enterprise_rbac import router as enterprise_rbac_router
+    from backend.app.api.clinical_copilot import router as clinical_copilot_router
+except Exception:
+    from backend.app.api.enterprise_notifications import router as enterprise_notifications_router
+    from backend.app.api.enterprise_dashboard import router as enterprise_dashboard_router
+    from backend.app.api.enterprise_rbac import router as enterprise_rbac_router
+    from backend.app.api.clinical_copilot import router as clinical_copilot_router
+
+app.include_router(enterprise_notifications_router)
+app.include_router(enterprise_dashboard_router)
+app.include_router(enterprise_rbac_router)
+app.include_router(clinical_copilot_router)
+
+app.include_router(radiology_upload_router)
+
+@app.post("/auth/dev-login")
+def dev_login(payload: dict):
+    if os.getenv("APP_ENV", "").strip().lower() not in {"dev", "development", "local", "test"}:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    username = payload.get("username", "admin")
+
+    token = create_access_token({
+        "sub": "00000000-0000-0000-0000-000000000001",
+        "tenant_id": "00000000-0000-0000-0000-000000000100",
+        "role": "tenant_admin",
+        "email": f"{username}@aiha.local",
+        "username": username
+    })
+
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": {
+            "username": username,
+            "role": "Admin"
+        }
+    }
+
+app.include_router(ultrasound_ai_router)
+
+app.include_router(ai_ultrasound_reports.router)
+
+app.include_router(ai_ultrasound_pdf.router)
+
+app.include_router(ai_ultrasound_dicom.router)
+
+app.mount("/generated_inference", StaticFiles(directory="generated_inference"), name="generated_inference")
+
+app.include_router(ai_ultrasound_inference.router)
+
+# AI Ultrasound X 6.2
+app.include_router(ai_ultrasound_x_62_router)
+app.include_router(multi_agent_reasoning_router)
+app.include_router(knowledge_graph_router)
+
+from backend.app.autonomous_healthcare_os.predictive_hospital_operations import router as predictive_hospital_operations_router
+
+app.include_router(predictive_hospital_operations_router)
+
+from backend.app.autonomous_healthcare_os.medical_memory_engine import router as medical_memory_router
+
+app.include_router(medical_memory_router)
+
+from backend.app.autonomous_healthcare_os.self_learning_outcome_engine import router as self_learning_router
+
+app.include_router(self_learning_router)
+
+from backend.app.autonomous_healthcare_os.hospital_intelligence_mesh import router as hospital_intelligence_mesh_router
+
+app.include_router(hospital_intelligence_mesh_router)
+
+from backend.app.autonomous_healthcare_os.ahos_complete_core import router as ahos_complete_router
+
+app.include_router(ahos_complete_router)
+
+from backend.app.database.ahos_database_api import router as ahos_database_router
+
+app.include_router(ahos_database_router)
+
+from backend.app.database.ahos_events_api import router as ahos_events_router
+
+app.include_router(ahos_events_router)
+
+from backend.app.database.gmin_dashboard_api import router as gmin_dashboard_router
+
+app.include_router(gmin_dashboard_router)
+
+from backend.app.gmin_live.live_operations_center import router as gmin_live_operations_router
+
+app.include_router(gmin_live_operations_router)
+
+
+from backend.app.gmin_realtime.realtime_command_center import router as gmin_realtime_router
+
+
+app.include_router(gmin_realtime_router)
+
+from backend.app.gmin_realtime.realtime_intelligence_layer import router as gmin_realtime_intelligence_router
+
+app.include_router(gmin_realtime_intelligence_router)
+
+from backend.app.global_digital_twin.global_digital_twin_network import router as global_digital_twin_router
+
+app.include_router(global_digital_twin_router)
+
+app.include_router(clinical_timeline_101_router)
+
+app.include_router(clinical_story_102_router)
+
+app.include_router(clinical_reasoning_103_router)
+
+app.include_router(care_plan_104_router)
+
+app.include_router(outcome_prediction_105_router)
+
+app.include_router(medical_command_brain_110_router)
+
+# AHOS 11.1.1 Resource Forecast Engine
+app.include_router(resource_forecast_router)
+
+# AHOS 11.1.2 Hospital Capacity Predictor
+app.include_router(capacity_router)
+
+# AHOS 11.1.3 Autonomous Resource Optimizer
+app.include_router(resource_optimizer_router)
+
+# AHOS 11.2.1
+app.include_router(inter_hospital_router)
+
+# AHOS 11.2.2 Regional Healthcare Intelligence
+app.include_router(regional_intelligence_router)
+
+# AHOS 11.2.3 Population Health Intelligence
+app.include_router(population_router)
+
+# AHOS 11.2.4 Pandemic Intelligence Engine
+app.include_router(pandemic_router)
+
+# AHOS 11.2.5 National Healthcare Command
+app.include_router(national_command_router)
+
+# AHOS 11.3.1 Healthcare Federation Core
+app.include_router(federation_core_router)
+
+# AHOS 11.3.2 Federated Medical Intelligence
+app.include_router(federated_medical_router)
+
+# AHOS 11.3.3 Federated Clinical Consensus
+app.include_router(federated_consensus_router)
+
+# AHOS 11.3.4 Federated Resource Optimization
+app.include_router(federated_resource_router)
+
+# AHOS 11.3.5 Global Healthcare Federation Command
+app.include_router(global_federation_command_router)
+
+# AHOS 11.4.1 Autonomous Hospital Orchestration Core
+app.include_router(orchestration_router)
+
+# AHOS 11.4.2 Autonomous Workflow Engine
+app.include_router(workflow_router)
+
+# AHOS 11.4.3 Care Path Orchestrator
+app.include_router(care_path_router)
+
+# AHOS 11.4.4 Resource Orchestrator
+app.include_router(resource_orchestrator_router)
+
+# AHOS 11.4.5 Emergency Orchestrator
+app.include_router(emergency_orchestrator_router)
+
+# AHOS 11.4.6 ICU Orchestrator
+app.include_router(icu_orchestrator_router)
+
+# AHOS 11.4.7 Pharmacy Orchestrator
+app.include_router(pharmacy_orchestrator_router)
+
+# AHOS 11.4.8 Laboratory Orchestrator
+app.include_router(laboratory_orchestrator_router)
+
+# AHOS 11.4.9 Radiology Orchestrator
+app.include_router(radiology_orchestrator_router)
+
+# AHOS 11.5.1 Executive Healthcare Intelligence
+app.include_router(executive_intelligence_router)
+
+# AHOS 11.5.2
+app.include_router(strategic_router)
+
+# AHOS 11.5.3 Executive Forecast Intelligence
+app.include_router(executive_forecast_router)
+
+# AHOS 11.5.4 Executive Risk Intelligence
+app.include_router(executive_risk_router)
+
+# AHOS 11.5.5 Executive Command Brain
+app.include_router(executive_command_brain_router)
+
+# AHOS 12.0 Autonomous Healthcare Operating System
+app.include_router(ahos_core_router)
+
+# AHOS 12.1 Production Readiness & Enterprise Integration
+app.include_router(production_readiness_router)
+
+# AHOS 12.2 FHIR HL7 Enterprise Interoperability Layer
+app.include_router(fhir_hl7_router)
+
+# AHOS 12.3 Cybersecurity Compliance & Audit Hardening
+app.include_router(security_compliance_router)
+
+# AHOS 12.4 Clinical Validation & Regulatory Readiness
+app.include_router(clinical_validation_router)
+
+# AHOS 12.5 Real Hospital Data Integration Layer
+app.include_router(real_data_router)
+
+# AHOS 12.6 Enterprise Deployment
+app.include_router(enterprise_deployment_router)
+
+# AHOS 13.0.1 Global Hospital Federation
+app.include_router(global_hospital_federation_router)
+
+# AHOS 13.0.2 Global Medical Knowledge Graph
+app.include_router(global_medical_kg_router)
+
+# AHOS 13.0.3 Worldwide Disease Surveillance
+app.include_router(disease_surveillance_router)
+
+# AHOS 13.0.4 Global Clinical Intelligence Exchange
+app.include_router(clinical_exchange_router)
+
+# AHOS 13.0.5 Planetary Healthcare Command Center
+app.include_router(planetary_command_router)
+
+# AHOS 14.0.1 Global Medical AI Brain
+app.include_router(global_ai_brain_router)
+
+# AHOS 14.0.2 Autonomous Medical Civilization Layer
+app.include_router(medical_civilization_router)
+
+# AHOS 14.0.3 Planetary Medical Intelligence Grid
+app.include_router(intelligence_grid_router)
+
+# AHOS 14.0.5 Universal Healthcare Intelligence Network
+app.include_router(universal_network_router)
+
+# AHOS 15.0.1 Self-Evolving Medical Intelligence
+app.include_router(self_evolving_router)
+
+# AHOS 15.0.2 Autonomous Global Medical Governance
+app.include_router(global_governance_router)
+
+# AHOS 15.0.3 Universal Medical Knowledge Engine
+app.include_router(universal_knowledge_router)
+
+# AHOS 15.0.4 Planetary Healthcare Optimization Core
+app.include_router(planetary_optimization_router)
+
+# AHOS 15.0.5 Medical Singularity Command Brain
+app.include_router(singularity_router)
+
+# AHOS 16.0 Enterprise Real Execution
+app.include_router(enterprise_real_execution_router)
+
+# AHOS 16.0.1 Real FHIR R4 Connector
+app.include_router(real_fhir_r4_router)
+
+# AHOS 16.0.2 HL7 v2 Parser
+app.include_router(hl7_v2_router)
+
+# AHOS 16.0.3 Orthanc OHIF PACS Production Bridge
+app.include_router(pacs_bridge_router)
+
+# AHOS 16.0.4 LIS Laboratory Integration
+app.include_router(lis_router)
+
+# AHOS 16.0.6 SaaS Multi-Tenant Architecture
+app.include_router(saas_router)
+
+# AHOS 16.0.8 Pilot Hospital Deployment Pack
+app.include_router(pilot_deployment_router)
+
+# AHOS 17.0 Investor & Enterprise Presentation Pack
+app.include_router(investor_pack_router)
+
+# AHOS 17.1 Investor Pitch Deck Generator
+app.include_router(investor_pitch_router)
+
+# AHOS 17.2 Enterprise Sales & Partnership Kit
+app.include_router(enterprise_sales_router)
+
+# AHOS 17.3 Government Healthcare Proposal Pack
+app.include_router(government_router)
+
+# AHOS 17.4 International Expansion Framework
+app.include_router(expansion_router)
+
+# AHOS 17.5 Global Launch Program
+app.include_router(global_launch_router)
+
+# AHOS 18.0 Commercial Production Release
+app.include_router(production_router)
+
+# AHOS 18.1 Enterprise Customer Success Platform
+app.include_router(customer_success_router)
+
+# AHOS 18.2 Global Healthcare Operations Network
+app.include_router(global_operations_router)
+
+# AHOS 18.3 Healthcare Marketplace Ecosystem
+app.include_router(marketplace_router)
+
+# AHOS 19.0 Enterprise Edition
+app.include_router(enterprise_edition_router)
+
+# AHOS 19.1 Enterprise AI Command Suite
+app.include_router(enterprise_command_suite_router)
+
+# AHOS 19.2 National Healthcare Cloud Edition
+app.include_router(national_cloud_router)
+
+# AHOS 19.3 Global Medical Intelligence Exchange
+app.include_router(global_medical_exchange_router)
+
+# AHOS 20.0 Global Healthcare Platform
+app.include_router(global_platform_router)
+
+# AHOS 21.0 Production Real Implementation
+app.include_router(real_implementation_router)
+
+# AHOS 21.0.1 PostgreSQL Production Database
+app.include_router(postgresql_production_router)
+
+# AHOS 21.0.2 Docker Production Stack
+app.include_router(docker_stack_router)
+
+# AHOS 21.0.3 Keycloak RBAC SSO
+app.include_router(keycloak_rbac_router)
+
+# AHOS 21.0.4 HAPI FHIR Server Bridge
+app.include_router(hapi_fhir_bridge_router)
+
+# AHOS 21.0.5 Orthanc OHIF Production Stack
+app.include_router(orthanc_ohif_router)
+
+# AHOS 21.0.6 Audit Logs & Security Events
+app.include_router(audit_security_router)
+
+# AHOS 21.0.7 Prometheus Grafana Monitoring
+app.include_router(monitoring_router)
+
+# AHOS 21.0.8 CI/CD Production Pipeline
+app.include_router(cicd_router)
+
+# AHOS 22.0 Real Hospital Deployment Program
+app.include_router(real_deployment_router)
+
+# AHOS 22.0.1 Real PostgreSQL Schema
+app.include_router(real_postgresql_schema_router)
+
+# AHOS 22.0.2 Real FHIR Resource Storage
+app.include_router(real_fhir_storage_router)
+
+# AHOS 22.0.3 Real Orthanc DICOM Integration
+app.include_router(real_orthanc_dicom_router)
+
+# AHOS 22.0.4 Real OHIF Viewer Integration
+app.include_router(real_ohif_viewer_router)
+
+# AHOS 22.0.5 Real Drug Database
+app.include_router(real_drug_database_router)
+
+# AHOS 22.0.6 Real Laboratory Database
+app.include_router(real_laboratory_database_router)
+
+# AHOS 22.0.7 Real Multi-Tenant SaaS
+app.include_router(real_multi_tenant_router)
+
+# AHOS 22.0.8 First Pilot Hospital Deployment
+app.include_router(first_pilot_router)
+
+# AI Hospital Alliance 24.0.1 Hospital Operations Core
+app.include_router(hospital_operations_24_router)
+app.include_router(live_bed_router)
+app.include_router(patient_flow_router)
+app.include_router(emergency_command_router)
+app.include_router(autonomous_icu_router)
+
+app.include_router(radiology_operations_router)
+
+app.include_router(laboratory_operations_router)
+
+app.include_router(pharmacy_operations_router)
+
+app.include_router(surgical_operations_router)
+
+app.include_router(executive_command_24_1_router)
+
+app.include_router(financial_operations_router)
+
+app.include_router(supply_chain_router)
+app.include_router(unified_digital_twin_router)
+app.include_router(hospital_brain_router)
+app.include_router(unified_executive_router)
+app.include_router(federation_24_8_router)
+app.include_router(digital_twin_24_9_router)
+app.include_router(aghos_core_router)
+app.include_router(clinical_mesh_router)
+app.include_router(realtime_event_monitor_router)
+app.include_router(data_exchange_25_3_router)
+app.include_router(ahos26_1_router)
+app.include_router(ahos26_2_router)
+app.include_router(ahos26_3_router)
+app.include_router(ahos26_4_router)
+app.include_router(ahos26_5_router)
+app.include_router(ahos26_6_router)
+app.include_router(ahos26_7_router)
+
+from backend.app.ahos_26_8.global_healthcare_ai_federation_core import router as ahos_26_8_router
+app.include_router(ahos_26_8_router)
+
+from backend.app.ahos_26_9.autonomous_healthcare_civilization_layer import router as ahos_26_9_router
+app.include_router(ahos_26_9_router)
+
+from backend.app.ahos_27_0.agi_healthcare_command_nexus import router as ahos_27_0_router
+app.include_router(ahos_27_0_router)
+
+from backend.app.ahos_27_1.autonomous_agi_medical_governance_core import router as ahos_27_1_router
+app.include_router(ahos_27_1_router)
+
+from backend.app.ahos_27_2.autonomous_clinical_safety_compliance_nexus import router as ahos_27_2_router
+app.include_router(ahos_27_2_router)
+
+from backend.app.ahos_27_3.autonomous_medical_device_certification_engine import router as ahos_27_3_router
+app.include_router(ahos_27_3_router)
+
+from backend.app.ahos_27_4.autonomous_clinical_validation_evidence_engine import router as ahos_27_4_router
+app.include_router(ahos_27_4_router)
+
+from backend.app.ahos_27_5.autonomous_real_world_evidence_post_market_surveillance_core import router as ahos_27_5_router
+app.include_router(ahos_27_5_router)
+
+from backend.app.ahos_27_6.autonomous_global_clinical_risk_intelligence_core import router as ahos_27_6_router
+app.include_router(ahos_27_6_router)
+
+from backend.app.ahos_27_7.autonomous_global_clinical_governance_risk_board import router as ahos_27_7_router
+app.include_router(ahos_27_7_router)
+
+from backend.app.ahos_27_8.autonomous_global_clinical_deployment_readiness_engine import router as ahos_27_8_router
+app.include_router(ahos_27_8_router)
+
+from backend.app.ahos_27_9.autonomous_global_hospital_pilot_launch_core import router as ahos_27_9_router
+app.include_router(ahos_27_9_router)
+
+from backend.app.ahos_28_0.autonomous_global_healthcare_enterprise_launch_platform import router as ahos_28_0_router
+app.include_router(ahos_28_0_router)
+
+from backend.app.ahos_28_1.router import router as ahos_28_1_router
+
+
+
+
+from backend.app.ahos_28_3.router import router as ahos_28_3_router
+app.include_router(ahos_28_3_router)
+
+
+from backend.app.ahos_28_4.router import router as ahos_28_4_router
+app.include_router(ahos_28_4_router)
+
+
+from backend.app.ahos_28_6.router import router as ahos_28_6_router
+app.include_router(ahos_28_6_router)
+
+
+
+@app.get("/system-health")
+async def system_health():
+    return {
+        "status": "online",
+        "platform": "AI Hospital Alliance",
+        "phase": "AHOS 28.0",
+        "backend": "running",
+        "enterprise_launch": "active"
+    }
+
+
+
+from backend.app.ahos_28_2.multi_tenant_healthcare_cloud import router as ahos_28_2_router
+
+
+from backend.app.ahos_28_2_1.tenant_database_isolation import router as ahos_28_2_1_router
+app.include_router(ahos_28_2_1_router)
+
+
+from backend.app.ahos_28_2_2.tenant_authentication_layer import router as ahos_28_2_2_router
+app.include_router(ahos_28_2_2_router)
+
+
+from backend.app.ahos_28_2_3.tenant_provisioning_engine import router as ahos_28_2_3_router
+app.include_router(ahos_28_2_3_router)
+
+
+from backend.app.ahos_28_2_4.multi_tenant_dashboard import router as ahos_28_2_4_router
+app.include_router(ahos_28_2_4_router)
+
+
+from backend.app.ahos_28_2_5.subscription_billing_engine import router as ahos_28_2_5_router
+app.include_router(ahos_28_2_5_router)
+
+
+from backend.app.ahos_28_2_6.multi_region_deployment import router as ahos_28_2_6_router
+app.include_router(ahos_28_2_6_router)
+
+
+from backend.app.ahos_28_2_7.global_tenant_federation import router as ahos_28_2_7_router
+app.include_router(ahos_28_2_7_router)
+
+
+from backend.app.ahos_28_3.unified_clinical_data_platform import router as ahos_28_3_router
+app.include_router(ahos_28_3_router)
+
+
+from backend.app.ahos_28_4.global_fhir_hl7_exchange import router as ahos_28_4_router
+app.include_router(ahos_28_4_router)
+
+
+from backend.app.ahos_28_5.real_hospital_deployment_validation import router as ahos_28_5_router
+app.include_router(ahos_28_5_router)
+
+
+from backend.app.ahos_29_0.global_autonomous_healthcare_intelligence_network import router as ahos_29_0_router
+app.include_router(ahos_29_0_router)
+
+
+from backend.app.ahos_30_0.production_regulatory_readiness_program import router as ahos_30_0_router
+app.include_router(ahos_30_0_router)
+
+
+from backend.app.ahos_30_1.real_clinical_data_integration import router as ahos_30_1_router
+app.include_router(ahos_30_1_router)
+
+
+from backend.app.ahos_30_2.production_kubernetes_platform import router as ahos_30_2_router
+app.include_router(ahos_30_2_router)
+
+
+from backend.app.ahos_30_3.mlops_ai_governance_platform import router as ahos_30_3_router
+app.include_router(ahos_30_3_router)
+
+
+from backend.app.ahos_30_4.medical_device_regulatory_program import router as ahos_30_4_router
+app.include_router(ahos_30_4_router)
+
+
+from backend.app.ahos_30_5.clinical_evidence_post_market_surveillance import router as ahos_30_5_router
+app.include_router(ahos_30_5_router)
+
+
+from backend.app.ahos_30_6.cybersecurity_zero_trust_platform import router as ahos_30_6_router
+app.include_router(ahos_30_6_router)
+
+
+from backend.app.ahos_30_7.global_commercial_launch_partner_ecosystem import router as ahos_30_7_router
+app.include_router(ahos_30_7_router)
+
+
+from backend.app.ahos_31_0.autonomous_global_healthcare_enterprise_platform import router as ahos_31_0_router
+app.include_router(ahos_31_0_router)
+
+
+
+
+
+
+from backend.app.ahos_33_0.autonomous_medical_research_discovery_network import router as ahos_33_router
+app.include_router(ahos_33_router)
+
+
+from backend.app.ahos_34_0.autonomous_medical_innovation_drug_discovery_ecosystem import router as ahos_34_router
+app.include_router(ahos_34_router)
+
+
+
+
+
+
+
+
+
+
+
+
+
+from backend.app.router_registry import register_all_routers
+register_all_routers(app)
+
+
+from backend.app.plugins.loader import load_plugins
+from backend.app.plugins.plugin_status import router as plugin_status_router
+from backend.app.plugins.plugin_status import LOADED_PLUGINS
+
+app.include_router(plugin_status_router)
+LOADED_PLUGINS.extend(load_plugins(app))
+
+
+from backend.app.service_registry.routes import router as service_registry_router
+app.include_router(service_registry_router)
+
+
+from backend.app.container.routes import router as container_router
+from backend.app.container.bootstrap import bootstrap_services
+
+bootstrap_services()
+app.include_router(container_router)
+
+
+app.include_router(ahos_41_0_4_router)
+
+app.include_router(ahos_41_1_router)
+
+from backend.app.ahos_41_3_3.secure_regulatory_submission_portal import router as ahos_41_3_3_router
+app.include_router(ahos_41_3_3_router)
+
+
+from backend.app.ahos_41_3_4.digital_signature_part11 import router as ahos_41_3_4_router
+app.include_router(ahos_41_3_4_router)
+
+
+from backend.app.ahos_41_3_5.multi_authority_gateway import router as ahos_41_3_5_router
+app.include_router(ahos_41_3_5_router)
+
+
+from backend.app.ahos_41_3_6.regulatory_review_dashboard import router as ahos_41_3_6_router
+app.include_router(ahos_41_3_6_router)
+
+
+from backend.app.ahos_41_3_7.audit_evidence_generator import router as ahos_41_3_7_router
+app.include_router(ahos_41_3_7_router)
+
+
+from backend.app.ahos_42_0.clinical_validation_platform import router as ahos_42_0_router
+app.include_router(ahos_42_0_router)
+
+
+
+
+
+
+from backend.app.ahos_42_1.federated_clinical_validation_network import router as ahos_42_1_router
+app.include_router(ahos_42_1_router)
+
+
+app.include_router(ahos_42_2_router)
+
+
+app.include_router(ahos_42_3_router)
+
+
+app.include_router(ahos_42_4_router)
+
+
+app.include_router(ahos_42_5_router)
+
+
+app.include_router(ahos_42_6_router)
+
+
+app.include_router(ahos_42_7_router)
+
+
+app.include_router(ahos_42_8_router)
+
+
+app.include_router(ahos_43_1_router)
+
+
+app.include_router(ahos_43_2_router)
+
+
+app.include_router(ahos_43_3_router)
+
+
+app.include_router(ahos_43_4_router)
+
+
+app.include_router(ahos_43_5_router)
+
+
+app.include_router(ahos_44_0_router)
+
+
+app.include_router(ahos_44_1_router)
+
+
+app.include_router(ahos_44_2_router)
+
+
+app.include_router(ahos_44_3_router)
+
+
+app.include_router(ahos_44_4_router)
+
+
+app.include_router(ahos_44_5_router)
+
+
+
+app.include_router(ahos_45_0_router)
+
+
+
+
+app.include_router(ahos_45_1_router)
+
+
+
+app.include_router(ahos_45_2_router)
+
+
+app.include_router(ahos_45_3_router)
+
+
+app.include_router(ahos_46_0_router)
+
+
+app.include_router(ahos_46_1_router)
+
+
+
+app.include_router(ahos_46_2_router)
+
+
+app.include_router(ahos_46_3_router)
+
+
+app.include_router(ahos_46_4_router)
+
+
+app.include_router(ahos_46_5_router)
+
+
+app.include_router(ahos_46_6_router)
+
+
+app.include_router(ahos_46_7_router)
+
+
+app.include_router(ahos_46_8_router)
+
+
+app.include_router(ahos_46_9_router)
+
+
+app.include_router(ahos_47_0_router)
+
+
+app.include_router(ahos_47_1_router)
+
+
+app.include_router(ahos_47_2_router)
+
+
+
+from backend.app.ahos_47_3.production_hospital_deployment_clinical_validation_platform import router as ahos_47_3_router
+app.include_router(ahos_47_3_router)
+
+
+from backend.app.ahos_47_4.cybersecurity_zero_trust_medical_soc_platform import router as ahos_47_4_router
+app.include_router(ahos_47_4_router)
+
+
+from backend.app.ahos_47_5.regulatory_certification_samd_platform import router as ahos_47_5_router
+app.include_router(ahos_47_5_router)
+
+
+from backend.app.ahos_47_6.global_multi_hospital_federation_platform import router as ahos_47_6_router
+app.include_router(ahos_47_6_router)
+
+
+from backend.app.ahos_48_0.global_commercial_launch_platform import router as ahos_48_0_router
+app.include_router(ahos_48_0_router)
+
+
+from backend.app.ahos_48_1.investor_strategic_partnership_dossier_platform import router as ahos_48_1_router
+app.include_router(ahos_48_1_router)
+
+
+from backend.app.ahos_48_2.ipo_global_expansion_platform import router as ahos_48_2_router
+from backend.app.api.unified_dashboard import router as unified_dashboard_router
+from backend.app.api.radiology_dashboard import router as radiology_dashboard_router
+from backend.app.api.ultrasound_dashboard import router as ultrasound_dashboard_router
+app.include_router(ahos_48_2_router)
+
+
+app.include_router(ahos_49_0_2_identity_rbac_router)
+
+
+app.include_router(ahos_49_0_3_real_hospital_integration_router)
+
+
+app.include_router(ahos_49_0_4_autonomous_hospital_orchestrator_router)
+
+
+app.include_router(ahos_49_0_5_global_monitoring_router)
+
+
+app.include_router(ahos_49_0_6_rwe_learning_router)
+
+
+app.include_router(ahos_49_0_7_strategic_partnership_router)
+
+
+app.include_router(ahos_49_0_8_global_ecosystem_router)
+
+
+app.include_router(ahos_50_0_production_hardening_router)
+
+
+app.include_router(ahos_50_1_migrations_cicd_router)
+
+
+app.include_router(ahos_50_2_api_validation_load_testing_router)
+
+
+app.include_router(ahos_50_3_security_compliance_router)
+
+
+app.include_router(ahos_50_4_observability_router)
+
+
+app.include_router(ahos_50_5_k8s_router)
+
+
+app.include_router(ahos_50_6_multiregion_dr_router)
+
+
+app.include_router(ahos_50_7_zero_trust_router)
+
+
+app.include_router(ahos_50_8_regulatory_evidence_router)
+
+app.include_router(ahos_50_9_router)
+
+
+app.include_router(ahos_51_0_global_commercial_launch_router)
+
+app.include_router(ahos_51_1_router)
+
+app.include_router(ahos_51_2_router)
+
+app.include_router(ahos_51_3_router)
+
+app.include_router(ahos_51_4_router)
+
+app.include_router(ahos_51_5_router)
+
+app.include_router(ahos_51_6_router)
+
+app.include_router(ahos_52_0_router)
+
+app.include_router(ahos_52_1_router)
+
+app.include_router(ahos_52_2_router)
+
+app.include_router(ahos_52_3_router)
+
+app.include_router(ahos_52_4_router)
+
+app.include_router(ahos_52_5_router)
+
+app.include_router(ahos_52_6_router)
+
+app.include_router(ahos_52_7_router)
+
+app.include_router(ahos_52_8_router)
+
+app.include_router(ahos_52_9_router)
+
+app.include_router(ahos_53_0_router)
+
+app.include_router(ahos_53_1_router)
+
+app.include_router(ahos_53_2_router)
+
+# AHOS 53.1 Unified Real PostgreSQL Dashboard
+app.include_router(unified_dashboard_router)
+
+# AHOS 53.7 Real Radiology Dashboard API
+app.include_router(radiology_dashboard_router)
+
+# AHOS 53.8 Real Ultrasound Dashboard API
+app.include_router(ultrasound_dashboard_router)
+
+
+# AHOS 54.2 Real DICOM Viewer Router
+app.include_router(dicom_viewer_router)
+
+
+
+from backend.app.ahos_55_0.autonomous_medical_ai_avatar import router as ahos_55_0_avatar_router
+app.include_router(ahos_55_0_avatar_router)
+
+from backend.app.ahos_55_1.realtime_voice_video_avatar import router as ahos_55_1_router
+app.include_router(ahos_55_1_router)
+
+
+from backend.app.ahos_55_2.arabic_avatar_command_center import router as ahos_55_2_arabic_avatar_router
+app.include_router(ahos_55_2_arabic_avatar_router)
+
+from backend.app.ahos_55_4.digital_human_medical_avatar import router as ahos_55_4_digital_human_router
+app.include_router(ahos_55_4_digital_human_router)
+
+from backend.app.ahos_55_5.enterprise_digital_human_avatar_integration import router as ahos_55_5_router
+from backend.app.ahos_55_6.real_digital_human_avatar import router as ahos_55_6_real_digital_human_avatar_router
+from backend.app.ahos_55_7.real_voice_clinical_context_engine import router as ahos_55_7_voice_clinical_context_router
+from backend.app.ahos_55_8.persistent_clinical_avatar_memory import router as ahos_55_8_avatar_memory_router
+from backend.app.ahos_55_9.unified_avatar_voice_memory_pipeline import router as ahos_55_9_avatar_voice_memory_router
+from backend.app.ahos_56_0.clinical_avatar_orchestration_center import router as ahos_56_0_avatar_orchestration_router
+from backend.app.ahos_56_1.physician_review_queue import router as ahos_56_1_physician_review_router
+from backend.app.ahos_56_2.automatic_safety_escalation_router import router as ahos_56_2_safety_escalation_router
+from backend.app.ahos_56_3.unified_safety_command_center import router as ahos_56_3_unified_safety_center_router
+from backend.app.ahos_56_4.regulatory_safety_evidence_export import router as ahos_56_4_regulatory_safety_evidence_router
+from backend.app.ahos_56_5.regulatory_dossier_pdf_zip_export import router as ahos_56_5_regulatory_dossier_router
+from backend.app.ahos_56_6.dossier_digital_signature_integrity import router as ahos_56_6_dossier_integrity_router
+from backend.app.ahos_56_7.immutable_regulatory_audit_ledger import router as ahos_56_7_immutable_ledger_router
+from backend.app.ahos_56_8.external_regulatory_reviewer_gateway import router as ahos_56_8_external_reviewer_router
+from backend.app.ahos_56_9.external_reviewer_certificate_report import router as ahos_56_9_reviewer_certificate_router
+app.include_router(ahos_55_5_router)
+
+
+# AHOS 55.6 Real Digital Human Avatar
+
+# AHOS 55.6 Real Digital Human Avatar
+app.include_router(ahos_55_6_real_digital_human_avatar_router)
+
+# AHOS 55.7 Real Voice + Clinical Context Engine
+app.include_router(ahos_55_7_voice_clinical_context_router)
+
+# AHOS 55.8 Persistent Clinical Avatar Memory + Audit Database
+app.include_router(ahos_55_8_avatar_memory_router)
+
+# AHOS 55.9 Unified Avatar Voice-to-Memory Pipeline
+app.include_router(ahos_55_9_avatar_voice_memory_router)
+
+# AHOS 56.0 Clinical Avatar Orchestration Center
+app.include_router(ahos_56_0_avatar_orchestration_router)
+
+# AHOS 56.1 Physician Review Queue + Safety Approval Workflow
+app.include_router(ahos_56_1_physician_review_router)
+
+# AHOS 56.2 Automatic Safety Escalation Router
+app.include_router(ahos_56_2_safety_escalation_router)
+
+# AHOS 56.3 Unified Safety Command Center
+app.include_router(ahos_56_3_unified_safety_center_router)
+
+# AHOS 56.4 Regulatory Safety Evidence & Clinical Audit Export
+app.include_router(ahos_56_4_regulatory_safety_evidence_router)
+
+# AHOS 56.5 Regulatory Dossier PDF + ZIP Export
+app.include_router(ahos_56_5_regulatory_dossier_router)
+
+# AHOS 56.6 Regulatory Dossier Digital Signature + Integrity Verification
+
+# AHOS 56.6 Regulatory Dossier Digital Signature + Integrity Verification
+app.include_router(ahos_56_6_dossier_integrity_router)
+
+# AHOS 56.7 Immutable Regulatory Audit Ledger + Tamper Evidence Registry
+app.include_router(ahos_56_7_immutable_ledger_router)
+
+# AHOS 56.8 External Regulatory Reviewer Portal + Dossier Verification Gateway
+app.include_router(ahos_56_8_external_reviewer_router)
+
+# AHOS 56.9 External Reviewer Certificate + Public Verification Report
+app.include_router(ahos_56_9_reviewer_certificate_router)
+
+
+# AHOS 57.0 Professional Stabilization & Scientific Evidence Package
+try:
+    from backend.app.ahos_57_0.professional_stabilization_scientific_evidence_package import router as ahos_57_0_professional_stabilization_scientific_evidence_package_router
+    app.include_router(ahos_57_0_professional_stabilization_scientific_evidence_package_router)
+except Exception as e:
+    print("AHOS 57.0 router load skipped:", e)
+
+
+# AHOS 57.1 Evidence Review Dashboard + Investor Export Center
+try:
+    from backend.app.ahos_57_1.evidence_review_investor_export_center import router as ahos_57_1_evidence_review_investor_export_center_router
+    app.include_router(ahos_57_1_evidence_review_investor_export_center_router)
+except Exception as e:
+    print("AHOS 57.1 router load skipped:", e)
+
+
+# AHOS 57.2 Investor Presentation + Board-Level Pitch Package
+try:
+    from backend.app.ahos_57_2.investor_presentation_board_pitch_package import router as ahos_57_2_investor_presentation_board_pitch_package_router
+    app.include_router(ahos_57_2_investor_presentation_board_pitch_package_router)
+except Exception as e:
+    print("AHOS 57.2 router load skipped:", e)
+
+
+# AHOS 57.3 Demo Video Script + Public Investor Walkthrough
+try:
+    from backend.app.ahos_57_3.demo_video_public_investor_walkthrough import router as ahos_57_3_demo_video_public_investor_walkthrough_router
+    app.include_router(ahos_57_3_demo_video_public_investor_walkthrough_router)
+except Exception as e:
+    print("AHOS 57.3 router load skipped:", e)
+
+
+# AHOS 57.4 Partner Data Room + Pilot Hospital Readiness Package
+try:
+    from backend.app.ahos_57_4.partner_data_room_pilot_hospital_readiness import router as ahos_57_4_partner_data_room_pilot_hospital_readiness_router
+    app.include_router(ahos_57_4_partner_data_room_pilot_hospital_readiness_router)
+except Exception as e:
+    print("AHOS 57.4 router load skipped:", e)
+
+
+# AHOS 57.5 Pilot Agreement + Validation Study Launch Pack
+try:
+    from backend.app.ahos_57_5.pilot_agreement_validation_study_launch_pack import router as ahos_57_5_pilot_agreement_validation_study_launch_pack_router
+    app.include_router(ahos_57_5_pilot_agreement_validation_study_launch_pack_router)
+except Exception as e:
+    print("AHOS 57.5 router load skipped:", e)
+
+
+# AHOS Avatar V3 Command API
+try:
+    from backend.app.api.avatar_v3_command import router as avatar_v3_command_router
+    app.include_router(avatar_v3_command_router)
+except Exception as e:
+    print(f"[AHOS] Avatar V3 command router not loaded: {e}")
+
+
+
+# AHOS Ophthalmology AI Eye Center
+app.include_router(ophthalmology_ai_router)
+
+
+# AHOS Official Ophthalmology Intelligence System
+app.include_router(ophthalmology_unique_router)
+
+
+# AHOS_PHASE38_2_OBSERVABILITY_START
+from backend.app.observability.phase38_2 import (
+    Phase38_2RuntimeObservabilityMiddleware,
+    router as ahos_phase38_2_observability_router,
+)
+
+app.add_middleware(
+    Phase38_2RuntimeObservabilityMiddleware
+)
+
+app.include_router(
+    ahos_phase38_2_observability_router
+)
+# AHOS_PHASE38_2_OBSERVABILITY_END
+
+
+# AHOS_PHASE38_3_TRACING_START
+from backend.app.observability.phase38_3 import (
+    Phase38_3OpenTelemetryMiddleware,
+    router as ahos_phase38_3_tracing_router,
+)
+
+app.add_middleware(
+    Phase38_3OpenTelemetryMiddleware
+)
+
+app.include_router(
+    ahos_phase38_3_tracing_router
+)
+# AHOS_PHASE38_3_TRACING_END
+
+# AHOS_PHASE36_4_INTEGRATION_START
+from backend.app.ahos_phase36_4_tenant_integration import (
+    Phase36_4TenantMiddleware,
+    router as ahos_phase36_4_router,
+)
+
+app.add_middleware(
+    Phase36_4TenantMiddleware
+)
+
+app.include_router(
+    ahos_phase36_4_router
+)
+# AHOS_PHASE36_4_INTEGRATION_END
+
+# AHOS PHASE 39.4 START
+from backend.app.observability.phase39_4 import install_phase39_4
+
+AHOS_PHASE39_4_STATE = install_phase39_4(app)
+# AHOS PHASE 39.4 END
+
+# AHOS PHASE 39.4 STATUS ENDPOINT START
+@app.get("/ahos/39.4/observability/status")
+async def ahos_phase39_4_observability_status():
+    state = getattr(
+        app.state,
+        "ahos_phase39_4",
+        {},
+    )
+
+    return {
+        "phase": "39.4",
+        "status": "ACTIVE",
+        "automatic_fastapi_instrumentation": bool(
+            state.get(
+                "automatic_fastapi_instrumentation",
+                False,
+            )
+        ),
+        "request_correlation": bool(
+            state.get(
+                "request_correlation",
+                False,
+            )
+        ),
+        "response_headers": state.get(
+            "response_headers",
+            [],
+        ),
+        "request_log": state.get(
+            "request_log",
+        ),
+        "otlp_endpoint": state.get(
+            "otlp_endpoint",
+        ),
+        "real_patient_data_used": False,
+        "clinical_certified": False,
+    }
+# AHOS PHASE 39.4 STATUS ENDPOINT END
+
+# AHOS PHASE 39.5.5 DATABASE PROBE START
+from sqlalchemy import text as _ahos_phase39_5_sql_text
+from backend.app.db.database import (
+    SessionLocal as _AHOSPhase39_5SessionLocal,
+)
+
+
+@app.get("/ahos/39.5.5/database-child-span/probe")
+async def ahos_phase39_5_5_database_child_span_probe():
+    """
+    Operational observability probe.
+
+    Executes SELECT 1 only. No patient, clinical, imaging,
+    identity, or tenant information is read or returned.
+    """
+    db = _AHOSPhase39_5SessionLocal()
+
+    try:
+        result = db.execute(
+            _ahos_phase39_5_sql_text(
+                "SELECT 1 AS ahos_phase39_5_probe"
+            )
+        ).scalar_one()
+
+        return {
+            "phase": "39.5.5",
+            "status": "PASSED",
+            "database_probe": int(result),
+            "query_type": "SELECT_CONSTANT",
+            "real_patient_data_used": False,
+            "clinical_data_accessed": False,
+        }
+
+    finally:
+        db.close()
+# AHOS PHASE 39.5.5 DATABASE PROBE END
+
+# AHOS PHASE 39.5.6 SERVICE SPANS START
+from backend.app.observability.service_child_spans import (
+    traced_json_get as _ahos_phase39_5_6_get,
+)
+
+
+@app.get("/ahos/39.5.6/mock-fhir/metadata")
+async def ahos_phase39_5_6_mock_fhir_metadata():
+    """
+    Synthetic FHIR CapabilityStatement.
+
+    No patient, encounter, observation, medication,
+    identity, or clinical resource data is returned.
+    """
+    return {
+        "resourceType": "CapabilityStatement",
+        "status": "active",
+        "kind": "instance",
+        "fhirVersion": "4.0.1",
+        "format": ["json"],
+        "implementation": {
+            "description": (
+                "AHOS synthetic observability probe"
+            )
+        },
+        "real_patient_data_used": False,
+    }
+
+
+@app.get("/ahos/39.5.6/mock-external/health")
+async def ahos_phase39_5_6_mock_external_health():
+    return {
+        "status": "healthy",
+        "service": "synthetic-external-probe",
+        "real_patient_data_used": False,
+    }
+
+
+@app.get("/ahos/39.5.6/service-child-spans/probe")
+async def ahos_phase39_5_6_service_child_spans_probe():
+    fhir_url = (
+        "http://127.0.0.1:8000"
+        "/ahos/39.5.6/mock-fhir/metadata"
+    )
+
+    external_url = (
+        "http://127.0.0.1:8000"
+        "/ahos/39.5.6/mock-external/health"
+    )
+
+    orthanc_url = (
+        "http://127.0.0.1:8042/system"
+    )
+
+    fhir_result = await _ahos_phase39_5_6_get(
+        name="FHIR capability.read",
+        layer="fhir",
+        operation="capability-read",
+        url=fhir_url,
+    )
+
+    external_result = await _ahos_phase39_5_6_get(
+        name="HTTP external.health",
+        layer="external-http",
+        operation="health-check",
+        url=external_url,
+    )
+
+    orthanc_available = True
+    orthanc_status = 0
+    orthanc_error_type = ""
+
+    try:
+        orthanc_result = await _ahos_phase39_5_6_get(
+            name="DICOM orthanc.system",
+            layer="dicom",
+            operation="orthanc-system-read",
+            url=orthanc_url,
+        )
+
+        orthanc_status = int(
+            orthanc_result["status_code"]
+        )
+
+    except Exception as exc:
+        orthanc_available = False
+        orthanc_error_type = type(exc).__name__
+
+    return {
+        "phase": "39.5.6",
+        "status": "PASSED",
+        "fhir": {
+            "instrumented": True,
+            "status_code": int(
+                fhir_result["status_code"]
+            ),
+            "synthetic_capability_statement": True,
+        },
+        "dicom_orthanc": {
+            "instrumented": True,
+            "available": orthanc_available,
+            "status_code": orthanc_status,
+            "error_type": orthanc_error_type,
+        },
+        "external_http": {
+            "instrumented": True,
+            "status_code": int(
+                external_result["status_code"]
+            ),
+            "synthetic_target": True,
+        },
+        "real_patient_data_used": False,
+        "clinical_payload_recorded": False,
+        "dicom_tags_recorded": False,
+        "fhir_resource_content_recorded": False,
+    }
+# AHOS PHASE 39.5.6 SERVICE SPANS END
+
+# AHOS PHASE 39.6 CORRELATION START
+from fastapi import Request as _AHOSPhase39_6Request
+from backend.app.observability.phase39_6_correlation import (
+    execute_correlation_probe as _ahos_phase39_6_probe,
+    phase39_6_metrics_response as _ahos_phase39_6_metrics,
+)
+
+
+@app.get("/ahos/39.6/correlation/probe")
+async def ahos_phase39_6_correlation_probe(
+    request: _AHOSPhase39_6Request,
+):
+    correlation_id = (
+        request.headers.get("x-correlation-id")
+        or request.headers.get("x-request-id")
+        or "ahos-phase39-6-generated"
+    )
+
+    return await _ahos_phase39_6_probe(
+        correlation_id
+    )
+
+
+@app.get("/ahos/39.6/metrics")
+async def ahos_phase39_6_metrics():
+    return _ahos_phase39_6_metrics()
+# AHOS PHASE 39.6 CORRELATION END
+
+# AHOS PHASE 39.7 ALERTING START
+from fastapi import (
+    Body as _AHOSPhase39_7Body,
+    Query as _AHOSPhase39_7Query,
+    Request as _AHOSPhase39_7Request,
+)
+from backend.app.observability.phase39_7_alerting import (
+    incident_status as _ahos_phase39_7_status,
+    metrics_response as _ahos_phase39_7_metrics,
+    record_alertmanager_webhook as _ahos_phase39_7_webhook,
+    simulate_incident as _ahos_phase39_7_simulate,
+)
+
+
+@app.post("/ahos/39.7/incident/simulate")
+async def ahos_phase39_7_incident_simulate(
+    request: _AHOSPhase39_7Request,
+    active: bool = _AHOSPhase39_7Query(True),
+    incident_id: str = _AHOSPhase39_7Query(
+        "AHOS-INC-39-7"
+    ),
+):
+    correlation_id = (
+        request.headers.get("x-correlation-id")
+        or request.headers.get("x-request-id")
+        or "ahos-phase39-7-generated"
+    )
+
+    return await _ahos_phase39_7_simulate(
+        active=active,
+        incident_id=incident_id,
+        correlation_id=correlation_id,
+    )
+
+
+@app.get("/ahos/39.7/status")
+async def ahos_phase39_7_status():
+    return _ahos_phase39_7_status()
+
+
+@app.get("/ahos/39.7/metrics")
+async def ahos_phase39_7_metrics():
+    return _ahos_phase39_7_metrics()
+
+
+@app.post("/ahos/39.7/alertmanager/webhook")
+async def ahos_phase39_7_alertmanager_webhook(
+    payload: dict = _AHOSPhase39_7Body(...),
+):
+    return _ahos_phase39_7_webhook(
+        payload
+    )
+# AHOS PHASE 39.7 ALERTING END
+
+# AHOS_PHASE40_2_2_PROTECTED_ROUTER
+from backend.app.keycloak_security.protected_router import (
+    router as ahos_phase40_2_2_router,
+)
+
+app.include_router(ahos_phase40_2_2_router)
+
+# AHOS_PHASE40_2_3_RBAC_ROUTER
+from backend.app.keycloak_security.phase40_2_3_router import (
+    router as ahos_phase40_2_3_router,
+)
+
+app.include_router(ahos_phase40_2_3_router)
+
+
+@app.get(
+    "/ahos/40.2.4.14/shadow-metrics",
+    tags=["AHOS Phase 40.2.4.14 Security"],
+)
+async def phase40_2_4_14_shadow_metrics(
+    request: FastAPIRequest,
+):
+    client_host = (
+        request.client.host
+        if request.client
+        else ""
+    )
+
+    if client_host not in {
+        "127.0.0.1",
+        "::1",
+        "localhost",
+        "testclient",
+    }:
+        raise HTTPException(
+            status_code=403,
+            detail="Internal endpoint.",
+        )
+
+    return {
+        "phase": "AHOS Phase 40.2.4.14",
+        "status": "ACTIVE",
+        "shadow_mode": True,
+        "blocking_enabled": False,
+        "default_deny_enabled": False,
+        "metrics": get_shadow_metrics(),
+        "recent_decisions": (
+            get_recent_shadow_decisions(20)
+        ),
+        "privacy": {
+            "tokens_logged": False,
+            "authorization_headers_logged": False,
+            "query_strings_logged": False,
+            "payloads_logged": False,
+            "path_identifiers_redacted": True,
+        },
+    }
+
+from backend.app.ahos_40_5.router import router as ahos_40_5_router
+
+app.include_router(ahos_40_5_router)
