@@ -9,6 +9,7 @@ from sqlalchemy.engine import URL
 
 from .memory.appointments_repository import InMemoryAppointmentsRepository
 from .postgres.appointments_repository import PostgresAppointmentsRepository
+from .postgres.nursing_repository import PostgresNursingRepository
 from .memory.reports_repository import InMemoryReportsRepository
 from .memory.nursing_repository import InMemoryNursingRepository
 from .memory.mar_repository import InMemoryMarRepository
@@ -100,6 +101,66 @@ def _build_appointments_repository(appointments_store):
         engine
     )
 
+def _build_nursing_repository(
+    nursing_vitals_store,
+    nursing_notes_store,
+):
+    """Build Nursing repository from an isolated feature switch."""
+    mode = os.getenv(
+        "AHOS_NURSING_REPOSITORY",
+        "memory",
+    ).strip().lower()
+
+    if mode == "memory":
+        return InMemoryNursingRepository(
+            nursing_vitals_store,
+            nursing_notes_store,
+        )
+
+    if mode != "postgres":
+        raise RuntimeError(
+            "AHOS_NURSING_REPOSITORY must be "
+            "'memory' or 'postgres'"
+        )
+
+    required = {
+        "host": os.getenv("AHOS_NURSING_PG_HOST"),
+        "port": os.getenv("AHOS_NURSING_PG_PORT"),
+        "database": os.getenv("AHOS_NURSING_PG_DATABASE"),
+        "username": os.getenv("AHOS_NURSING_PG_USER"),
+        "password": os.getenv("AHOS_NURSING_PG_PASSWORD"),
+    }
+
+    missing = [
+        key
+        for key, value in required.items()
+        if not value
+    ]
+
+    if missing:
+        raise RuntimeError(
+            "Missing Nursing PostgreSQL configuration: "
+            + ", ".join(sorted(missing))
+        )
+
+    url = URL.create(
+        drivername="postgresql+psycopg2",
+        username=required["username"],
+        password=required["password"],
+        host=required["host"],
+        port=int(required["port"]),
+        database=required["database"],
+    )
+
+    engine = create_engine(
+        url,
+        pool_pre_ping=True,
+        pool_recycle=300,
+    )
+
+    return PostgresNursingRepository(engine)
+
+
 def build_repositories(
     users_store,
     patients_store,
@@ -123,8 +184,9 @@ def build_repositories(
         "orders": InMemoryOrdersRepository(orders_store),
         "appointments": _build_appointments_repository(appointments_store or []),
         "reports": InMemoryReportsRepository(reports_store or []),
-        "nursing": InMemoryNursingRepository(
-            nursing_vitals_store or {}, nursing_notes_store or {}
+        "nursing": _build_nursing_repository(
+            nursing_vitals_store or {},
+            nursing_notes_store or {},
         ),
         "mar": InMemoryMarRepository(mar_store or {}),
         "labs": InMemoryLabsRepository(
