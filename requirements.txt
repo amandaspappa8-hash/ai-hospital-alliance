@@ -10,3 +10,4 @@ anthropic
 groq
 google-generativeai
 requests
+alembic==1.19.1
