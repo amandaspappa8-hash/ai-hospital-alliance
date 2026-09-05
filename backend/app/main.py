@@ -1388,17 +1388,17 @@ def create_nursing_note(patient_id: str, payload: NursingNoteRequest):
 
 @app.get("/radiology/catalog")
 def get_radiology_catalog():
-    return RADIOLOGY_CATALOG
+    return SERVICES["radiology"].get_catalog()
 
 
 @app.get("/radiology/orders")
 def get_radiology_orders():
-    return RADIOLOGY_ORDERS
+    return SERVICES["radiology"].list_orders()
 
 
 @app.get("/radiology/orders/{patient_id}")
 def get_radiology_orders_by_patient(patient_id: str):
-    return [order for order in RADIOLOGY_ORDERS if order["patientId"] == patient_id]
+    return SERVICES["radiology"].list_orders_by_patient(patient_id)
 
 
 @app.post("/radiology/orders")
@@ -1406,28 +1406,26 @@ def create_radiology_order(payload: RadiologyOrderCreateRequest):
     if not payload.studies:
         raise HTTPException(status_code=400, detail="At least one study is required")
 
-    new_order = {
-        "id": f"RAD-{5000 + len(RADIOLOGY_ORDERS) + 1}",
-        "patientId": payload.patientId,
-        "patientName": payload.patientName,
-        "section": payload.section,
-        "studies": payload.studies,
-        "priority": payload.priority or "Routine",
-        "status": payload.status or "Pending",
-        "report": "",
-    }
-    RADIOLOGY_ORDERS.append(new_order)
-    return new_order
+    try:
+        return SERVICES["radiology"].create_order(payload.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @app.post("/radiology/results/{order_id}")
 def create_radiology_report(order_id: str, payload: RadiologyReportRequest):
-    for order in RADIOLOGY_ORDERS:
-        if order["id"] == order_id:
-            order["report"] = payload.report
-            order["status"] = payload.status or "Completed"
-            return order
-    raise HTTPException(status_code=404, detail="Radiology order not found")
+    order = SERVICES["radiology"].set_result(
+        order_id,
+        payload.model_dump(),
+    )
+
+    if order is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Radiology order not found",
+        )
+
+    return order
 
 
 @app.get("/labs/catalog")

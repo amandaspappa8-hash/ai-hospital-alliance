@@ -16,6 +16,7 @@ from .memory.mar_repository import InMemoryMarRepository
 from .memory.labs_repository import InMemoryLabsRepository
 from .postgres.labs_repository import PostgresLabsRepository
 from .memory.radiology_repository import InMemoryRadiologyRepository
+from .postgres.radiology_repository import PostgresRadiologyRepository
 from .memory.doctor_assignments_repository import InMemoryDoctorAssignmentsRepository
 
 
@@ -245,6 +246,65 @@ def _build_labs_repository(
     )
 
 
+def _build_radiology_repository(
+    catalog_store,
+    orders_store,
+):
+    mode = os.getenv(
+        "AIHA_RADIOLOGY_REPOSITORY",
+        "memory",
+    ).strip().lower()
+
+    if mode != "postgres":
+        return InMemoryRadiologyRepository(
+            catalog_store,
+            orders_store,
+        )
+
+    host = os.getenv(
+        "AIHA_RADIOLOGY_PG_HOST",
+        "127.0.0.1",
+    )
+    port = int(
+        os.getenv(
+            "AIHA_RADIOLOGY_PG_PORT",
+            "5432",
+        )
+    )
+    database = os.getenv(
+        "AIHA_RADIOLOGY_PG_DATABASE",
+        "aiha_db",
+    )
+    username = os.getenv(
+        "AIHA_RADIOLOGY_PG_USER",
+        "postgres",
+    )
+    password = os.getenv(
+        "AIHA_RADIOLOGY_PG_PASSWORD",
+        "",
+    )
+
+    url = URL.create(
+        drivername="postgresql+psycopg2",
+        username=username,
+        password=password,
+        host=host,
+        port=port,
+        database=database,
+    )
+
+    engine = create_engine(
+        url,
+        future=True,
+        pool_pre_ping=True,
+    )
+
+    return PostgresRadiologyRepository(
+        engine,
+        catalog_store,
+    )
+
+
 def build_repositories(
     users_store,
     patients_store,
@@ -274,9 +334,7 @@ def build_repositories(
         ),
         "mar": InMemoryMarRepository(mar_store or {}),
         "labs": _build_labs_repository(labs_catalog_store or {}, lab_orders_store or []),
-        "radiology": InMemoryRadiologyRepository(
-            radiology_catalog_store or {}, radiology_orders_store or []
-        ),
+        "radiology": _build_radiology_repository(radiology_catalog_store or {}, radiology_orders_store or []),
         "doctor_assignments": InMemoryDoctorAssignmentsRepository(
             doctor_assignments_store or {}
         ),

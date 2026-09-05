@@ -20,26 +20,100 @@ class InMemoryRadiologyRepository:
         ]
 
     def create_order(self, payload: dict[str, Any]) -> dict[str, Any]:
-        next_id = len(self.orders_store) + 1
+        numeric_ids: list[int] = []
+
+        for order in self.orders_store:
+            order_id = str(
+                order.get("id", "")
+            )
+
+            if not order_id.startswith("RAD-"):
+                continue
+
+            suffix = order_id[4:]
+
+            if suffix.isdigit():
+                numeric_ids.append(
+                    int(suffix)
+                )
+
+        next_number = (
+            max(
+                5000,
+                max(
+                    numeric_ids,
+                    default=5000,
+                ),
+            )
+            + 1
+        )
+
         new_order = {
-            "id": next_id,
-            "patientId": payload.get("patientId", ""),
-            "patientName": payload.get("patientName", ""),
-            "studyName": payload.get("studyName", ""),
-            "modality": payload.get("modality", ""),
-            "priority": payload.get("priority", "routine"),
-            "status": payload.get("status", "Pending"),
-            "result": payload.get("result"),
+            "id": f"RAD-{next_number}",
+            "patientId": payload.get(
+                "patientId",
+                "",
+            ),
+            "patientName": payload.get(
+                "patientName",
+                "",
+            ),
+            "section": payload.get(
+                "section",
+                "",
+            ),
+            "studies": list(
+                payload.get(
+                    "studies",
+                    [],
+                )
+            ),
+            "priority": (
+                payload.get("priority")
+                or "Routine"
+            ),
+            "status": (
+                payload.get("status")
+                or "Pending"
+            ),
+            "report": (
+                payload.get(
+                    "report",
+                    "",
+                )
+                or ""
+            ),
         }
-        self.orders_store.append(new_order)
+
+        self.orders_store.append(
+            new_order
+        )
+
         return new_order
 
-    def set_result(
-        self, order_id: str | int, payload: dict[str, Any]
-    ) -> dict[str, Any] | None:
+    def set_result(self, order_id: str | int, payload: dict[str, Any]) -> dict[str, Any] | None:
         for order in self.orders_store:
-            if str(order.get("id")) == str(order_id):
-                order["result"] = payload.get("result", "")
-                order["status"] = payload.get("status", "Completed")
-                return order
+            if str(
+                order.get(
+                    "id",
+                    "",
+                )
+            ) != str(order_id):
+                continue
+
+            order["report"] = (
+                payload.get(
+                    "report",
+                    "",
+                )
+                or ""
+            )
+
+            order["status"] = (
+                payload.get("status")
+                or "Completed"
+            )
+
+            return order
+
         return None
