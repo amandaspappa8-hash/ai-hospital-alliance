@@ -14,6 +14,7 @@ from .memory.reports_repository import InMemoryReportsRepository
 from .memory.nursing_repository import InMemoryNursingRepository
 from .memory.mar_repository import InMemoryMarRepository
 from .memory.labs_repository import InMemoryLabsRepository
+from .postgres.labs_repository import PostgresLabsRepository
 from .memory.radiology_repository import InMemoryRadiologyRepository
 from .memory.doctor_assignments_repository import InMemoryDoctorAssignmentsRepository
 
@@ -161,6 +162,89 @@ def _build_nursing_repository(
     return PostgresNursingRepository(engine)
 
 
+
+def _build_labs_repository(
+    labs_catalog_store,
+    lab_orders_store,
+):
+    """Build the AIHA Labs persistence adapter from an isolated feature switch."""
+
+    mode = os.getenv(
+        "AIHA_LABS_REPOSITORY",
+        "memory",
+    ).strip().lower()
+
+    if mode == "memory":
+        return InMemoryLabsRepository(
+            labs_catalog_store,
+            lab_orders_store,
+        )
+
+    if mode != "postgres":
+        raise RuntimeError(
+            "AIHA_LABS_REPOSITORY must be 'memory' or 'postgres'"
+        )
+
+    names = {
+        "host": "AIHA_LABS_PG_HOST",
+        "port": "AIHA_LABS_PG_PORT",
+        "database": "AIHA_LABS_PG_DATABASE",
+        "username": "AIHA_LABS_PG_USER",
+        "password": "AIHA_LABS_PG_PASSWORD",
+    }
+
+    values = {
+        key: os.getenv(
+            env_name,
+            "",
+        ).strip()
+        for key, env_name in names.items()
+    }
+
+    missing = [
+        names[key]
+        for key, value in values.items()
+        if not value
+    ]
+
+    if missing:
+        raise RuntimeError(
+            "Missing AIHA Labs PostgreSQL configuration: "
+            + ", ".join(missing)
+        )
+
+    try:
+        port = int(
+            values["port"]
+        )
+    except ValueError as exc:
+        raise RuntimeError(
+            "AIHA_LABS_PG_PORT must be an integer"
+        ) from exc
+
+    url = URL.create(
+        drivername="postgresql+psycopg2",
+        username=values["username"],
+        password=values["password"],
+        host=values["host"],
+        port=port,
+        database=values["database"],
+    )
+
+    engine = create_engine(
+        url,
+        pool_pre_ping=True,
+        pool_size=5,
+        max_overflow=5,
+        pool_recycle=3600,
+    )
+
+    return PostgresLabsRepository(
+        engine,
+        labs_catalog_store,
+    )
+
+
 def build_repositories(
     users_store,
     patients_store,
@@ -189,9 +273,7 @@ def build_repositories(
             nursing_notes_store or {},
         ),
         "mar": InMemoryMarRepository(mar_store or {}),
-        "labs": InMemoryLabsRepository(
-            labs_catalog_store or {}, lab_orders_store or []
-        ),
+        "labs": _build_labs_repository(labs_catalog_store or {}, lab_orders_store or []),
         "radiology": InMemoryRadiologyRepository(
             radiology_catalog_store or {}, radiology_orders_store or []
         ),

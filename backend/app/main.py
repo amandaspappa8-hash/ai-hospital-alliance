@@ -1432,46 +1432,62 @@ def create_radiology_report(order_id: str, payload: RadiologyReportRequest):
 
 @app.get("/labs/catalog")
 def get_labs_catalog():
-    return LAB_CATALOG
+    return SERVICES["labs"].get_catalog()
 
 
 @app.get("/labs/orders")
 def get_lab_orders():
-    return LAB_ORDERS
+    return SERVICES["labs"].list_orders()
 
 
 @app.get("/labs/orders/{patient_id}")
 def get_lab_orders_by_patient(patient_id: str):
-    return [order for order in LAB_ORDERS if order["patientId"] == patient_id]
+    return SERVICES["labs"].list_orders_by_patient(patient_id)
 
 
 @app.post("/labs/orders")
 def create_lab_order(payload: LabOrderCreateRequest):
     if not payload.tests:
-        raise HTTPException(status_code=400, detail="At least one test is required")
+        raise HTTPException(
+            status_code=400,
+            detail="At least one test is required",
+        )
 
-    new_order = {
-        "id": f"L-{4000 + len(LAB_ORDERS) + 1}",
+    order_payload = {
         "patientId": payload.patientId,
         "patientName": payload.patientName,
         "section": payload.section,
-        "tests": payload.tests,
+        "tests": list(payload.tests),
         "priority": payload.priority or "Routine",
         "status": payload.status or "Pending",
         "result": "",
     }
-    LAB_ORDERS.append(new_order)
-    return new_order
+
+    try:
+        return SERVICES["labs"].create_order(
+            order_payload
+        )
+    except ValueError as exc:
+        if str(exc) == "Patient not found":
+            raise HTTPException(
+                status_code=404,
+                detail="Patient not found",
+            ) from exc
+        raise
 
 
 @app.post("/labs/results/{order_id}")
-def create_lab_result(order_id: str, payload: LabResultRequest):
-    for order in LAB_ORDERS:
-        if order["id"] == order_id:
-            order["result"] = payload.result
-            order["status"] = payload.status or "Completed"
-            return order
-    raise HTTPException(status_code=404, detail="Lab order not found")
+def create_lab_result(
+    order_id: str,
+    payload: LabResultRequest,
+):
+    return SERVICES["labs"].set_result(
+        order_id,
+        {
+            "result": payload.result,
+            "status": payload.status or "Completed",
+        },
+    )
 
 
 app.include_router(clinical_route_router)
