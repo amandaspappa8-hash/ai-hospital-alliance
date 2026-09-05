@@ -52,45 +52,68 @@ def create_mar_item(patient_id: str, payload: MARItemRequest):
 
 @router.put("/mar/{patient_id}/{item_id}")
 def update_mar_item(patient_id: str, item_id: int, payload: MARUpdateRequest):
-    from ..main import MAR
-    for item in MAR.get(patient_id, []):
-        if item["id"] == item_id:
-            item.update({"medication": payload.medication, "dose": payload.dose,
-                "route": payload.route, "schedule": payload.schedule,
-                "status": payload.status or item.get("status", "Pending"),
-                "givenAt": payload.givenAt or ""})
-            return item
-    raise HTTPException(status_code=404, detail="MAR item not found")
+    from ..main import SERVICES
+    payload_data = payload.model_dump()
+    updated = SERVICES["mar"].update_item(
+        patient_id,
+        item_id,
+        payload_data,
+    )
+    if updated is None:
+        raise HTTPException(
+            status_code=404,
+            detail="MAR item not found",
+        )
+    return updated
 
 @router.put("/mar/{patient_id}/{item_id}/pharmacist-review")
 def pharmacist_review(patient_id: str, item_id: int, payload: PharmacistReviewRequest):
-    from ..main import MAR
-    for item in MAR.get(patient_id, []):
-        if item["id"] == item_id:
-            item["status"] = payload.status or item.get("status", "Pending")
-            item["pharmacistNote"] = payload.note or ""
-            item["reviewedAt"] = datetime.now().strftime("%Y-%m-%d %H:%M")
-            return item
-    raise HTTPException(status_code=404, detail="MAR item not found")
+    from ..main import SERVICES
+    payload_data = payload.model_dump()
+    updated = SERVICES["mar"].set_pharmacy_review(
+        patient_id,
+        item_id,
+        payload_data,
+    )
+    if updated is None:
+        raise HTTPException(
+            status_code=404,
+            detail="MAR item not found",
+        )
+    return updated
 
 @router.put("/mar/{patient_id}/{item_id}/status")
 def update_mar_status(patient_id: str, item_id: int, payload: MARStatusRequest):
-    from ..main import MAR
-    for item in MAR.get(patient_id, []):
-        if item["id"] == item_id:
-            item["status"] = payload.status
-            item["givenAt"] = payload.givenAt or item.get("givenAt", "")
-            return item
-    raise HTTPException(status_code=404, detail="MAR item not found")
+    from ..main import SERVICES
+    payload_data = payload.model_dump()
+    updated = SERVICES["mar"].set_status(
+        patient_id,
+        item_id,
+        payload_data,
+    )
+    if updated is None:
+        raise HTTPException(
+            status_code=404,
+            detail="MAR item not found",
+        )
+    return updated
 
 @router.delete("/mar/{patient_id}/{item_id}")
 def delete_mar_item(patient_id: str, item_id: int):
-    from ..main import MAR
-    items = MAR.get(patient_id, [])
-    for index, item in enumerate(items):
-        if item["id"] == item_id:
-            return items.pop(index)
-    raise HTTPException(status_code=404, detail="MAR item not found")
+    from ..main import SERVICES
+    deleted = SERVICES["mar"].delete_item(
+        patient_id,
+        item_id,
+    )
+    if not deleted:
+        raise HTTPException(
+            status_code=404,
+            detail="MAR item not found",
+        )
+    return {
+        "deleted": True,
+        "id": item_id,
+    }
 
 @router.get("/drug-intel/search")
 def drug_intel_search(q: str = Query(..., min_length=2)):

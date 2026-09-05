@@ -17,6 +17,7 @@ from .memory.labs_repository import InMemoryLabsRepository
 from .postgres.labs_repository import PostgresLabsRepository
 from .memory.radiology_repository import InMemoryRadiologyRepository
 from .postgres.radiology_repository import PostgresRadiologyRepository
+from .postgres.mar_repository import PostgresMarRepository
 from .memory.doctor_assignments_repository import InMemoryDoctorAssignmentsRepository
 
 
@@ -305,6 +306,53 @@ def _build_radiology_repository(
     )
 
 
+
+def _build_mar_repository(mar_store):
+    mode = os.getenv(
+        "AIHA_MAR_REPOSITORY",
+        "memory",
+    ).strip().lower()
+
+    if mode != "postgres":
+        return InMemoryMarRepository(
+            mar_store or {}
+        )
+
+    url = URL.create(
+        drivername="postgresql+psycopg2",
+        host=os.getenv(
+            "AIHA_MAR_PG_HOST",
+            "127.0.0.1",
+        ),
+        port=int(
+            os.getenv(
+                "AIHA_MAR_PG_PORT",
+                "5432",
+            )
+        ),
+        database=os.getenv(
+            "AIHA_MAR_PG_DATABASE",
+            "aiha_db",
+        ),
+        username=os.getenv(
+            "AIHA_MAR_PG_USER",
+            "postgres",
+        ),
+        password=os.getenv(
+            "AIHA_MAR_PG_PASSWORD",
+        ),
+    )
+
+    engine = create_engine(
+        url,
+        pool_pre_ping=True,
+    )
+
+    return PostgresMarRepository(
+        engine
+    )
+
+
 def build_repositories(
     users_store,
     patients_store,
@@ -332,7 +380,7 @@ def build_repositories(
             nursing_vitals_store or {},
             nursing_notes_store or {},
         ),
-        "mar": InMemoryMarRepository(mar_store or {}),
+        "mar": _build_mar_repository(mar_store or {}),
         "labs": _build_labs_repository(labs_catalog_store or {}, lab_orders_store or []),
         "radiology": _build_radiology_repository(radiology_catalog_store or {}, radiology_orders_store or []),
         "doctor_assignments": InMemoryDoctorAssignmentsRepository(

@@ -26,3 +26,69 @@ class InMemoryMarRepository:
         }
         self.mar_store[patient_id].append(new_item)
         return new_item
+
+    def update(self, patient_id: str, item_id: int, payload: dict):
+        items = self.mar_store.get(patient_id, [])
+        for item in items:
+            if int(item.get("id")) != int(item_id):
+                continue
+
+            for field in (
+                "medication",
+                "dose",
+                "route",
+                "schedule",
+            ):
+                if field in payload:
+                    item[field] = payload[field]
+
+            if payload.get("status") is not None:
+                item["status"] = payload["status"]
+
+            if payload.get("givenAt") is not None:
+                item["givenAt"] = payload["givenAt"]
+
+            return dict(item)
+
+        return None
+
+    def set_status(self, patient_id: str, item_id: int, payload: dict):
+        items = self.mar_store.get(patient_id, [])
+        for item in items:
+            if int(item.get("id")) != int(item_id):
+                continue
+
+            item["status"] = payload.get(
+                "status",
+                item.get("status"),
+            )
+
+            if payload.get("givenAt") is not None:
+                item["givenAt"] = payload["givenAt"]
+
+            return dict(item)
+
+        return None
+
+    def set_pharmacy_review(self, patient_id: str, item_id: int, payload: dict):
+        items = self.mar_store.get(patient_id, [])
+        for item in items:
+            if int(item.get("id")) != int(item_id):
+                continue
+
+            status = payload.get("status")
+
+            if status is not None:
+                item["pharmacyReview"] = status
+
+            return dict(item)
+
+        return None
+
+    def delete(self, patient_id: str, item_id: int) -> bool:
+        items = self.mar_store.get(patient_id, [])
+        for index, item in enumerate(items):
+            if int(item.get("id")) == int(item_id):
+                del items[index]
+                return True
+        return False

@@ -2665,16 +2665,33 @@ def update_mar_status(
     payload: dict,
     current_user: dict = Depends(get_current_user),
 ):
-    if patient_id not in MAR:
-        return {"error": "Patient MAR not found"}
-
-    if index < 0 or index >= len(MAR[patient_id]):
-        return {"error": "Invalid MAR index"}
-
-    MAR[patient_id][index]["status"] = payload.get(
-        "status", MAR[patient_id][index].get("status")
+    item_id = SERVICES["mar"].resolve_item_id_by_index(
+        patient_id,
+        index,
     )
-    return {"status": "ok", "mar": MAR[patient_id]}
+    if item_id is None:
+        return {
+            "error": "MAR item not found",
+        }
+
+    payload_data = (
+        payload.model_dump()
+        if hasattr(payload, "model_dump")
+        else dict(payload)
+    )
+
+    updated = SERVICES["mar"].set_status(
+        patient_id,
+        item_id,
+        payload_data,
+    )
+
+    if updated is None:
+        return {
+            "error": "MAR item not found",
+        }
+
+    return updated
 
 
 @app.post("/mar/{patient_id}/{index}/pharmacy-review")
@@ -2684,17 +2701,36 @@ def pharmacy_review_mar_item(
     payload: dict,
     current_user: dict = Depends(get_current_user),
 ):
-    if patient_id not in MAR:
-        return {"error": "Patient MAR not found"}
-
-    if index < 0 or index >= len(MAR[patient_id]):
-        return {"error": "Invalid MAR index"}
-
-    MAR[patient_id][index]["pharmacy_review"] = payload.get(
-        "pharmacy_review", "Reviewed"
+    item_id = SERVICES["mar"].resolve_item_id_by_index(
+        patient_id,
+        index,
     )
-    MAR[patient_id][index]["ai_flag"] = payload.get("ai_flag", "Safe")
-    return {"status": "ok", "mar": MAR[patient_id]}
+    if item_id is None:
+        return {
+            "error": "MAR item not found",
+        }
+
+    payload_data = (
+        payload.model_dump()
+        if hasattr(payload, "model_dump")
+        else dict(payload)
+    )
+
+    if not payload_data.get("status"):
+        payload_data["status"] = "Reviewed"
+
+    updated = SERVICES["mar"].set_pharmacy_review(
+        patient_id,
+        item_id,
+        payload_data,
+    )
+
+    if updated is None:
+        return {
+            "error": "MAR item not found",
+        }
+
+    return updated
 
 
 RADIOLOGY = {"P-1001": [{"study": "CT Chest", "status": "Pending", "report": ""}]}
