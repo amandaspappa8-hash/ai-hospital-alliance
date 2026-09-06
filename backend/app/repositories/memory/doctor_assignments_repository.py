@@ -8,20 +8,39 @@ class InMemoryDoctorAssignmentsRepository:
     def list_by_doctor(self, doctor_id: str) -> list[dict[str, Any]]:
         return list(self.assignments_store.get(doctor_id, []))
 
-    def create(self, doctor_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def create(
+        self,
+        doctor_id: str,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
         if doctor_id not in self.assignments_store:
             self.assignments_store[doctor_id] = []
 
-        next_id = len(self.assignments_store[doctor_id]) + 1
+        existing = next(
+            (
+                item
+                for item in self.assignments_store[doctor_id]
+                if item.get('patientId') == payload.get('patientId')
+            ),
+            None,
+        )
+
+        if existing:
+            return existing
+
         new_assignment = {
-            "id": next_id,
-            "patientId": payload.get("patientId", ""),
-            "patientName": payload.get("patientName", ""),
-            "specialty": payload.get("specialty", ""),
-            "priority": payload.get("priority", "routine"),
-            "status": payload.get("status", "Pending"),
+            'id': len(self.assignments_store[doctor_id]) + 1,
+            'patientId': payload.get('patientId', ''),
+            'patientName': payload.get('patientName', ''),
+            'department': payload.get('department'),
+            'condition': payload.get('condition'),
+            'status': payload.get('status') or 'Assigned',
         }
-        self.assignments_store[doctor_id].append(new_assignment)
+
+        self.assignments_store[doctor_id].append(
+            new_assignment
+        )
+
         return new_assignment
 
     def update_status(

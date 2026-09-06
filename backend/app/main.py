@@ -1289,61 +1289,44 @@ def get_doctor_by_id(doctor_id: str):
     raise HTTPException(status_code=404, detail="Doctor not found")
 
 
-@app.get("/doctor-assignments/{doctor_id}")
+@app.get('/doctor-assignments/{doctor_id}')
 def get_doctor_assignments(doctor_id: str):
-    return DOCTOR_ASSIGNMENTS.get(doctor_id, [])
+    return SERVICES['doctor_assignments'].list_by_doctor(doctor_id)
 
 
-@app.post("/doctor-assignments/{doctor_id}")
+@app.post('/doctor-assignments/{doctor_id}')
 def create_doctor_assignment(doctor_id: str, payload: DoctorAssignmentRequest):
-    if doctor_id not in DOCTOR_ASSIGNMENTS:
-        DOCTOR_ASSIGNMENTS[doctor_id] = []
-
-    existing = next(
-        (
-            item
-            for item in DOCTOR_ASSIGNMENTS[doctor_id]
-            if item["patientId"] == payload.patientId
-        ),
-        None,
+    return SERVICES['doctor_assignments'].create(
+        doctor_id,
+        {
+            'patientId': payload.patientId,
+            'patientName': payload.patientName,
+            'department': payload.department,
+            'condition': payload.condition,
+            'status': payload.status,
+        },
     )
-    if existing:
-        return existing
-
-    new_assignment = {
-        "id": len(DOCTOR_ASSIGNMENTS[doctor_id]) + 1,
-        "patientId": payload.patientId,
-        "patientName": payload.patientName,
-        "department": payload.department,
-        "condition": payload.condition,
-        "status": payload.status or "Assigned",
-    }
-    DOCTOR_ASSIGNMENTS[doctor_id].append(new_assignment)
-    return new_assignment
 
 
-@app.post("/doctor-assignments/{doctor_id}/{assignment_id}/status")
+@app.post('/doctor-assignments/{doctor_id}/{assignment_id}/status')
 def update_doctor_assignment_status(
     doctor_id: str,
     assignment_id: int,
     payload: DoctorAssignmentStatusRequest,
 ):
-    assignments = DOCTOR_ASSIGNMENTS.get(doctor_id, [])
-    for item in assignments:
-        if item["id"] == assignment_id:
-            item["status"] = payload.status
-            return item
-    raise HTTPException(status_code=404, detail="Assignment not found")
+    return SERVICES['doctor_assignments'].update_status(
+        doctor_id,
+        assignment_id,
+        payload.status,
+    )
 
 
-@app.delete("/doctor-assignments/{doctor_id}/{assignment_id}")
+@app.delete('/doctor-assignments/{doctor_id}/{assignment_id}')
 def delete_doctor_assignment(doctor_id: str, assignment_id: int):
-    assignments = DOCTOR_ASSIGNMENTS.get(doctor_id, [])
-    for index, item in enumerate(assignments):
-        if item["id"] == assignment_id:
-            removed = assignments.pop(index)
-            return removed
-    raise HTTPException(status_code=404, detail="Assignment not found")
+    return SERVICES['doctor_assignments'].delete(
+        doctor_id,
+        assignment_id,
+    )
 
 
 @app.get("/specialties/summary")

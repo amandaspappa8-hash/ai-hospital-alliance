@@ -19,6 +19,8 @@ from .memory.radiology_repository import InMemoryRadiologyRepository
 from .postgres.radiology_repository import PostgresRadiologyRepository
 from .postgres.mar_repository import PostgresMarRepository
 from .memory.doctor_assignments_repository import InMemoryDoctorAssignmentsRepository
+from .postgres.doctor_assignments_repository import PostgresDoctorAssignmentsRepository
+
 
 
 
@@ -353,6 +355,65 @@ def _build_mar_repository(mar_store):
     )
 
 
+
+def _build_doctor_assignments_repository(assignments_store):
+    mode = os.getenv(
+        "AIHA_DOCTOR_ASSIGNMENTS_REPOSITORY",
+        "memory",
+    ).strip().lower()
+
+    if mode == "memory":
+        return InMemoryDoctorAssignmentsRepository(
+            assignments_store
+        )
+
+    if mode != "postgres":
+        raise RuntimeError(
+            "Invalid AIHA_DOCTOR_ASSIGNMENTS_REPOSITORY mode"
+        )
+
+    env_names = {
+        "host": "AIHA_DOCTOR_ASSIGNMENTS_PG_HOST",
+        "port": "AIHA_DOCTOR_ASSIGNMENTS_PG_PORT",
+        "database": "AIHA_DOCTOR_ASSIGNMENTS_PG_DATABASE",
+        "user": "AIHA_DOCTOR_ASSIGNMENTS_PG_USER",
+        "password": "AIHA_DOCTOR_ASSIGNMENTS_PG_PASSWORD",
+    }
+
+    values = {
+        key: os.getenv(env_name)
+        for key, env_name in env_names.items()
+    }
+
+    missing = [
+        env_name
+        for key, env_name in env_names.items()
+        if not values[key]
+    ]
+
+    if missing:
+        raise RuntimeError(
+            "Missing PostgreSQL configuration for "
+            "doctor assignments: "
+            + ", ".join(missing)
+        )
+
+    try:
+        port = int(values["port"])
+    except (TypeError, ValueError) as exc:
+        raise RuntimeError(
+            "Invalid PostgreSQL port for doctor assignments"
+        ) from exc
+
+    return PostgresDoctorAssignmentsRepository(
+        host=values["host"],
+        port=port,
+        database=values["database"],
+        user=values["user"],
+        password=values["password"],
+    )
+
+
 def build_repositories(
     users_store,
     patients_store,
@@ -383,7 +444,5 @@ def build_repositories(
         "mar": _build_mar_repository(mar_store or {}),
         "labs": _build_labs_repository(labs_catalog_store or {}, lab_orders_store or []),
         "radiology": _build_radiology_repository(radiology_catalog_store or {}, radiology_orders_store or []),
-        "doctor_assignments": InMemoryDoctorAssignmentsRepository(
-            doctor_assignments_store or {}
-        ),
+        "doctor_assignments": _build_doctor_assignments_repository(doctor_assignments_store or {}),
     }

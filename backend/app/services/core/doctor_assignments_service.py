@@ -9,7 +9,16 @@ class DoctorAssignmentsService:
         return self.assignments_repository.list_by_doctor(doctor_id)
 
     def create(self, doctor_id: str, payload: dict):
-        return self.assignments_repository.create(doctor_id, payload)
+        try:
+            return self.assignments_repository.create(
+                doctor_id,
+                payload,
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=404,
+                detail=str(exc),
+            ) from exc
 
     def update_status(self, doctor_id: str, assignment_id: int, status: str):
         assignment = self.assignments_repository.update_status(
@@ -20,7 +29,15 @@ class DoctorAssignmentsService:
         return assignment
 
     def delete(self, doctor_id: str, assignment_id: int):
-        assignment = self.assignments_repository.delete(doctor_id, assignment_id)
+        assignment = self.assignments_repository.delete(
+            doctor_id,
+            assignment_id,
+        )
+
         if not assignment:
-            raise HTTPException(status_code=404, detail="Assignment not found")
-        return {"success": True, "deleted": assignment}
+            raise HTTPException(
+                status_code=404,
+                detail='Assignment not found',
+            )
+
+        return assignment
