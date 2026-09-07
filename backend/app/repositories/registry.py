@@ -1,3 +1,4 @@
+from backend.app.repositories.postgres.users_repository import PostgresUsersRepository
 from .memory.users_repository import InMemoryUsersRepository
 from .memory.patients_repository import InMemoryPatientsRepository
 from .memory.notes_repository import InMemoryNotesRepository
@@ -414,6 +415,69 @@ def _build_doctor_assignments_repository(assignments_store):
     )
 
 
+
+def _build_users_repository(users_store):
+    mode = os.getenv(
+        "AIHA_USERS_REPOSITORY",
+        "memory",
+    ).strip().lower()
+
+    if mode in {"memory", "inmemory"}:
+        return InMemoryUsersRepository(
+            users_store
+        )
+
+    if mode not in {"postgres", "postgresql"}:
+        raise RuntimeError(
+            "Invalid AIHA_USERS_REPOSITORY value"
+        )
+
+    environment = {
+        "host": os.getenv(
+            "AIHA_USERS_PG_HOST"
+        ),
+        "port": os.getenv(
+            "AIHA_USERS_PG_PORT"
+        ),
+        "database": os.getenv(
+            "AIHA_USERS_PG_DATABASE"
+        ),
+        "user": os.getenv(
+            "AIHA_USERS_PG_USER"
+        ),
+        "password": os.getenv(
+            "AIHA_USERS_PG_PASSWORD"
+        ),
+    }
+
+    missing = [
+        key
+        for key, value in environment.items()
+        if value is None or value == ""
+    ]
+
+    if missing:
+        raise RuntimeError(
+            "Missing isolated PostgreSQL users "
+            "repository configuration"
+        )
+
+    try:
+        port = int(environment["port"])
+    except (TypeError, ValueError) as exc:
+        raise RuntimeError(
+            "Invalid AIHA_USERS_PG_PORT value"
+        ) from exc
+
+    return PostgresUsersRepository(
+        host=environment["host"],
+        port=port,
+        database=environment["database"],
+        user=environment["user"],
+        password=environment["password"],
+    )
+
+
 def build_repositories(
     users_store,
     patients_store,
@@ -431,7 +495,7 @@ def build_repositories(
     doctor_assignments_store=None,
 ):
     return {
-        "users": InMemoryUsersRepository(users_store),
+        "users": _build_users_repository(users_store),
         "patients": InMemoryPatientsRepository(patients_store),
         "notes": InMemoryNotesRepository(notes_store),
         "orders": InMemoryOrdersRepository(orders_store),

@@ -1194,19 +1194,13 @@ def login(payload: dict, db=None):
 
 @app.post("/auth/db-login")
 def db_login(payload: dict):
-    from .tenant_isolation import SessionLocal
-    from .security_compat import login_with_db
-    db = SessionLocal()
-    try:
-        email = payload.get("email", "")
-        password = payload.get("password", "")
-        result = login_with_db(email, password, db)
-        if not result:
-            from fastapi import HTTPException
-            raise HTTPException(status_code=401, detail="Invalid credentials")
-        return result
-    finally:
-        db.close()
+    identifier = payload.get("email")
+    password = payload.get("password")
+
+    return AuthService(REPOSITORIES["users"]).login(
+        identifier,
+        password,
+    )
 
 
 
@@ -4939,5 +4933,6 @@ async def phase40_2_4_14_shadow_metrics(
     }
 
 from backend.app.ahos_40_5.router import router as ahos_40_5_router
+from .services.core.auth_service import AuthService
 
 app.include_router(ahos_40_5_router)
