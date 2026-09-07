@@ -13,10 +13,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 logger = logging.getLogger(__name__)
 
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://aiha:aiha123@localhost:5432/aiha_db"
-)
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL environment variable is required")
 
 if DATABASE_URL.startswith("sqlite:///"):
     ASYNC_DATABASE_URL = DATABASE_URL.replace(
@@ -44,7 +43,9 @@ async_engine = create_async_engine(ASYNC_DATABASE_URL, pool_size=20, max_overflo
 AsyncSessionLocal = async_sessionmaker(async_engine, expire_on_commit=False)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-12345")
+SECRET_KEY = os.environ.get("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY environment variable is required")
 ALGORITHM = "HS256"
 bearer_scheme = HTTPBearer()
 

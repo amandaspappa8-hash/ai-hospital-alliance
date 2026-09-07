@@ -1,3 +1,4 @@
+import os
 from fastapi import APIRouter, HTTPException, Depends, Header
 from pydantic import BaseModel, EmailStr
 from datetime import datetime, timedelta
@@ -10,7 +11,9 @@ router = APIRouter(
     tags=["AHOS 49.0.2 Identity & RBAC Platform"]
 )
 
-SECRET_KEY = "AHOS_SUPER_SECRET_2026"
+SECRET_KEY = os.environ.get("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY environment variable is required")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 1440
 

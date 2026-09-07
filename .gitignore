@@ -94,3 +94,17 @@ venv/
 .venv/
 __pycache__/
 *.db
+
+# BEGIN AIHA SECURITY S1 - PRIVATE KEY GUARD
+# Prevent local TLS/private-key material from entering Git.
+monitoring_phase40/tls/*.key
+monitoring_phase40/tls/*.pem
+monitoring_phase40/tls/*.p12
+monitoring_phase40/tls/*.pfx
+# END AIHA SECURITY S1 - PRIVATE KEY GUARD
+
+# BEGIN AIHA SECURITY S3 - LOCAL RUNTIME ENV GUARD
+# Prevent local AIHA/AHOS runtime environment files from entering Git.
+.env.ahos_local_runtime
+.env.ahos_local_runtime.*
+# END AIHA SECURITY S3 - LOCAL RUNTIME ENV GUARD
