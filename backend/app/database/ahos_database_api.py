@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from datetime import datetime
-from backend.app.database.ahos_db import init_ahos_database, get_connection
+from backend.app.database.ahos_db import get_connection
 
 router = APIRouter(tags=["AHOS Persistent Database"])
 
@@ -15,9 +15,6 @@ async def ahos_db_health():
     }
 
 
-@router.post("/ahos/db/init")
-async def ahos_db_init():
-    return init_ahos_database()
 
 
 @router.get("/ahos/db/tables")
