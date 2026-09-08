@@ -42,45 +42,6 @@ async def health():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/db/init")
-async def init_db():
-    ddl = """
-    CREATE TABLE IF NOT EXISTS clinical_event_store (
-        id SERIAL PRIMARY KEY,
-        event_id VARCHAR(100) UNIQUE NOT NULL,
-        redis_message_id VARCHAR(100),
-        stream_name VARCHAR(100),
-        event_type VARCHAR(100),
-        resource_type VARCHAR(100),
-        resource_id VARCHAR(255),
-        priority VARCHAR(50),
-        value_text TEXT,
-        unit VARCHAR(50),
-        payload JSONB,
-        created_at TIMESTAMP DEFAULT NOW()
-    );
-
-    CREATE TABLE IF NOT EXISTS clinical_audit_trail (
-        id SERIAL PRIMARY KEY,
-        audit_id VARCHAR(100) UNIQUE NOT NULL,
-        action VARCHAR(100),
-        entity_type VARCHAR(100),
-        entity_id VARCHAR(100),
-        status VARCHAR(50),
-        details JSONB,
-        created_at TIMESTAMP DEFAULT NOW()
-    );
-    """
-
-    with engine.begin() as conn:
-        conn.execute(text(ddl))
-
-    return {
-        "status": "database_initialized",
-        "tables": ["clinical_event_store", "clinical_audit_trail"],
-        "phase": "AHOS 52.8",
-        "readiness": "POSTGRESQL_EVENT_STORE_READY"
-    }
 
 
 @router.post("/events/persist-from-redis")
