@@ -194,3 +194,66 @@ def test_phase50_health_and_dashboard_routes_remain_registered(
         "/ahos/50.0/production-hardening/dashboard"
         in paths
     )
+
+
+def test_phase50_db_init_route_is_not_exposed():
+    """
+    Phase50 schema initialization must not be exposed as an HTTP route.
+
+    This test performs static AST inspection only.
+    It does not issue any HTTP request.
+    """
+    import ast
+    from pathlib import Path
+
+    platform_source = (
+        Path(__file__).resolve().parents[2]
+        / "app"
+        / "ahos_50_0"
+        / "production_hardening_platform.py"
+    )
+
+    tree = ast.parse(
+        platform_source.read_text(
+            encoding="utf-8",
+            errors="replace",
+        )
+    )
+
+    exposed = []
+
+    for node in tree.body:
+        if not isinstance(
+            node,
+            (
+                ast.FunctionDef,
+                ast.AsyncFunctionDef,
+            ),
+        ):
+            continue
+
+        for decorator in node.decorator_list:
+            if not (
+                isinstance(decorator, ast.Call)
+                and isinstance(
+                    decorator.func,
+                    ast.Attribute,
+                )
+                and decorator.args
+            ):
+                continue
+
+            try:
+                route = ast.literal_eval(
+                    decorator.args[0]
+                )
+            except Exception:
+                continue
+
+            if (
+                decorator.func.attr.lower() == "post"
+                and route == "/db/init"
+            ):
+                exposed.append(node.name)
+
+    assert exposed == []

@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from datetime import datetime
 from passlib.context import CryptContext
 
-from .database import Base, engine, get_db
+from .database import engine, get_db
 from .models import Hospital, AhosUser, ClinicalCase, MonitoringMetric, Partnership
 
 router = APIRouter(
@@ -50,15 +50,6 @@ class PartnerCreate(BaseModel):
     strategic_value: int
     deal_value_usd: float = 0
 
-@router.post("/db/init")
-async def init_database():
-    Base.metadata.create_all(bind=engine)
-    return {
-        "status": "database_initialized",
-        "phase": "AHOS 50.0",
-        "readiness": "POSTGRESQL_MODELS_READY",
-        "timestamp": datetime.utcnow().isoformat()
-    }
 
 @router.get("/health")
 async def health():
