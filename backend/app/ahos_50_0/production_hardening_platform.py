@@ -67,7 +67,7 @@ async def health():
         "phase": "AHOS 50.0",
         "platform": "Production Hardening & Real Deployment",
         "readiness": "PRODUCTION_HARDENING_FULLY_READY",
-        "database": "PostgreSQL connected",
+        "database": f"{engine.dialect.name} connected",
         "timestamp": datetime.utcnow().isoformat()
     }
 
@@ -138,7 +138,7 @@ async def dashboard(db: Session = Depends(get_db)):
     return {
         "phase": "AHOS 50.0",
         "readiness": "PRODUCTION_HARDENING_READY",
-        "database": "PostgreSQL",
+        "database": engine.dialect.name,
         "persistent_hospitals": hospitals,
         "persistent_users": users,
         "persistent_clinical_cases": cases,
