@@ -251,15 +251,3 @@ async def dashboard():
         "event_store_score": 0.99,
         "status": "operational"
     }
-
-
-@router.delete("/db/clear-test")
-async def clear_test():
-    with engine.begin() as conn:
-        conn.execute(text("DELETE FROM clinical_audit_trail"))
-        conn.execute(text("DELETE FROM clinical_event_store"))
-
-    return {
-        "status": "cleared",
-        "tables": ["clinical_event_store", "clinical_audit_trail"]
-    }
