@@ -28,29 +28,6 @@ async def health():
     }
 
 
-@router.post("/db/init")
-async def db_init():
-    ddl = """
-    CREATE TABLE IF NOT EXISTS clinical_safety_alerts(
-        id SERIAL PRIMARY KEY,
-        alert_id VARCHAR(100) UNIQUE,
-        event_id VARCHAR(100),
-        event_type VARCHAR(100),
-        priority VARCHAR(50),
-        risk_score FLOAT,
-        alert_level VARCHAR(50),
-        status VARCHAR(50),
-        created_at TIMESTAMP DEFAULT NOW()
-    );
-    """
-
-    with engine.begin() as conn:
-        conn.execute(text(ddl))
-
-    return {
-        "status": "initialized",
-        "table": "clinical_safety_alerts"
-    }
 
 
 @router.post("/alerts/generate")
