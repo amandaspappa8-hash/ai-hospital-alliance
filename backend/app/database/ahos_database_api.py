@@ -43,21 +43,6 @@ async def ahos_db_tables():
 
 
 
-@router.get("/ahos/db/memory")
-async def db_memory():
-    conn = get_connection()
-    cur = conn.cursor()
-
-    cur.execute("SELECT * FROM medical_memory_records ORDER BY created_at DESC")
-    rows = [dict(row) for row in cur.fetchall()]
-
-    conn.close()
-
-    return {
-        "status": "success",
-        "total": len(rows),
-        "memory_records": rows
-    }
 
 
 @router.get("/ahos/db/hospital-nodes")
