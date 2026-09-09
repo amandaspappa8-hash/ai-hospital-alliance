@@ -37,26 +37,3 @@ async def ahos_db_tables():
         "status": "success",
         "tables": result
     }
-
-
-
-
-
-
-
-
-@router.get("/ahos/db/hospital-nodes")
-async def db_hospital_nodes():
-    conn = get_connection()
-    cur = conn.cursor()
-
-    cur.execute("SELECT * FROM hospital_nodes ORDER BY created_at DESC")
-    rows = [dict(row) for row in cur.fetchall()]
-
-    conn.close()
-
-    return {
-        "status": "success",
-        "total": len(rows),
-        "hospital_nodes": rows
-    }
