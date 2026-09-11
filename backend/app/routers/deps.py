@@ -55,3 +55,46 @@ async def auth_rate_limit(request: Request):
             detail="Too many login attempts. Try again in 60 seconds.",
             headers={"Retry-After": "60"},
         )
+
+def get_verified_principal_tenant(
+    request: Request,
+) -> tuple[int, str]:
+    """
+    Return the canonical authenticated principal and tenant claim.
+
+    GlobalAuthenticationMiddleware attaches auth_payload only after
+    canonical cryptographic access-token verification. This helper
+    deliberately does not trust client-supplied tenant identifiers.
+    """
+    payload = getattr(
+        request.state,
+        "auth_payload",
+        None,
+    )
+
+    if not isinstance(payload, dict):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authenticated principal unavailable",
+        )
+
+    principal = payload.get("sub")
+    tenant_id = str(
+        payload.get("tenant_id") or ""
+    ).strip()
+
+    try:
+        principal_user_id = int(principal)
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authenticated principal",
+        )
+
+    if principal_user_id <= 0 or not tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authenticated principal",
+        )
+
+    return principal_user_id, tenant_id

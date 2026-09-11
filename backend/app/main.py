@@ -242,6 +242,8 @@ from backend.app.api.ai_engine import router as ai_engine_router
 
 from backend.app.api.radiology_upload import router as radiology_upload_router
 from .security_compat import login_with_env, get_current_user, validate_token
+from .routers.deps import get_verified_principal_tenant
+from starlette.requests import Request as StarletteRequest
 from .routers.patients import router as patients_router
 from .routers.doctors import router as doctors_router
 from .routers.appointments import router as appointments_router
@@ -1280,26 +1282,59 @@ def create_note(patient_id: str, payload: NoteRequest):
 
 
 @app.get("/appointments")
-def get_appointments():
-    return SERVICES["appointments"].list_appointments()
+def get_appointments(request: StarletteRequest):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
+    )
+
+    try:
+        return SERVICES["appointments"].list_appointments(
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Tenant scope denied",
+        ) from exc
 
 
 @app.post("/appointments")
-def create_appointment(payload: AppointmentRequest):
+def create_appointment(
+    payload: AppointmentRequest,
+    request: StarletteRequest,
+):
     patient_name = payload.patientName or payload.patient or ""
     patient_id = payload.patientId or ""
 
-    return SERVICES["appointments"].create_appointment(
-        {
-            "patientId": patient_id,
-            "patientName": patient_name,
-            "department": payload.department,
-            "doctor": payload.doctor,
-            "date": payload.date or "",
-            "time": payload.time,
-            "status": payload.status or "Scheduled",
-        }
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
     )
+
+    try:
+        return SERVICES["appointments"].create_appointment(
+            {
+                "patientId": patient_id,
+                "patientName": patient_name,
+                "department": payload.department,
+                "doctor": payload.doctor,
+                "date": payload.date or "",
+                "time": payload.time,
+                "status": payload.status or "Scheduled",
+            },
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Tenant scope denied",
+        ) from exc
+    except LookupError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
 
 
 @app.get("/reports")
