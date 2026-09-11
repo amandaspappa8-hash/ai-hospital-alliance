@@ -4,11 +4,19 @@ Route Security Registry
 """
 
 PUBLIC_ROUTES = {
-    "/",
-    "/docs",
-    "/redoc",
-    "/openapi.json",
-    "/health",
+    '/',
+    '/auth/db-login',
+    '/auth/jwt-login',
+    '/auth/login',
+    '/auth/refresh',
+    '/docs',
+    '/docs/oauth2-redirect',
+    '/fhir/R4/metadata',
+    '/health',
+    '/openapi.json',
+    '/ready',
+    '/redoc',
+    '/system-health',
 }
 
 PROTECTED_PREFIXES = {
@@ -38,4 +46,4 @@ def classify(path: str) -> str:
         if path.startswith(p):
             return "PROTECTED"
 
-    return "PUBLIC"
+    return "PROTECTED"
