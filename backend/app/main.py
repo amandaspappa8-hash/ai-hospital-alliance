@@ -241,7 +241,7 @@ from backend.app.api.ultrasound_ai import router as ultrasound_ai_router
 from backend.app.api.ai_engine import router as ai_engine_router
 
 from backend.app.api.radiology_upload import router as radiology_upload_router
-from .security_compat import login_with_env, get_current_user
+from .security_compat import login_with_env, get_current_user, validate_token
 from .routers.patients import router as patients_router
 from .routers.doctors import router as doctors_router
 from .routers.appointments import router as appointments_router
@@ -318,6 +318,28 @@ class GlobalAuthenticationMiddleware(BaseHTTPMiddleware):
         if request.method == "OPTIONS":
             return await call_next(request)
 
+        # Development-only authentication bootstrap.
+        #
+        # /auth/dev-login must never be exposed in production, but it
+        # also cannot require an already-issued access token in approved
+        # development/test environments.
+        if path == "/auth/dev-login":
+            app_env = os.getenv("APP_ENV", "").strip().lower()
+
+            if app_env in {
+                "dev",
+                "development",
+                "local",
+                "test",
+            }:
+                return await call_next(request)
+
+            return JSONResponse(
+                status_code=404,
+                content={
+                    "detail": "Not found"
+                },
+            )
 
         route_class = classify(path)
         audit_class = classify_generated(path)
@@ -361,15 +383,40 @@ class GlobalAuthenticationMiddleware(BaseHTTPMiddleware):
         if path.startswith("/public"):
             return await call_next(request)
 
-        auth = request.headers.get("Authorization","")
+        auth = request.headers.get("Authorization", "")
 
         if not auth.startswith("Bearer "):
             return JSONResponse(
                 status_code=401,
                 content={
-                    "detail":"Authentication required"
-                }
+                    "detail": "Authentication required"
+                },
             )
+
+        token = auth[len("Bearer "):].strip()
+
+        if not token:
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "detail": "Invalid or expired access token"
+                },
+            )
+
+        payload = validate_token(token)
+
+        if not payload:
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "detail": "Invalid or expired access token"
+                },
+            )
+
+        # Claims are attached only after successful cryptographic
+        # verification. Existing endpoint dependencies may continue
+        # performing their own authorization/tenant checks.
+        request.state.auth_payload = payload
 
         return await call_next(request)
 
