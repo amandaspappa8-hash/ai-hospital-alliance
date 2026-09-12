@@ -1343,45 +1343,120 @@ def get_reports():
 
 
 @app.get("/doctors/summary")
-def get_doctors_summary():
-    return DOCTORS
+def get_doctors_summary(request: StarletteRequest):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
+    )
+    try:
+        return SERVICES["doctor_assignments"].list_doctors(
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=str(exc),
+        ) from exc
 
 
 @app.get("/doctors/by-specialty/{name}")
-def get_doctors_by_specialty(name: str):
-    normalized = name.strip().lower()
-    return [
-        doctor
-        for doctor in DOCTORS
-        if doctor["specialty"].strip().lower() == normalized
-    ]
+def get_doctors_by_specialty(
+    name: str,
+    request: StarletteRequest,
+):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
+    )
+    try:
+        return SERVICES["doctor_assignments"].list_doctors_by_specialty(
+            name,
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=str(exc),
+        ) from exc
 
 
 @app.get("/doctors/{doctor_id}")
-def get_doctor_by_id(doctor_id: str):
-    for doctor in DOCTORS:
-        if doctor["id"] == doctor_id:
-            return doctor
-    raise HTTPException(status_code=404, detail="Doctor not found")
+def get_doctor_by_id(
+    doctor_id: str,
+    request: StarletteRequest,
+):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
+    )
+    try:
+        doctor = SERVICES["doctor_assignments"].get_doctor(
+            doctor_id,
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=str(exc),
+        ) from exc
+
+    if doctor is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Doctor not found",
+        )
+
+    return doctor
 
 
 @app.get('/doctor-assignments/{doctor_id}')
-def get_doctor_assignments(doctor_id: str):
-    return SERVICES['doctor_assignments'].list_by_doctor(doctor_id)
+def get_doctor_assignments(
+    doctor_id: str,
+    request: StarletteRequest,
+):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
+    )
+    try:
+        return SERVICES["doctor_assignments"].list_by_doctor(
+            doctor_id,
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=str(exc),
+        ) from exc
 
 
 @app.post('/doctor-assignments/{doctor_id}')
-def create_doctor_assignment(doctor_id: str, payload: DoctorAssignmentRequest):
-    return SERVICES['doctor_assignments'].create(
-        doctor_id,
-        {
-            'patientId': payload.patientId,
-            'patientName': payload.patientName,
-            'department': payload.department,
-            'condition': payload.condition,
-            'status': payload.status,
-        },
+def create_doctor_assignment(
+    doctor_id: str,
+    payload: DoctorAssignmentRequest,
+    request: StarletteRequest,
+):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
     )
+    try:
+        return SERVICES["doctor_assignments"].create(
+            doctor_id,
+            {
+                "patientId": payload.patientId,
+                "patientName": payload.patientName,
+                "department": payload.department,
+                "condition": payload.condition,
+                "status": payload.status,
+            },
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=str(exc),
+        ) from exc
 
 
 @app.post('/doctor-assignments/{doctor_id}/{assignment_id}/status')
@@ -1389,20 +1464,47 @@ def update_doctor_assignment_status(
     doctor_id: str,
     assignment_id: int,
     payload: DoctorAssignmentStatusRequest,
+    request: StarletteRequest,
 ):
-    return SERVICES['doctor_assignments'].update_status(
-        doctor_id,
-        assignment_id,
-        payload.status,
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
     )
+    try:
+        return SERVICES["doctor_assignments"].update_status(
+            doctor_id,
+            assignment_id,
+            payload.status,
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=str(exc),
+        ) from exc
 
 
 @app.delete('/doctor-assignments/{doctor_id}/{assignment_id}')
-def delete_doctor_assignment(doctor_id: str, assignment_id: int):
-    return SERVICES['doctor_assignments'].delete(
-        doctor_id,
-        assignment_id,
+def delete_doctor_assignment(
+    doctor_id: str,
+    assignment_id: int,
+    request: StarletteRequest,
+):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
     )
+    try:
+        return SERVICES["doctor_assignments"].delete(
+            doctor_id,
+            assignment_id,
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=str(exc),
+        ) from exc
 
 
 @app.get("/specialties/summary")
