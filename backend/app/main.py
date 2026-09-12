@@ -1582,17 +1582,56 @@ def get_labs_catalog():
 
 
 @app.get("/labs/orders")
-def get_lab_orders():
-    return SERVICES["labs"].list_orders()
+def get_lab_orders(
+    request: StarletteRequest,
+):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
+    )
+
+    try:
+        return SERVICES["labs"].list_orders(
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden",
+        ) from exc
 
 
 @app.get("/labs/orders/{patient_id}")
-def get_lab_orders_by_patient(patient_id: str):
-    return SERVICES["labs"].list_orders_by_patient(patient_id)
+def get_lab_orders_by_patient(
+    patient_id: str,
+    request: StarletteRequest,
+):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
+    )
+
+    try:
+        return SERVICES["labs"].list_orders_by_patient(
+            patient_id,
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden",
+        ) from exc
 
 
 @app.post("/labs/orders")
-def create_lab_order(payload: LabOrderCreateRequest):
+def create_lab_order(
+    payload: LabOrderCreateRequest,
+    request: StarletteRequest,
+):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
+    )
+
     if not payload.tests:
         raise HTTPException(
             status_code=400,
@@ -1611,8 +1650,15 @@ def create_lab_order(payload: LabOrderCreateRequest):
 
     try:
         return SERVICES["labs"].create_order(
-            order_payload
+            order_payload,
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
         )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden",
+        ) from exc
     except ValueError as exc:
         if str(exc) == "Patient not found":
             raise HTTPException(
@@ -1626,14 +1672,27 @@ def create_lab_order(payload: LabOrderCreateRequest):
 def create_lab_result(
     order_id: str,
     payload: LabResultRequest,
+    request: StarletteRequest,
 ):
-    return SERVICES["labs"].set_result(
-        order_id,
-        {
-            "result": payload.result,
-            "status": payload.status or "Completed",
-        },
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
     )
+
+    try:
+        return SERVICES["labs"].set_result(
+            order_id,
+            {
+                "result": payload.result,
+                "status": payload.status or "Completed",
+            },
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden",
+        ) from exc
 
 
 app.include_router(clinical_route_router)

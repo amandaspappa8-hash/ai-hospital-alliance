@@ -6,10 +6,13 @@ import json
 from typing import Any
 
 from sqlalchemy import text
+from sqlalchemy.engine import Connection
 
 
 class PostgresLabsRepository:
-    """Persist laboratory orders in the canonical PostgreSQL schema."""
+    """Persist tenant-scoped laboratory orders in canonical PostgreSQL."""
+
+    supports_tenant_scope = True
 
     _ID_LOCK_KEY = "aiha:labs:lab_orders:id"
 
@@ -44,101 +47,104 @@ class PostgresLabsRepository:
             "result": mapping["result"] or "",
         }
 
-    def get_catalog(self) -> dict[str, Any]:
-        return dict(self.catalog_store)
+    @staticmethod
+    def _parse_principal_user_id(
+        principal_user_id: int | str | None,
+    ) -> int:
+        try:
+            parsed = int(principal_user_id)
+        except (TypeError, ValueError) as exc:
+            raise PermissionError(
+                "Invalid authenticated principal"
+            ) from exc
 
-    def list_orders(self) -> list[dict[str, Any]]:
-        stmt = text(
-            """
-            SELECT
-                lo.id,
-                lo.patient_id,
-                p.name AS patient_name,
-                lo.section,
-                lo.tests,
-                lo.priority,
-                lo.status,
-                lo.result
-            FROM public.lab_orders AS lo
-            LEFT JOIN public.patients AS p
-                ON p.id = lo.patient_id
-            ORDER BY
-                CASE
-                    WHEN lo.id ~ '^L-[0-9]+$'
-                    THEN substring(lo.id FROM '^L-([0-9]+)$')::integer
-                    ELSE NULL
-                END,
-                lo.id
-            """
+        if parsed <= 0:
+            raise PermissionError(
+                "Invalid authenticated principal"
+            )
+
+        return parsed
+
+    @classmethod
+    def _resolve_scope(
+        cls,
+        connection: Connection,
+        tenant_id: str | None,
+        principal_user_id: int | str | None,
+    ) -> str:
+        claimed_tenant_id = str(
+            tenant_id or ""
+        ).strip()
+
+        if not claimed_tenant_id:
+            raise PermissionError(
+                "Authenticated tenant unavailable"
+            )
+
+        user_id = cls._parse_principal_user_id(
+            principal_user_id
         )
 
-        with self.engine.connect() as connection:
-            rows = connection.execute(
-                stmt
-            ).fetchall()
+        row = connection.execute(
+            text(
+                """
+                SELECT
+                    t.id AS tenant_id
+                FROM public.users AS u
+                JOIN public.hospitals AS h
+                    ON h.id = u.hospital_id
+                JOIN public.tenants AS t
+                    ON t.id = h.tenant_id
+                WHERE u.id = :user_id
+                """
+            ),
+            {
+                "user_id": user_id,
+            },
+        ).one_or_none()
 
-        return [
-            self._serialize(row)
-            for row in rows
-        ]
+        if row is None:
+            raise PermissionError(
+                "Authenticated principal has no tenant scope"
+            )
 
-    def list_orders_by_patient(
-        self,
-        patient_id: str,
-    ) -> list[dict[str, Any]]:
-        stmt = text(
-            """
-            SELECT
-                lo.id,
-                lo.patient_id,
-                p.name AS patient_name,
-                lo.section,
-                lo.tests,
-                lo.priority,
-                lo.status,
-                lo.result
-            FROM public.lab_orders AS lo
-            LEFT JOIN public.patients AS p
-                ON p.id = lo.patient_id
-            WHERE lo.patient_id = :patient_id
-            ORDER BY
-                CASE
-                    WHEN lo.id ~ '^L-[0-9]+$'
-                    THEN substring(lo.id FROM '^L-([0-9]+)$')::integer
-                    ELSE NULL
-                END,
-                lo.id
-            """
-        )
+        derived_tenant_id = str(
+            row._mapping["tenant_id"] or ""
+        ).strip()
 
-        with self.engine.connect() as connection:
-            rows = connection.execute(
-                stmt,
-                {
-                    "patient_id": patient_id,
-                },
-            ).fetchall()
+        if (
+            not derived_tenant_id
+            or derived_tenant_id
+            != claimed_tenant_id
+        ):
+            raise PermissionError(
+                "Authenticated tenant scope mismatch"
+            )
 
-        return [
-            self._serialize(row)
-            for row in rows
-        ]
+        return derived_tenant_id
 
     @staticmethod
     def _validate_patient(
-        connection,
+        connection: Connection,
         patient_id: str,
+        tenant_id: str,
     ) -> str:
         patient_name = connection.execute(
             text(
                 """
-                SELECT name
-                FROM public.patients
-                WHERE id = :patient_id
+                SELECT
+                    p.name
+                FROM public.patients AS p
+                JOIN public.hospitals AS h
+                    ON h.id = p.hospital_id
+                WHERE
+                    p.id = :patient_id
+                    AND h.tenant_id = :tenant_id
                 """
             ),
             {
                 "patient_id": patient_id,
+                "tenant_id": tenant_id,
             },
         ).scalar_one_or_none()
 
@@ -149,9 +155,129 @@ class PostgresLabsRepository:
 
         return patient_name
 
+    def get_catalog(self) -> dict[str, Any]:
+        # Shared reference data. It contains no patient records and therefore
+        # intentionally remains outside tenant row filtering.
+        return dict(self.catalog_store)
+
+    def list_orders(
+        self,
+        *,
+        tenant_id: str | None = None,
+        principal_user_id: int | str | None = None,
+    ) -> list[dict[str, Any]]:
+        with self.engine.connect() as connection:
+            trusted_tenant_id = self._resolve_scope(
+                connection,
+                tenant_id,
+                principal_user_id,
+            )
+
+            rows = connection.execute(
+                text(
+                    """
+                    SELECT
+                        lo.id,
+                        lo.patient_id,
+                        p.name AS patient_name,
+                        lo.section,
+                        lo.tests,
+                        lo.priority,
+                        lo.status,
+                        lo.result
+                    FROM public.lab_orders AS lo
+                    JOIN public.patients AS p
+                        ON p.id = lo.patient_id
+                    JOIN public.hospitals AS h
+                        ON h.id = p.hospital_id
+                    WHERE
+                        h.tenant_id = :tenant_id
+                    ORDER BY
+                        CASE
+                            WHEN lo.id ~ '^L-[0-9]+$'
+                            THEN substring(
+                                lo.id FROM '^L-([0-9]+)$'
+                            )::integer
+                            ELSE NULL
+                        END,
+                        lo.id
+                    """
+                ),
+                {
+                    "tenant_id":
+                        trusted_tenant_id,
+                },
+            ).fetchall()
+
+        return [
+            self._serialize(row)
+            for row in rows
+        ]
+
+    def list_orders_by_patient(
+        self,
+        patient_id: str,
+        *,
+        tenant_id: str | None = None,
+        principal_user_id: int | str | None = None,
+    ) -> list[dict[str, Any]]:
+        with self.engine.connect() as connection:
+            trusted_tenant_id = self._resolve_scope(
+                connection,
+                tenant_id,
+                principal_user_id,
+            )
+
+            rows = connection.execute(
+                text(
+                    """
+                    SELECT
+                        lo.id,
+                        lo.patient_id,
+                        p.name AS patient_name,
+                        lo.section,
+                        lo.tests,
+                        lo.priority,
+                        lo.status,
+                        lo.result
+                    FROM public.lab_orders AS lo
+                    JOIN public.patients AS p
+                        ON p.id = lo.patient_id
+                    JOIN public.hospitals AS h
+                        ON h.id = p.hospital_id
+                    WHERE
+                        lo.patient_id = :patient_id
+                        AND h.tenant_id = :tenant_id
+                    ORDER BY
+                        CASE
+                            WHEN lo.id ~ '^L-[0-9]+$'
+                            THEN substring(
+                                lo.id FROM '^L-([0-9]+)$'
+                            )::integer
+                            ELSE NULL
+                        END,
+                        lo.id
+                    """
+                ),
+                {
+                    "patient_id":
+                        patient_id,
+                    "tenant_id":
+                        trusted_tenant_id,
+                },
+            ).fetchall()
+
+        return [
+            self._serialize(row)
+            for row in rows
+        ]
+
     def create_order(
         self,
         payload: dict[str, Any],
+        *,
+        tenant_id: str | None = None,
+        principal_user_id: int | str | None = None,
     ) -> dict[str, Any]:
         patient_id = payload.get(
             "patientId",
@@ -179,9 +305,16 @@ class PostgresLabsRepository:
         )
 
         with self.engine.begin() as connection:
+            trusted_tenant_id = self._resolve_scope(
+                connection,
+                tenant_id,
+                principal_user_id,
+            )
+
             patient_name = self._validate_patient(
                 connection,
                 patient_id,
+                trusted_tenant_id,
             )
 
             connection.execute(
@@ -241,9 +374,9 @@ class PostgresLabsRepository:
                         created_at,
                         updated_at
                     )
-                    VALUES (
+                    SELECT
                         :id,
-                        :patient_id,
+                        p.id,
                         NULL,
                         :section,
                         CAST(:tests AS json),
@@ -252,7 +385,12 @@ class PostgresLabsRepository:
                         '',
                         CURRENT_TIMESTAMP,
                         CURRENT_TIMESTAMP
-                    )
+                    FROM public.patients AS p
+                    JOIN public.hospitals AS h
+                        ON h.id = p.hospital_id
+                    WHERE
+                        p.id = :patient_id
+                        AND h.tenant_id = :tenant_id
                     RETURNING
                         id,
                         patient_id,
@@ -264,22 +402,35 @@ class PostgresLabsRepository:
                     """
                 ),
                 {
-                    "id": order_id,
-                    "patient_id": patient_id,
-                    "section": section,
-                    "tests": json.dumps(tests),
-                    "priority": priority,
-                    "status": status,
+                    "id":
+                        order_id,
+                    "patient_id":
+                        patient_id,
+                    "tenant_id":
+                        trusted_tenant_id,
+                    "section":
+                        section,
+                    "tests":
+                        json.dumps(tests),
+                    "priority":
+                        priority,
+                    "status":
+                        status,
                 },
-            ).one()
+            ).one_or_none()
+
+            if row is None:
+                raise ValueError(
+                    "Patient not found"
+                )
 
             data = dict(
                 row._mapping
             )
 
-            data[
-                "patient_name"
-            ] = patient_name
+            data["patient_name"] = (
+                patient_name
+            )
 
             return self._serialize(
                 _MappingRow(data)
@@ -289,6 +440,9 @@ class PostgresLabsRepository:
         self,
         order_id: str | int,
         payload: dict[str, Any],
+        *,
+        tenant_id: str | None = None,
+        principal_user_id: int | str | None = None,
     ) -> dict[str, Any] | None:
         status = (
             payload.get("status")
@@ -301,31 +455,50 @@ class PostgresLabsRepository:
         )
 
         with self.engine.begin() as connection:
+            trusted_tenant_id = self._resolve_scope(
+                connection,
+                tenant_id,
+                principal_user_id,
+            )
+
             row = connection.execute(
                 text(
                     """
-                    UPDATE public.lab_orders
+                    UPDATE public.lab_orders AS lo
                     SET
                         result = :result,
                         status = :status,
                         updated_at = CURRENT_TIMESTAMP
-                    WHERE id = :order_id
+                    WHERE
+                        lo.id = :order_id
+                        AND EXISTS (
+                            SELECT 1
+                            FROM public.patients AS p
+                            JOIN public.hospitals AS h
+                                ON h.id = p.hospital_id
+                            WHERE
+                                p.id = lo.patient_id
+                                AND h.tenant_id = :tenant_id
+                        )
                     RETURNING
-                        id,
-                        patient_id,
-                        section,
-                        tests,
-                        priority,
-                        status,
-                        result
+                        lo.id,
+                        lo.patient_id,
+                        lo.section,
+                        lo.tests,
+                        lo.priority,
+                        lo.status,
+                        lo.result
                     """
                 ),
                 {
-                    "order_id": str(
-                        order_id
-                    ),
-                    "result": result,
-                    "status": status,
+                    "order_id":
+                        str(order_id),
+                    "result":
+                        result,
+                    "status":
+                        status,
+                    "tenant_id":
+                        trusted_tenant_id,
                 },
             ).one_or_none()
 
@@ -335,9 +508,14 @@ class PostgresLabsRepository:
             patient_name = connection.execute(
                 text(
                     """
-                    SELECT name
-                    FROM public.patients
-                    WHERE id = :patient_id
+                    SELECT
+                        p.name
+                    FROM public.patients AS p
+                    JOIN public.hospitals AS h
+                        ON h.id = p.hospital_id
+                    WHERE
+                        p.id = :patient_id
+                        AND h.tenant_id = :tenant_id
                     """
                 ),
                 {
@@ -345,18 +523,20 @@ class PostgresLabsRepository:
                         row._mapping[
                             "patient_id"
                         ],
+                    "tenant_id":
+                        trusted_tenant_id,
                 },
             ).scalar_one_or_none()
+
+            if patient_name is None:
+                return None
 
             data = dict(
                 row._mapping
             )
 
-            data[
-                "patient_name"
-            ] = (
+            data["patient_name"] = (
                 patient_name
-                or ""
             )
 
             return self._serialize(
