@@ -4,10 +4,11 @@ import json
 from typing import Any
 
 from sqlalchemy import text
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection, Engine
 
 
 class PostgresRadiologyRepository:
+    supports_tenant_scope = True
     _ID_LOCK_KEY = "aiha:radiology:radiology_orders:id"
 
     def __init__(
@@ -23,6 +24,161 @@ class PostgresRadiologyRepository:
         )
 
     @staticmethod
+    def _parse_principal_user_id(
+        principal_user_id: int,
+    ) -> int:
+        try:
+            value = int(principal_user_id)
+        except (TypeError, ValueError) as exc:
+            raise PermissionError(
+                "Invalid authenticated principal"
+            ) from exc
+
+        if value <= 0:
+            raise PermissionError(
+                "Invalid authenticated principal"
+            )
+
+        return value
+
+    def _resolve_scope(
+        self,
+        connection: Connection,
+        tenant_id: str,
+        principal_user_id: int,
+    ) -> dict[str, str | int]:
+        claimed_tenant_id = str(
+            tenant_id or ""
+        ).strip()
+
+        if not claimed_tenant_id:
+            raise PermissionError(
+                "Authenticated tenant unavailable"
+            )
+
+        user_id = self._parse_principal_user_id(
+            principal_user_id
+        )
+
+        row = connection.execute(
+            text(
+                """
+                SELECT
+                    u.id AS user_id,
+                    u.hospital_id,
+                    h.tenant_id
+                FROM public.users AS u
+                JOIN public.hospitals AS h
+                  ON h.id = u.hospital_id
+                JOIN public.tenants AS t
+                  ON t.id = h.tenant_id
+                WHERE u.id = :user_id
+                """
+            ),
+            {
+                "user_id": user_id,
+            },
+        ).mappings().one_or_none()
+
+        if row is None:
+            raise PermissionError(
+                "Authenticated principal has no tenant scope"
+            )
+
+        derived_tenant_id = str(
+            row.get("tenant_id") or ""
+        ).strip()
+
+        hospital_id = str(
+            row.get("hospital_id") or ""
+        ).strip()
+
+        if (
+            not derived_tenant_id
+            or not hospital_id
+        ):
+            raise PermissionError(
+                "Authenticated principal has incomplete tenant scope"
+            )
+
+        if derived_tenant_id != claimed_tenant_id:
+            raise PermissionError(
+                "Authenticated tenant does not match principal scope"
+            )
+
+        return {
+            "user_id": user_id,
+            "hospital_id": hospital_id,
+            "tenant_id": derived_tenant_id,
+        }
+
+    def _validate_patient(
+        self,
+        connection: Connection,
+        patient_id: str,
+        tenant_id: str,
+    ) -> str:
+        patient_name = connection.execute(
+            text(
+                """
+                SELECT p.name
+                FROM public.patients AS p
+                JOIN public.hospitals AS h
+                  ON h.id = p.hospital_id
+                WHERE p.id = :patient_id
+                  AND h.tenant_id = :tenant_id
+                """
+            ),
+            {
+                "patient_id": patient_id,
+                "tenant_id": tenant_id,
+            },
+        ).scalar_one_or_none()
+
+        if patient_name is None:
+            raise ValueError(
+                "Patient not found"
+            )
+
+        return str(patient_name)
+
+    def authorize_patient_access(
+        self,
+        patient_id: str,
+        *,
+        tenant_id: str,
+        principal_user_id: int,
+    ) -> None:
+        with self.engine.connect() as connection:
+            scope = self._resolve_scope(
+                connection,
+                tenant_id,
+                principal_user_id,
+            )
+
+            allowed = connection.execute(
+                text(
+                    """
+                    SELECT 1
+                    FROM public.patients AS p
+                    JOIN public.hospitals AS h
+                      ON h.id = p.hospital_id
+                    WHERE p.id = :patient_id
+                      AND h.tenant_id = :tenant_id
+                    """
+                ),
+                {
+                    "patient_id": patient_id,
+                    "tenant_id": scope["tenant_id"],
+                },
+            ).scalar_one_or_none()
+
+        if allowed is None:
+            raise PermissionError(
+                "Patient is outside authenticated tenant scope"
+            )
+
+    @staticmethod
     def _json_value(
         value: Any,
         default: Any,
@@ -30,14 +186,9 @@ class PostgresRadiologyRepository:
         if value is None:
             return default
 
-        if isinstance(
-            value,
-            str,
-        ):
+        if isinstance(value, str):
             try:
-                return json.loads(
-                    value
-                )
+                return json.loads(value)
             except json.JSONDecodeError:
                 return default
 
@@ -84,33 +235,6 @@ class PostgresRadiologyRepository:
             ),
         }
 
-    def _validate_patient(
-        self,
-        connection: Any,
-        patient_id: str,
-    ) -> str:
-        patient_name = connection.execute(
-            text(
-                """
-                SELECT name
-                FROM patients
-                WHERE id = :patient_id
-                """
-            ),
-            {
-                "patient_id": patient_id,
-            },
-        ).scalar_one_or_none()
-
-        if patient_name is None:
-            raise ValueError(
-                "Patient not found"
-            )
-
-        return str(
-            patient_name
-        )
-
     def get_catalog(
         self,
     ) -> dict[str, Any]:
@@ -118,8 +242,17 @@ class PostgresRadiologyRepository:
 
     def list_orders(
         self,
+        *,
+        tenant_id: str,
+        principal_user_id: int,
     ) -> list[dict[str, Any]]:
         with self.engine.connect() as connection:
+            scope = self._resolve_scope(
+                connection,
+                tenant_id,
+                principal_user_id,
+            )
+
             rows = connection.execute(
                 text(
                     """
@@ -132,14 +265,20 @@ class PostgresRadiologyRepository:
                         ro.priority,
                         ro.status,
                         ro.report
-                    FROM radiology_orders AS ro
-                    LEFT JOIN patients AS p
+                    FROM public.radiology_orders AS ro
+                    JOIN public.patients AS p
                       ON p.id = ro.patient_id
+                    JOIN public.hospitals AS h
+                      ON h.id = p.hospital_id
+                    WHERE h.tenant_id = :tenant_id
                     ORDER BY
                         ro.created_at NULLS LAST,
                         ro.id
                     """
-                )
+                ),
+                {
+                    "tenant_id": scope["tenant_id"],
+                },
             ).all()
 
         return [
@@ -150,8 +289,17 @@ class PostgresRadiologyRepository:
     def list_orders_by_patient(
         self,
         patient_id: str,
+        *,
+        tenant_id: str,
+        principal_user_id: int,
     ) -> list[dict[str, Any]]:
         with self.engine.connect() as connection:
+            scope = self._resolve_scope(
+                connection,
+                tenant_id,
+                principal_user_id,
+            )
+
             rows = connection.execute(
                 text(
                     """
@@ -164,10 +312,13 @@ class PostgresRadiologyRepository:
                         ro.priority,
                         ro.status,
                         ro.report
-                    FROM radiology_orders AS ro
-                    LEFT JOIN patients AS p
+                    FROM public.radiology_orders AS ro
+                    JOIN public.patients AS p
                       ON p.id = ro.patient_id
+                    JOIN public.hospitals AS h
+                      ON h.id = p.hospital_id
                     WHERE ro.patient_id = :patient_id
+                      AND h.tenant_id = :tenant_id
                     ORDER BY
                         ro.created_at NULLS LAST,
                         ro.id
@@ -175,6 +326,7 @@ class PostgresRadiologyRepository:
                 ),
                 {
                     "patient_id": patient_id,
+                    "tenant_id": scope["tenant_id"],
                 },
             ).all()
 
@@ -186,6 +338,9 @@ class PostgresRadiologyRepository:
     def create_order(
         self,
         payload: dict[str, Any],
+        *,
+        tenant_id: str,
+        principal_user_id: int,
     ) -> dict[str, Any]:
         patient_id = str(
             payload.get(
@@ -222,11 +377,16 @@ class PostgresRadiologyRepository:
         )
 
         with self.engine.begin() as connection:
-            patient_name = (
-                self._validate_patient(
-                    connection,
-                    patient_id,
-                )
+            scope = self._resolve_scope(
+                connection,
+                tenant_id,
+                principal_user_id,
+            )
+
+            patient_name = self._validate_patient(
+                connection,
+                patient_id,
+                str(scope["tenant_id"]),
             )
 
             connection.execute(
@@ -238,8 +398,7 @@ class PostgresRadiologyRepository:
                     """
                 ),
                 {
-                    "lock_key":
-                        self._ID_LOCK_KEY,
+                    "lock_key": self._ID_LOCK_KEY,
                 },
             )
 
@@ -255,7 +414,7 @@ class PostgresRadiologyRepository:
                         ),
                         5000
                     )
-                    FROM radiology_orders
+                    FROM public.radiology_orders
                     WHERE id ~ '^RAD-[0-9]+$'
                     """
                 )
@@ -264,22 +423,17 @@ class PostgresRadiologyRepository:
             next_number = (
                 max(
                     5000,
-                    int(
-                        max_suffix
-                        or 5000
-                    ),
+                    int(max_suffix or 5000),
                 )
                 + 1
             )
 
-            order_id = (
-                f"RAD-{next_number}"
-            )
+            order_id = f"RAD-{next_number}"
 
             row = connection.execute(
                 text(
                     """
-                    INSERT INTO radiology_orders (
+                    INSERT INTO public.radiology_orders (
                         id,
                         patient_id,
                         ordered_by,
@@ -293,9 +447,9 @@ class PostgresRadiologyRepository:
                         created_at,
                         updated_at
                     )
-                    VALUES (
+                    SELECT
                         :id,
-                        :patient_id,
+                        p.id,
                         NULL,
                         :section,
                         CAST(:studies AS JSON),
@@ -306,7 +460,11 @@ class PostgresRadiologyRepository:
                         NULL,
                         CURRENT_TIMESTAMP,
                         CURRENT_TIMESTAMP
-                    )
+                    FROM public.patients AS p
+                    JOIN public.hospitals AS h
+                      ON h.id = p.hospital_id
+                    WHERE p.id = :patient_id
+                      AND h.tenant_id = :tenant_id
                     RETURNING
                         id,
                         patient_id,
@@ -319,8 +477,8 @@ class PostgresRadiologyRepository:
                 ),
                 {
                     "id": order_id,
-                    "patient_id":
-                        patient_id,
+                    "patient_id": patient_id,
+                    "tenant_id": scope["tenant_id"],
                     "section": (
                         payload.get(
                             "section",
@@ -328,22 +486,20 @@ class PostgresRadiologyRepository:
                         )
                         or ""
                     ),
-                    "studies": json.dumps(
-                        studies
-                    ),
+                    "studies": json.dumps(studies),
                     "priority": priority,
                     "status": status,
                     "report": report,
                 },
-            ).one()
+            ).one_or_none()
 
-            mapping = dict(
-                row._mapping
-            )
+            if row is None:
+                raise ValueError(
+                    "Patient not found"
+                )
 
-            mapping[
-                "patient_name"
-            ] = patient_name
+            mapping = dict(row._mapping)
+            mapping["patient_name"] = patient_name
 
             class RowAdapter:
                 def __init__(
@@ -353,15 +509,16 @@ class PostgresRadiologyRepository:
                     self._mapping = values
 
             return self._serialize(
-                RowAdapter(
-                    mapping
-                )
+                RowAdapter(mapping)
             )
 
     def set_result(
         self,
         order_id: str | int,
         payload: dict[str, Any],
+        *,
+        tenant_id: str,
+        principal_user_id: int,
     ) -> dict[str, Any] | None:
         report = (
             payload.get(
@@ -377,23 +534,37 @@ class PostgresRadiologyRepository:
         )
 
         with self.engine.begin() as connection:
+            scope = self._resolve_scope(
+                connection,
+                tenant_id,
+                principal_user_id,
+            )
+
             patient_id = connection.execute(
                 text(
                     """
-                    UPDATE radiology_orders
+                    UPDATE public.radiology_orders AS ro
                     SET
                         report = :report,
                         status = :status,
                         updated_at = CURRENT_TIMESTAMP
-                    WHERE id = :order_id
-                    RETURNING patient_id
+                    WHERE ro.id = :order_id
+                      AND EXISTS (
+                          SELECT 1
+                          FROM public.patients AS p
+                          JOIN public.hospitals AS h
+                            ON h.id = p.hospital_id
+                          WHERE p.id = ro.patient_id
+                            AND h.tenant_id = :tenant_id
+                      )
+                    RETURNING ro.patient_id
                     """
                 ),
                 {
-                    "order_id":
-                        str(order_id),
+                    "order_id": str(order_id),
                     "report": report,
                     "status": status,
+                    "tenant_id": scope["tenant_id"],
                 },
             ).scalar_one_or_none()
 
@@ -412,18 +583,22 @@ class PostgresRadiologyRepository:
                         ro.priority,
                         ro.status,
                         ro.report
-                    FROM radiology_orders AS ro
-                    LEFT JOIN patients AS p
+                    FROM public.radiology_orders AS ro
+                    JOIN public.patients AS p
                       ON p.id = ro.patient_id
+                    JOIN public.hospitals AS h
+                      ON h.id = p.hospital_id
                     WHERE ro.id = :order_id
+                      AND h.tenant_id = :tenant_id
                     """
                 ),
                 {
-                    "order_id":
-                        str(order_id),
+                    "order_id": str(order_id),
+                    "tenant_id": scope["tenant_id"],
                 },
-            ).one()
+            ).one_or_none()
 
-            return self._serialize(
-                row
-            )
+            if row is None:
+                return None
+
+            return self._serialize(row)

@@ -1540,32 +1540,100 @@ def get_radiology_catalog():
 
 
 @app.get("/radiology/orders")
-def get_radiology_orders():
-    return SERVICES["radiology"].list_orders()
+def get_radiology_orders(request: StarletteRequest):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
+    )
+
+    try:
+        return SERVICES["radiology"].list_orders(
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden",
+        ) from exc
 
 
 @app.get("/radiology/orders/{patient_id}")
-def get_radiology_orders_by_patient(patient_id: str):
-    return SERVICES["radiology"].list_orders_by_patient(patient_id)
+def get_radiology_orders_by_patient(
+    patient_id: str,
+    request: StarletteRequest,
+):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
+    )
+
+    try:
+        return SERVICES["radiology"].list_orders_by_patient(
+            patient_id,
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden",
+        ) from exc
 
 
 @app.post("/radiology/orders")
-def create_radiology_order(payload: RadiologyOrderCreateRequest):
+def create_radiology_order(
+    payload: RadiologyOrderCreateRequest,
+    request: StarletteRequest,
+):
     if not payload.studies:
-        raise HTTPException(status_code=400, detail="At least one study is required")
+        raise HTTPException(
+            status_code=400,
+            detail="At least one study is required",
+        )
+
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
+    )
 
     try:
-        return SERVICES["radiology"].create_order(payload.model_dump())
+        return SERVICES["radiology"].create_order(
+            payload.model_dump(),
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden",
+        ) from exc
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
 
 
 @app.post("/radiology/results/{order_id}")
-def create_radiology_report(order_id: str, payload: RadiologyReportRequest):
-    order = SERVICES["radiology"].set_result(
-        order_id,
-        payload.model_dump(),
+def create_radiology_report(
+    order_id: str,
+    payload: RadiologyReportRequest,
+    request: StarletteRequest,
+):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
     )
+
+    try:
+        order = SERVICES["radiology"].set_result(
+            order_id,
+            payload.model_dump(),
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden",
+        ) from exc
 
     if order is None:
         raise HTTPException(
@@ -2944,18 +3012,62 @@ RADIOLOGY = {"P-1001": [{"study": "CT Chest", "status": "Pending", "report": ""}
 
 
 @app.get("/radiology/{patient_id}")
-def get_radiology(patient_id: str, current_user: dict = Depends(get_current_user)):
+def get_radiology(
+    patient_id: str,
+    request: StarletteRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
+    )
+
+    try:
+        SERVICES["radiology"].authorize_patient_access(
+            patient_id,
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden",
+        ) from exc
+
     return RADIOLOGY.get(patient_id, [])
 
 
 @app.post("/radiology/{patient_id}")
 def add_radiology(
-    patient_id: str, payload: dict, current_user: dict = Depends(get_current_user)
+    patient_id: str,
+    payload: dict,
+    request: StarletteRequest,
+    current_user: dict = Depends(get_current_user),
 ):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
+    )
+
+    try:
+        SERVICES["radiology"].authorize_patient_access(
+            patient_id,
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden",
+        ) from exc
+
     if patient_id not in RADIOLOGY:
         RADIOLOGY[patient_id] = []
+
     RADIOLOGY[patient_id].append(payload)
-    return {"status": "ok", "radiology": RADIOLOGY[patient_id]}
+
+    return {
+        "status": "ok",
+        "radiology": RADIOLOGY[patient_id],
+    }
 
 
 from .ai_radiology import analyze_ct_scan
@@ -2963,13 +3075,34 @@ from .ai_radiology import analyze_ct_scan
 
 @app.post("/radiology/{patient_id}/{index}/analyze")
 def analyze_radiology(
-    patient_id: str, index: int, current_user: dict = Depends(get_current_user)
+    patient_id: str,
+    index: int,
+    request: StarletteRequest,
+    current_user: dict = Depends(get_current_user),
 ):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
+    )
+
+    try:
+        SERVICES["radiology"].authorize_patient_access(
+            patient_id,
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden",
+        ) from exc
+
     if patient_id not in RADIOLOGY:
         return {"error": "No studies"}
 
     study = RADIOLOGY[patient_id][index]
-    result = analyze_ct_scan(study.get("study", ""))
+    result = analyze_ct_scan(
+        study.get("study", "")
+    )
 
     RADIOLOGY[patient_id][index]["ai"] = result
 
@@ -2981,7 +3114,11 @@ def analyze_radiology(
                 "time": "NOW",
             }
         )
-    return {"status": "ok", "result": result}
+
+    return {
+        "status": "ok",
+        "result": result,
+    }
 
 
 ALERTS = []
