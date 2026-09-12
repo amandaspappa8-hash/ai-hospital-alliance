@@ -2938,12 +2938,26 @@ def update_mar_status(
     patient_id: str,
     index: int,
     payload: dict,
+    request: StarletteRequest,
     current_user: dict = Depends(get_current_user),
 ):
-    item_id = SERVICES["mar"].resolve_item_id_by_index(
-        patient_id,
-        index,
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
     )
+
+    try:
+        item_id = SERVICES["mar"].resolve_item_id_by_index(
+            patient_id,
+            index,
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden",
+        ) from exc
+
     if item_id is None:
         return {
             "error": "MAR item not found",
@@ -2955,11 +2969,19 @@ def update_mar_status(
         else dict(payload)
     )
 
-    updated = SERVICES["mar"].set_status(
-        patient_id,
-        item_id,
-        payload_data,
-    )
+    try:
+        updated = SERVICES["mar"].set_status(
+            patient_id,
+            item_id,
+            payload_data,
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden",
+        ) from exc
 
     if updated is None:
         return {
@@ -2974,12 +2996,26 @@ def pharmacy_review_mar_item(
     patient_id: str,
     index: int,
     payload: dict,
+    request: StarletteRequest,
     current_user: dict = Depends(get_current_user),
 ):
-    item_id = SERVICES["mar"].resolve_item_id_by_index(
-        patient_id,
-        index,
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
     )
+
+    try:
+        item_id = SERVICES["mar"].resolve_item_id_by_index(
+            patient_id,
+            index,
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden",
+        ) from exc
+
     if item_id is None:
         return {
             "error": "MAR item not found",
@@ -2994,11 +3030,19 @@ def pharmacy_review_mar_item(
     if not payload_data.get("status"):
         payload_data["status"] = "Reviewed"
 
-    updated = SERVICES["mar"].set_pharmacy_review(
-        patient_id,
-        item_id,
-        payload_data,
-    )
+    try:
+        updated = SERVICES["mar"].set_pharmacy_review(
+            patient_id,
+            item_id,
+            payload_data,
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden",
+        ) from exc
 
     if updated is None:
         return {

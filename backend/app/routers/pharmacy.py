@@ -1,8 +1,12 @@
 from fastapi import Depends
 from .deps import get_current_user
 from fastapi import Depends
-from .deps import get_current_user, rate_limit_middleware
-from fastapi import APIRouter, HTTPException, Query
+from .deps import (
+    get_current_user,
+    get_verified_principal_tenant,
+    rate_limit_middleware,
+)
+from fastapi import APIRouter, HTTPException, Query, Request as FastAPIRequest
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
@@ -35,81 +39,203 @@ class PharmacistReviewRequest(BaseModel):
     note: Optional[str] = ""
 
 @router.get("/mar/{patient_id}")
-def get_mar(patient_id: str):
+def get_mar(
+    patient_id: str,
+    request: FastAPIRequest,
+):
     from ..main import SERVICES
-    return SERVICES["mar"].list_items(patient_id)
+
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
+    )
+
+    try:
+        return SERVICES["mar"].list_items(
+            patient_id,
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden",
+        ) from exc
 
 @router.post("/mar/{patient_id}")
-def create_mar_item(patient_id: str, payload: MARItemRequest):
+def create_mar_item(
+    patient_id: str,
+    payload: MARItemRequest,
+    request: FastAPIRequest,
+):
     from ..main import SERVICES
-    return SERVICES["mar"].create_item(patient_id, {
-        "medication": payload.medication,
-        "dose": payload.dose,
-        "route": payload.route,
-        "schedule": payload.schedule,
-        "status": "Pending",
-    })
+
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
+    )
+
+    try:
+        return SERVICES["mar"].create_item(
+            patient_id,
+            {
+                "medication": payload.medication,
+                "dose": payload.dose,
+                "route": payload.route,
+                "schedule": payload.schedule,
+                "status": "Pending",
+            },
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden",
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
 
 @router.put("/mar/{patient_id}/{item_id}")
-def update_mar_item(patient_id: str, item_id: int, payload: MARUpdateRequest):
+def update_mar_item(
+    patient_id: str,
+    item_id: int,
+    payload: MARUpdateRequest,
+    request: FastAPIRequest,
+):
     from ..main import SERVICES
-    payload_data = payload.model_dump()
-    updated = SERVICES["mar"].update_item(
-        patient_id,
-        item_id,
-        payload_data,
+
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
     )
+    payload_data = payload.model_dump()
+
+    try:
+        updated = SERVICES["mar"].update_item(
+            patient_id,
+            item_id,
+            payload_data,
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden",
+        ) from exc
+
     if updated is None:
         raise HTTPException(
             status_code=404,
             detail="MAR item not found",
         )
+
     return updated
 
 @router.put("/mar/{patient_id}/{item_id}/pharmacist-review")
-def pharmacist_review(patient_id: str, item_id: int, payload: PharmacistReviewRequest):
+def pharmacist_review(
+    patient_id: str,
+    item_id: int,
+    payload: PharmacistReviewRequest,
+    request: FastAPIRequest,
+):
     from ..main import SERVICES
-    payload_data = payload.model_dump()
-    updated = SERVICES["mar"].set_pharmacy_review(
-        patient_id,
-        item_id,
-        payload_data,
+
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
     )
+    payload_data = payload.model_dump()
+
+    try:
+        updated = SERVICES["mar"].set_pharmacy_review(
+            patient_id,
+            item_id,
+            payload_data,
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden",
+        ) from exc
+
     if updated is None:
         raise HTTPException(
             status_code=404,
             detail="MAR item not found",
         )
+
     return updated
 
 @router.put("/mar/{patient_id}/{item_id}/status")
-def update_mar_status(patient_id: str, item_id: int, payload: MARStatusRequest):
+def update_mar_status(
+    patient_id: str,
+    item_id: int,
+    payload: MARStatusRequest,
+    request: FastAPIRequest,
+):
     from ..main import SERVICES
-    payload_data = payload.model_dump()
-    updated = SERVICES["mar"].set_status(
-        patient_id,
-        item_id,
-        payload_data,
+
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
     )
+    payload_data = payload.model_dump()
+
+    try:
+        updated = SERVICES["mar"].set_status(
+            patient_id,
+            item_id,
+            payload_data,
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden",
+        ) from exc
+
     if updated is None:
         raise HTTPException(
             status_code=404,
             detail="MAR item not found",
         )
+
     return updated
 
 @router.delete("/mar/{patient_id}/{item_id}")
-def delete_mar_item(patient_id: str, item_id: int):
+def delete_mar_item(
+    patient_id: str,
+    item_id: int,
+    request: FastAPIRequest,
+):
     from ..main import SERVICES
-    deleted = SERVICES["mar"].delete_item(
-        patient_id,
-        item_id,
+
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
     )
+
+    try:
+        deleted = SERVICES["mar"].delete_item(
+            patient_id,
+            item_id,
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden",
+        ) from exc
+
     if not deleted:
         raise HTTPException(
             status_code=404,
             detail="MAR item not found",
         )
+
     return {
         "deleted": True,
         "id": item_id,
