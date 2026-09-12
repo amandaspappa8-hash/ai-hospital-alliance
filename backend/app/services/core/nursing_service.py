@@ -2,14 +2,92 @@ class NursingService:
     def __init__(self, nursing_repository):
         self.nursing_repository = nursing_repository
 
-    def list_vitals(self, patient_id: str):
-        return self.nursing_repository.list_vitals(patient_id)
+    def list_vitals(
+        self,
+        patient_id: str,
+        tenant_id: str | None = None,
+        principal_user_id: int | None = None,
+    ):
+        if getattr(
+            self.nursing_repository,
+            "supports_tenant_scope",
+            False,
+        ):
+            return self.nursing_repository.list_vitals(
+                patient_id,
+                tenant_id=tenant_id,
+                principal_user_id=principal_user_id,
+            )
 
-    def create_vital(self, patient_id: str, payload: dict):
-        return self.nursing_repository.create_vital(patient_id, payload)
+        return self.nursing_repository.list_vitals(
+            patient_id
+        )
 
-    def list_notes(self, patient_id: str):
-        return self.nursing_repository.list_notes(patient_id)
+    def create_vital(
+        self,
+        patient_id: str,
+        payload: dict,
+        tenant_id: str | None = None,
+        principal_user_id: int | None = None,
+    ):
+        if getattr(
+            self.nursing_repository,
+            "supports_tenant_scope",
+            False,
+        ):
+            return self.nursing_repository.create_vital(
+                patient_id,
+                payload,
+                tenant_id=tenant_id,
+                principal_user_id=principal_user_id,
+            )
 
-    def create_note(self, patient_id: str, text: str):
-        return self.nursing_repository.create_note(patient_id, text)
+        return self.nursing_repository.create_vital(
+            patient_id,
+            payload,
+        )
+
+    def list_notes(
+        self,
+        patient_id: str,
+        tenant_id: str | None = None,
+        principal_user_id: int | None = None,
+    ):
+        if getattr(
+            self.nursing_repository,
+            "supports_tenant_scope",
+            False,
+        ):
+            return self.nursing_repository.list_notes(
+                patient_id,
+                tenant_id=tenant_id,
+                principal_user_id=principal_user_id,
+            )
+
+        return self.nursing_repository.list_notes(
+            patient_id
+        )
+
+    def create_note(
+        self,
+        patient_id: str,
+        text: str,
+        tenant_id: str | None = None,
+        principal_user_id: int | None = None,
+    ):
+        if getattr(
+            self.nursing_repository,
+            "supports_tenant_scope",
+            False,
+        ):
+            return self.nursing_repository.create_note(
+                patient_id,
+                text,
+                tenant_id=tenant_id,
+                principal_user_id=principal_user_id,
+            )
+
+        return self.nursing_repository.create_note(
+            patient_id,
+            text,
+        )

@@ -1416,33 +1416,122 @@ def get_pacs_studies():
 
 
 @app.get("/nursing/vitals/{patient_id}")
-def get_nursing_vitals(patient_id: str):
-    return SERVICES["nursing"].list_vitals(patient_id)
+def get_nursing_vitals(
+    patient_id: str,
+    request: StarletteRequest,
+):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
+    )
+
+    try:
+        return SERVICES["nursing"].list_vitals(
+            patient_id,
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden",
+        ) from exc
+    except LookupError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail="Patient not found",
+        ) from exc
 
 
 @app.post("/nursing/vitals/{patient_id}")
-def create_nursing_vital(patient_id: str, payload: NursingVitalRequest):
-    return SERVICES["nursing"].create_vital(
-        patient_id,
-        {
-            "temperature": payload.temperature,
-            "bloodPressure": payload.bloodPressure,
-            "heartRate": payload.heartRate,
-            "respiratoryRate": payload.respiratoryRate,
-            "oxygenSaturation": payload.oxygenSaturation,
-            "time": payload.time,
-        },
+def create_nursing_vital(
+    patient_id: str,
+    payload: NursingVitalRequest,
+    request: StarletteRequest,
+):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
     )
+
+    try:
+        return SERVICES["nursing"].create_vital(
+            patient_id,
+            {
+                "temperature": payload.temperature,
+                "bloodPressure": payload.bloodPressure,
+                "heartRate": payload.heartRate,
+                "respiratoryRate": payload.respiratoryRate,
+                "oxygenSaturation": payload.oxygenSaturation,
+                "time": payload.time,
+            },
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden",
+        ) from exc
+    except LookupError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail="Patient not found",
+        ) from exc
 
 
 @app.get("/nursing/notes/{patient_id}")
-def get_nursing_notes(patient_id: str):
-    return SERVICES["nursing"].list_notes(patient_id)
+def get_nursing_notes(
+    patient_id: str,
+    request: StarletteRequest,
+):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
+    )
+
+    try:
+        return SERVICES["nursing"].list_notes(
+            patient_id,
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden",
+        ) from exc
+    except LookupError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail="Patient not found",
+        ) from exc
 
 
 @app.post("/nursing/notes/{patient_id}")
-def create_nursing_note(patient_id: str, payload: NursingNoteRequest):
-    return SERVICES["nursing"].create_note(patient_id, payload.text)
+def create_nursing_note(
+    patient_id: str,
+    payload: NursingNoteRequest,
+    request: StarletteRequest,
+):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
+    )
+
+    try:
+        return SERVICES["nursing"].create_note(
+            patient_id,
+            payload.text,
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden",
+        ) from exc
+    except LookupError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail="Patient not found",
+        ) from exc
 
 
 @app.get("/radiology/catalog")
