@@ -335,6 +335,88 @@ class PostgresRadiologyRepository:
             for row in rows
         ]
 
+    def get_study_by_uid(
+        self,
+        study_uid: str,
+        *,
+        tenant_id: str,
+        principal_user_id: int,
+    ) -> dict[str, Any] | None:
+        with self.engine.connect() as connection:
+            scope = self._resolve_scope(
+                connection,
+                tenant_id,
+                principal_user_id,
+            )
+
+            row = connection.execute(
+                text(
+                    """
+                    SELECT
+                        ro.patient_id,
+                        ro.study_uid,
+                        ro.studies
+                    FROM public.radiology_orders AS ro
+                    JOIN public.patients AS p
+                      ON p.id = ro.patient_id
+                    JOIN public.hospitals AS h
+                      ON h.id = p.hospital_id
+                    WHERE ro.study_uid = :study_uid
+                      AND h.tenant_id = :tenant_id
+                    LIMIT 1
+                    """
+                ),
+                {
+                    "study_uid": study_uid,
+                    "tenant_id": scope["tenant_id"],
+                },
+            ).mappings().first()
+
+        if row is None:
+            return None
+
+        studies = list(
+            self._json_value(
+                row["studies"],
+                [],
+            )
+            or []
+        )
+
+        matched_study: dict[str, Any] = {}
+
+        for item in studies:
+            if not isinstance(item, dict):
+                continue
+
+            identifiers = (
+                item.get("study_uid"),
+                item.get("studyUid"),
+                item.get("dicom_study_uid"),
+                item.get("StudyInstanceUID"),
+            )
+
+            if any(
+                value is not None
+                and str(value) == str(study_uid)
+                for value in identifiers
+            ):
+                matched_study = item
+                break
+
+        return {
+            "patient_id": row["patient_id"],
+            "study_uid": row["study_uid"],
+            "modality": matched_study.get("modality"),
+            "description": matched_study.get("description"),
+            "ohif_url": matched_study.get("ohif_url"),
+            "dicom_study_uid": (
+                matched_study.get("dicom_study_uid")
+                or matched_study.get("StudyInstanceUID")
+            ),
+            "orthanc_id": matched_study.get("orthanc_id"),
+        }
+
     def create_order(
         self,
         payload: dict[str, Any],

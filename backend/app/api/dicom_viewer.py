@@ -1,34 +1,63 @@
-from fastapi import APIRouter
-from sqlalchemy import create_engine, text
-import os
+from fastapi import APIRouter, Depends, HTTPException
+
+from backend.app.routers.deps import get_current_user
+
 
 router = APIRouter(prefix="/api/dicom", tags=["AHOS 54.2 Real DICOM Viewer"])
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql+psycopg2://ahos_admin:AHOS_2026_Strong_Password@127.0.0.1:5433/ahos_production"
-)
-
-engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 
 @router.get("/health")
 async def dicom_health():
     return {"status": "online", "phase": "AHOS 54.2"}
 
+
 @router.get("/study/{study_uid}")
-async def get_dicom_study(study_uid: str):
-    with engine.connect() as conn:
-        row = conn.execute(text("""
-            SELECT patient_id, study_uid, modality, description,
-                   ohif_url, dicom_study_uid, orthanc_id
-            FROM radiology_studies
-            WHERE study_uid = :uid
-        """), {"uid": study_uid}).mappings().first()
+async def get_dicom_study(
+    study_uid: str,
+    current_user: dict = Depends(get_current_user),
+):
+    principal_user_id = current_user.get("sub")
+    tenant_id = current_user.get("tenant_id")
 
-    if not row:
-        return {"status": "not_found", "study_uid": study_uid}
+    try:
+        principal_user_id = int(principal_user_id)
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=403,
+            detail="Invalid authenticated principal scope",
+        )
 
-    study = dict(row)
+    if tenant_id is None or not str(tenant_id).strip():
+        raise HTTPException(
+            status_code=403,
+            detail="Invalid authenticated tenant scope",
+        )
+
+    # Runtime import avoids an application-start circular import while
+    # reusing the canonical service registry already owned by main.py.
+    from backend.app.main import SERVICES
+
+    radiology_service = SERVICES["radiology"]
+
+    try:
+        study = radiology_service.get_study_by_uid(
+            study_uid,
+            tenant_id=str(tenant_id),
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=str(exc),
+        )
+
+    if not study:
+        return {
+            "status": "not_found",
+            "study_uid": study_uid,
+        }
+
+    study = dict(study)
 
     study["ohif_url_direct"] = (
         f"http://127.0.0.1:3005/viewer?StudyInstanceUIDs={study['dicom_study_uid']}"
@@ -45,5 +74,5 @@ async def get_dicom_study(study_uid: str):
     return {
         "status": "success",
         "real_data": True,
-        "study": study
+        "study": study,
     }

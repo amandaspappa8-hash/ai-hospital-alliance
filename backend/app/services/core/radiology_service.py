@@ -48,6 +48,28 @@ class RadiologyService:
             patient_id
         )
 
+    def get_study_by_uid(
+        self,
+        study_uid: str,
+        *,
+        tenant_id: str | None = None,
+        principal_user_id: int | None = None,
+    ):
+        if getattr(
+            self.radiology_repository,
+            "supports_tenant_scope",
+            False,
+        ):
+            return self.radiology_repository.get_study_by_uid(
+                study_uid,
+                tenant_id=tenant_id,
+                principal_user_id=principal_user_id,
+            )
+
+        return self.radiology_repository.get_study_by_uid(
+            study_uid
+        )
+
     def create_order(
         self,
         payload: dict,
