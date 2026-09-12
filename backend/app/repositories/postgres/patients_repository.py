@@ -15,19 +15,35 @@ class PostgresPatientsRepository:
     def _serialize_patient(row) -> dict[str, Any]:
         mapping = dict(row)
 
-        value = mapping.get("date_of_birth")
-        if isinstance(value, date):
-            mapping["date_of_birth"] = value.isoformat()
+        date_of_birth = mapping.get("date_of_birth")
+        if isinstance(date_of_birth, date):
+            date_of_birth = date_of_birth.isoformat()
 
-        mapping["allergies"] = mapping.get("allergies") or []
-        mapping["chronic_conditions"] = (
-            mapping.get("chronic_conditions") or []
-        )
-        mapping["current_medications"] = (
-            mapping.get("current_medications") or []
+        # Keep the public Patient response stable while PostgreSQL becomes
+        # the canonical persistence authority. Do not infer absent clinical
+        # values or expose persistence-only identifiers.
+        full_name = (
+            mapping.get("full_name")
+            or mapping.get("name")
         )
 
-        return mapping
+        return {
+            "id": mapping.get("id"),
+            "mrn": mapping.get("mrn"),
+            "full_name": full_name,
+            "name": mapping.get("name"),
+            "date_of_birth": date_of_birth,
+            "gender": mapping.get("gender"),
+            "phone": mapping.get("phone"),
+            "blood_type": mapping.get("blood_type"),
+            "allergies": mapping.get("allergies") or [],
+            "chronic_conditions": (
+                mapping.get("chronic_conditions") or []
+            ),
+            "condition": mapping.get("condition"),
+            "department": mapping.get("department"),
+            "status": mapping.get("status"),
+        }
 
     @staticmethod
     def _parse_principal_user_id(principal_user_id: int) -> int:
@@ -135,15 +151,18 @@ class PostgresPatientsRepository:
                 p.blood_type,
                 p.allergies,
                 p.chronic_conditions,
-                p.current_medications,
-                p.insurance_provider,
                 p.condition,
-                p.department_id,
-                p.status,
-                p.hospital_id
+                d.name AS department,
+                p.status
             FROM public.patients AS p
             JOIN public.hospitals AS h
               ON h.id = p.hospital_id
+            LEFT JOIN public.departments AS d
+              ON d.id = p.department_id
+             AND (
+                    d.hospital_id = p.hospital_id
+                    OR d.hospital_id IS NULL
+                 )
             WHERE h.tenant_id = :tenant_id
         """
 
