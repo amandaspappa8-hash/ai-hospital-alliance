@@ -1,6 +1,7 @@
 from backend.app.repositories.postgres.users_repository import PostgresUsersRepository
 from .memory.users_repository import InMemoryUsersRepository
 from .memory.patients_repository import InMemoryPatientsRepository
+from .postgres.patients_repository import PostgresPatientsRepository
 from .memory.notes_repository import InMemoryNotesRepository
 from .memory.orders_repository import InMemoryOrdersRepository
 import os
@@ -23,6 +24,114 @@ from .memory.doctor_assignments_repository import InMemoryDoctorAssignmentsRepos
 from .postgres.doctor_assignments_repository import PostgresDoctorAssignmentsRepository
 
 
+
+
+_PATIENTS_REPOSITORY = None
+_PATIENTS_REPOSITORY_MODE = "legacy_db"
+
+
+def _build_patients_repository(patients_store):
+    """Build the Patient adapter from an isolated transition switch.
+
+    legacy_db remains the default while the historical direct TenantSession
+    path is retained by the Patient router. PostgreSQL is explicit opt-in.
+    """
+
+    global _PATIENTS_REPOSITORY
+    global _PATIENTS_REPOSITORY_MODE
+
+    mode = os.getenv(
+        "AIHA_PATIENTS_REPOSITORY",
+        "legacy_db",
+    ).strip().lower()
+
+    if mode == "legacy_db":
+        repository = InMemoryPatientsRepository(
+            patients_store
+        )
+    elif mode == "memory":
+        repository = InMemoryPatientsRepository(
+            patients_store
+        )
+    elif mode == "postgres":
+        names = {
+            "host": "AIHA_PATIENTS_PG_HOST",
+            "port": "AIHA_PATIENTS_PG_PORT",
+            "database": "AIHA_PATIENTS_PG_DATABASE",
+            "username": "AIHA_PATIENTS_PG_USER",
+            "password": "AIHA_PATIENTS_PG_PASSWORD",
+        }
+
+        values = {
+            key: os.getenv(
+                env_name,
+                "",
+            ).strip()
+            for key, env_name in names.items()
+        }
+
+        missing = [
+            names[key]
+            for key, value in values.items()
+            if not value
+        ]
+
+        if missing:
+            raise RuntimeError(
+                "Missing isolated PostgreSQL Patient configuration: "
+                + ", ".join(missing)
+            )
+
+        try:
+            port = int(values["port"])
+        except ValueError as exc:
+            raise RuntimeError(
+                "AIHA_PATIENTS_PG_PORT must be an integer"
+            ) from exc
+
+        url = URL.create(
+            drivername="postgresql+psycopg2",
+            username=values["username"],
+            password=values["password"],
+            host=values["host"],
+            port=port,
+            database=values["database"],
+        )
+
+        engine = create_engine(
+            url,
+            pool_pre_ping=True,
+            pool_size=5,
+            max_overflow=5,
+            pool_recycle=3600,
+        )
+
+        repository = PostgresPatientsRepository(
+            engine
+        )
+    else:
+        raise RuntimeError(
+            "AIHA_PATIENTS_REPOSITORY must be "
+            "'legacy_db', 'postgres', or 'memory'"
+        )
+
+    _PATIENTS_REPOSITORY = repository
+    _PATIENTS_REPOSITORY_MODE = mode
+
+    return repository
+
+
+def get_patients_repository():
+    if _PATIENTS_REPOSITORY is None:
+        raise RuntimeError(
+            "Patient repository has not been initialized"
+        )
+
+    return _PATIENTS_REPOSITORY
+
+
+def get_patients_repository_mode() -> str:
+    return _PATIENTS_REPOSITORY_MODE
 
 
 def _build_appointments_repository(appointments_store):
@@ -496,7 +605,7 @@ def build_repositories(
 ):
     return {
         "users": _build_users_repository(users_store),
-        "patients": InMemoryPatientsRepository(patients_store),
+        "patients": _build_patients_repository(patients_store),
         "notes": InMemoryNotesRepository(notes_store),
         "orders": InMemoryOrdersRepository(orders_store),
         "appointments": _build_appointments_repository(appointments_store or []),
