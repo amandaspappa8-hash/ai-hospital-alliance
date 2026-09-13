@@ -31,3 +31,53 @@ def build_services(repositories):
         "clinical_ai": ClinicalAIService(repositories["orders"]),
         "drug_intel": DrugIntelService(repositories["mar"]),
     }
+
+
+# AIHA P4.25 — Unified Dashboard aggregation binding.
+#
+# The original service registry remains authoritative for existing services.
+# This wrapper adds only the dashboard aggregation service.
+from .dashboard_aggregation_service import DashboardAggregationService
+
+from backend.app.repositories.dashboard.legacy_operational_metrics import (
+    LegacyOperationalMetricsAdapter,
+)
+from backend.app.repositories.dashboard.subsystem_metrics import (
+    ClinicalSafetyMetricsAdapter,
+    PersistentEventMetricsAdapter,
+    PhysicianReviewMetricsAdapter,
+)
+
+
+_build_services_without_dashboard = build_services
+
+
+def build_services(repositories):
+    services = _build_services_without_dashboard(
+        repositories
+    )
+
+    services["dashboard"] = (
+        DashboardAggregationService(
+            patients_service=services[
+                "patients"
+            ],
+            radiology_service=services[
+                "radiology"
+            ],
+            physician_review_adapter=(
+                PhysicianReviewMetricsAdapter()
+            ),
+            persistent_event_adapter=(
+                PersistentEventMetricsAdapter()
+            ),
+            clinical_safety_adapter=(
+                ClinicalSafetyMetricsAdapter()
+            ),
+            legacy_operational_adapter=(
+                LegacyOperationalMetricsAdapter()
+            ),
+        )
+    )
+
+    return services
