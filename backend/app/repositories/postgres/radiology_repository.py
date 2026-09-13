@@ -335,13 +335,12 @@ class PostgresRadiologyRepository:
             for row in rows
         ]
 
-    def get_study_by_uid(
+    def list_dashboard_studies(
         self,
-        study_uid: str,
         *,
         tenant_id: str,
         principal_user_id: int,
-    ) -> dict[str, Any] | None:
+    ) -> list[dict[str, Any]]:
         with self.engine.connect() as connection:
             scope = self._resolve_scope(
                 connection,
@@ -349,73 +348,134 @@ class PostgresRadiologyRepository:
                 principal_user_id,
             )
 
-            row = connection.execute(
+            rows = connection.execute(
                 text(
                     """
                     SELECT
+                        ro.id,
                         ro.patient_id,
                         ro.study_uid,
-                        ro.studies
+                        ro.studies,
+                        ro.created_at,
+                        h.tenant_id
                     FROM public.radiology_orders AS ro
                     JOIN public.patients AS p
                       ON p.id = ro.patient_id
                     JOIN public.hospitals AS h
                       ON h.id = p.hospital_id
-                    WHERE ro.study_uid = :study_uid
-                      AND h.tenant_id = :tenant_id
-                    LIMIT 1
+                    WHERE h.tenant_id = :tenant_id
+                    ORDER BY
+                        ro.created_at DESC NULLS LAST,
+                        ro.id
                     """
                 ),
                 {
-                    "study_uid": study_uid,
                     "tenant_id": scope["tenant_id"],
                 },
-            ).mappings().first()
+            ).mappings().all()
 
-        if row is None:
-            return None
+        dashboard_studies: list[dict[str, Any]] = []
 
-        studies = list(
-            self._json_value(
-                row["studies"],
-                [],
+        for row in rows:
+            studies = list(
+                self._json_value(
+                    row["studies"],
+                    [],
+                )
+                or []
             )
-            or []
-        )
 
-        matched_study: dict[str, Any] = {}
+            order_uid = row["study_uid"]
 
-        for item in studies:
-            if not isinstance(item, dict):
-                continue
+            if not studies and order_uid:
+                studies = [{}]
 
+            for item in studies:
+                if not isinstance(item, dict):
+                    continue
+
+                study_uid = (
+                    item.get("study_uid")
+                    or item.get("studyUid")
+                    or item.get("dicom_study_uid")
+                    or item.get("StudyInstanceUID")
+                )
+
+                if (
+                    not study_uid
+                    and len(studies) == 1
+                ):
+                    study_uid = order_uid
+
+                dashboard_studies.append(
+                    {
+                        "id": (
+                            item.get("id")
+                            or row["id"]
+                        ),
+                        "tenant_id": row["tenant_id"],
+                        "patient_id": row["patient_id"],
+                        "study_uid": study_uid,
+                        "modality": item.get("modality"),
+                        "description": (
+                            item.get("description")
+                            or item.get("study_description")
+                        ),
+                        "ohif_url": (
+                            item.get("ohif_url")
+                            or item.get("ohif_viewer_url")
+                        ),
+                        "dicom_study_uid": (
+                            item.get("dicom_study_uid")
+                            or item.get("StudyInstanceUID")
+                            or study_uid
+                        ),
+                        "orthanc_id": item.get("orthanc_id"),
+                        "created_at": (
+                            item.get("created_at")
+                            or row["created_at"]
+                        ),
+                    }
+                )
+
+        return dashboard_studies
+
+    def get_study_by_uid(
+        self,
+        study_uid: str,
+        *,
+        tenant_id: str,
+        principal_user_id: int,
+    ) -> dict[str, Any] | None:
+        requested_uid = str(study_uid)
+
+        for study in self.list_dashboard_studies(
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        ):
             identifiers = (
-                item.get("study_uid"),
-                item.get("studyUid"),
-                item.get("dicom_study_uid"),
-                item.get("StudyInstanceUID"),
+                study.get("study_uid"),
+                study.get("dicom_study_uid"),
             )
 
             if any(
                 value is not None
-                and str(value) == str(study_uid)
+                and str(value) == requested_uid
                 for value in identifiers
             ):
-                matched_study = item
-                break
+                return {
+                    "patient_id": study.get("patient_id"),
+                    "study_uid": study.get("study_uid"),
+                    "modality": study.get("modality"),
+                    "description": study.get("description"),
+                    "ohif_url": study.get("ohif_url"),
+                    "dicom_study_uid": study.get(
+                        "dicom_study_uid"
+                    ),
+                    "orthanc_id": study.get("orthanc_id"),
+                }
 
-        return {
-            "patient_id": row["patient_id"],
-            "study_uid": row["study_uid"],
-            "modality": matched_study.get("modality"),
-            "description": matched_study.get("description"),
-            "ohif_url": matched_study.get("ohif_url"),
-            "dicom_study_uid": (
-                matched_study.get("dicom_study_uid")
-                or matched_study.get("StudyInstanceUID")
-            ),
-            "orthanc_id": matched_study.get("orthanc_id"),
-        }
+        return None
 
     def create_order(
         self,
@@ -439,6 +499,31 @@ class PostgresRadiologyRepository:
             )
             or []
         )
+
+        study_uid = (
+            payload.get("study_uid")
+            or payload.get("studyUid")
+            or payload.get("dicom_study_uid")
+            or payload.get("StudyInstanceUID")
+        )
+
+        if not study_uid:
+            for study in studies:
+                if not isinstance(study, dict):
+                    continue
+
+                study_uid = (
+                    study.get("study_uid")
+                    or study.get("studyUid")
+                    or study.get("dicom_study_uid")
+                    or study.get("StudyInstanceUID")
+                )
+
+                if study_uid:
+                    break
+
+        if study_uid is not None:
+            study_uid = str(study_uid)
 
         priority = (
             payload.get("priority")
@@ -537,7 +622,7 @@ class PostgresRadiologyRepository:
                         CAST(:studies AS JSON),
                         :priority,
                         :status,
-                        NULL,
+                        :study_uid,
                         :report,
                         NULL,
                         CURRENT_TIMESTAMP,
@@ -571,6 +656,7 @@ class PostgresRadiologyRepository:
                     "studies": json.dumps(studies),
                     "priority": priority,
                     "status": status,
+                    "study_uid": study_uid,
                     "report": report,
                 },
             ).one_or_none()

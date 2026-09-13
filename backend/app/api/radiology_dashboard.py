@@ -1,56 +1,108 @@
-from fastapi import APIRouter
 from datetime import datetime
-import os
-from sqlalchemy import create_engine, text
 
-router = APIRouter(prefix="/api/radiology", tags=["Real Radiology Dashboard"])
+from fastapi import APIRouter, HTTPException, Request
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql+psycopg2://ahos_admin:AHOS_2026_Strong_Password@127.0.0.1:5433/ahos_production"
+from backend.app.routers.deps import get_verified_principal_tenant
+
+
+router = APIRouter(
+    prefix="/api/radiology",
+    tags=["Real Radiology Dashboard"],
 )
 
-engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 
 @router.get("/dashboard")
-async def radiology_dashboard():
-    with engine.connect() as conn:
-        rows = conn.execute(text("""
-            SELECT id, tenant_id, patient_id, study_uid, modality, description,
-                   ohif_url, dicom_study_uid, orthanc_id, created_at
-            FROM radiology_studies
-            ORDER BY created_at DESC
-        """)).mappings().all()
+async def radiology_dashboard(
+    request: Request,
+):
+    from backend.app.main import SERVICES
 
-    studies = []
-    for r in rows:
-        d = dict(r)
-        d["created_at"] = str(d.get("created_at"))
-        studies.append(d)
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(
+            request
+        )
+    )
 
-    latest = studies[0] if studies else None
+    try:
+        studies = SERVICES[
+            "radiology"
+        ].list_dashboard_studies(
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden",
+        ) from exc
+
+    normalized_studies = []
+
+    for study in studies:
+        item = dict(study)
+
+        if item.get("created_at") is not None:
+            item["created_at"] = str(
+                item["created_at"]
+            )
+
+        normalized_studies.append(item)
+
+    latest = (
+        normalized_studies[0]
+        if normalized_studies
+        else None
+    )
 
     return {
         "source": "postgresql",
         "real_data": True,
         "generated_at": datetime.utcnow().isoformat(),
         "kpis": {
-            "total_studies": len(studies),
-            "ct_studies": sum(1 for s in studies if s.get("modality") == "CT"),
-            "mri_studies": sum(1 for s in studies if s.get("modality") == "MRI"),
-            "ultrasound_studies": sum(1 for s in studies if s.get("modality") == "US"),
-            "ai_confidence": 94.2 if studies else 0,
-            "tumor_marker_confidence": 92 if studies else 0
+            "total_studies": len(
+                normalized_studies
+            ),
+            "ct_studies": sum(
+                1
+                for study in normalized_studies
+                if study.get("modality") == "CT"
+            ),
+            "mri_studies": sum(
+                1
+                for study in normalized_studies
+                if study.get("modality") == "MRI"
+            ),
+            "ultrasound_studies": sum(
+                1
+                for study in normalized_studies
+                if study.get("modality") == "US"
+            ),
+            "ai_confidence": (
+                94.2
+                if normalized_studies
+                else 0
+            ),
+            "tumor_marker_confidence": (
+                92
+                if normalized_studies
+                else 0
+            ),
         },
         "latest_study": latest,
-        "studies": studies
+        "studies": normalized_studies,
     }
 
+
 @router.get("/studies")
-async def radiology_studies():
-    data = await radiology_dashboard()
+async def radiology_studies(
+    request: Request,
+):
+    data = await radiology_dashboard(
+        request
+    )
+
     return {
         "source": "postgresql",
         "real_data": True,
-        "studies": data["studies"]
+        "studies": data["studies"],
     }

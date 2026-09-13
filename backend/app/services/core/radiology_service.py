@@ -70,6 +70,24 @@ class RadiologyService:
             study_uid
         )
 
+    def list_dashboard_studies(
+        self,
+        *,
+        tenant_id: str | None = None,
+        principal_user_id: int | None = None,
+    ):
+        if getattr(
+            self.radiology_repository,
+            "supports_tenant_scope",
+            False,
+        ):
+            return self.radiology_repository.list_dashboard_studies(
+                tenant_id=tenant_id,
+                principal_user_id=principal_user_id,
+            )
+
+        return self.radiology_repository.list_dashboard_studies()
+
     def create_order(
         self,
         payload: dict,

@@ -13,6 +13,11 @@ class RadiologyRepositoryContract(Protocol):
         study_uid: str,
     ) -> dict[str, Any] | None: ...
 
+    def list_dashboard_studies(
+        self,
+    ) -> list[dict[str, Any]]:
+        ...
+
     def create_order(self, payload: dict[str, Any]) -> dict[str, Any]: ...
 
     def set_result(

@@ -95,6 +95,86 @@ class InMemoryRadiologyRepository:
 
         return None
 
+    def list_dashboard_studies(
+        self,
+    ) -> list[dict[str, Any]]:
+        dashboard_studies: list[dict[str, Any]] = []
+
+        for order in self.list_orders():
+            studies = order.get("studies") or []
+
+            if not isinstance(studies, list):
+                studies = []
+
+            order_uid = (
+                order.get("study_uid")
+                or order.get("studyUid")
+                or order.get("dicom_study_uid")
+                or order.get("StudyInstanceUID")
+            )
+
+            patient_id = (
+                order.get("patient_id")
+                or order.get("patientId")
+                or ""
+            )
+
+            if not studies and order_uid:
+                studies = [{}]
+
+            for index, item in enumerate(studies):
+                if not isinstance(item, dict):
+                    continue
+
+                study_uid = (
+                    item.get("study_uid")
+                    or item.get("studyUid")
+                    or item.get("dicom_study_uid")
+                    or item.get("StudyInstanceUID")
+                )
+
+                if (
+                    not study_uid
+                    and len(studies) == 1
+                ):
+                    study_uid = order_uid
+
+                dashboard_studies.append(
+                    {
+                        "id": (
+                            item.get("id")
+                            or order.get("id")
+                        ),
+                        "tenant_id": (
+                            item.get("tenant_id")
+                            or order.get("tenant_id")
+                        ),
+                        "patient_id": patient_id,
+                        "study_uid": study_uid,
+                        "modality": item.get("modality"),
+                        "description": (
+                            item.get("description")
+                            or item.get("study_description")
+                        ),
+                        "ohif_url": (
+                            item.get("ohif_url")
+                            or item.get("ohif_viewer_url")
+                        ),
+                        "dicom_study_uid": (
+                            item.get("dicom_study_uid")
+                            or item.get("StudyInstanceUID")
+                            or study_uid
+                        ),
+                        "orthanc_id": item.get("orthanc_id"),
+                        "created_at": (
+                            item.get("created_at")
+                            or order.get("created_at")
+                        ),
+                    }
+                )
+
+        return dashboard_studies
+
     def create_order(self, payload: dict[str, Any]) -> dict[str, Any]:
         numeric_ids: list[int] = []
 
