@@ -153,3 +153,50 @@ class PostgresOphthalmologyRepository(
                 dict(row)
                 for row in rows
             ]
+
+    def list_reports(
+        self,
+        *,
+        principal_user_id: int,
+        tenant_id: str,
+    ) -> list[dict[str, Any]]:
+        with self.engine.connect() as connection:
+            (
+                resolved_tenant_id,
+                hospital_id,
+                _principal_user_id,
+            ) = self._resolve_scope(
+                connection,
+                tenant_id=tenant_id,
+                principal_user_id=principal_user_id,
+            )
+
+            rows = connection.execute(
+                text(
+                    """
+                    SELECT
+                        r.report_id,
+                        r.case_id,
+                        r.patient_id,
+                        r.report_type,
+                        r.risk_score,
+                        r.risk_level,
+                        r.language,
+                        r.created_at
+                    FROM public.ophthalmology_reports AS r
+                    WHERE r.tenant_id = :tenant_id
+                      AND r.hospital_id = :hospital_id
+                    ORDER BY r.created_at DESC
+                    LIMIT 100
+                    """
+                ),
+                {
+                    "tenant_id": resolved_tenant_id,
+                    "hospital_id": hospital_id,
+                },
+            ).mappings().all()
+
+        return [
+            dict(row)
+            for row in rows
+        ]

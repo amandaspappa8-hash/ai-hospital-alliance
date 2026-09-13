@@ -16,3 +16,12 @@ class OphthalmologyRepository(ABC):
     ) -> list[dict[str, Any]]:
         """Return analyses in verified tenant/hospital scope."""
         raise NotImplementedError
+
+    @abstractmethod
+    def list_reports(
+        self,
+        *,
+        principal_user_id: int,
+        tenant_id: str,
+    ) -> list[dict[str, Any]]:
+        raise NotImplementedError
