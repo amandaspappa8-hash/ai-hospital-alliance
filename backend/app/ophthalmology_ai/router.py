@@ -3,6 +3,9 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional, Dict, Any, List
+from fastapi import Request, HTTPException
+from backend.app.routers.deps import get_verified_principal_tenant
+from backend.app.services.core.ophthalmology_service import (get_ophthalmology_repository_mode, get_postgres_ophthalmology_service)
 
 router = APIRouter(
     prefix="/api/ophthalmology",
@@ -2330,7 +2333,36 @@ async def phase11_analyze_uploaded_image(
     }
 
 @router.get("/phase-11/analyses")
-async def phase11_list_analyses():
+async def phase11_list_analyses(request: Request):
+    repository_mode = get_ophthalmology_repository_mode()
+
+    if repository_mode == "postgres":
+        principal_user_id, tenant_id = (
+            get_verified_principal_tenant(
+                request
+            )
+        )
+
+        try:
+            analyses = (
+                get_postgres_ophthalmology_service()
+                .list_analyses(
+                    principal_user_id=principal_user_id,
+                    tenant_id=tenant_id,
+                )
+            )
+        except PermissionError as exc:
+            raise HTTPException(
+                status_code=403,
+                detail=str(exc),
+            ) from exc
+
+        return {
+            "status": "online",
+            "total_analyses": len(analyses),
+            "analyses": analyses,
+        }
+
     _phase11_init_db()
     conn = _phase8_conn()
 
