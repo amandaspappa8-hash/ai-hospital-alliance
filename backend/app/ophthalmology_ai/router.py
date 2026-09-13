@@ -1330,7 +1330,33 @@ async def phase8_report_history(request: Request):
     }
 
 @router.get("/phase-8/audit-logs")
-async def phase8_audit_logs():
+async def phase8_audit_logs(request: Request):
+    repository_mode = get_ophthalmology_repository_mode()
+
+    if repository_mode == "postgres":
+        (
+            principal_user_id,
+            tenant_id,
+        ) = get_verified_principal_tenant(request)
+
+        try:
+            rows = get_postgres_ophthalmology_service().list_audit_logs(
+                principal_user_id=principal_user_id,
+                tenant_id=tenant_id,
+            )
+        except PermissionError as exc:
+            raise HTTPException(
+                status_code=403,
+                detail=str(exc),
+            ) from exc
+
+        return {
+            "status": "online",
+            "persistent": True,
+            "total_logs": len(rows),
+            "audit_logs": rows,
+        }
+
     _phase8_init_db()
     conn = _phase8_conn()
     rows = conn.execute("""

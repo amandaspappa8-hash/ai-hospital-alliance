@@ -25,3 +25,12 @@ class OphthalmologyRepository(ABC):
         tenant_id: str,
     ) -> list[dict[str, Any]]:
         raise NotImplementedError
+
+    @abstractmethod
+    def list_audit_logs(
+        self,
+        *,
+        principal_user_id: int,
+        tenant_id: str,
+    ) -> list[dict[str, Any]]:
+        raise NotImplementedError

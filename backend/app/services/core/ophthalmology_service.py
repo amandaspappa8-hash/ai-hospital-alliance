@@ -46,6 +46,17 @@ class OphthalmologyService:
             tenant_id=tenant_id,
         )
 
+    def list_audit_logs(
+        self,
+        *,
+        principal_user_id: int,
+        tenant_id: str,
+    ) -> list[dict[str, Any]]:
+        return self.repository.list_audit_logs(
+            principal_user_id=principal_user_id,
+            tenant_id=tenant_id,
+        )
+
 
 def get_ophthalmology_repository_mode() -> str:
     mode = os.getenv(
