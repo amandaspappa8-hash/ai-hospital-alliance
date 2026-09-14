@@ -70,6 +70,19 @@ class OphthalmologyService:
             q=q,
         )
 
+    def get_case_detail(
+        self,
+        *,
+        principal_user_id: int,
+        tenant_id: str,
+        case_id: str,
+    ) -> dict[str, Any] | None:
+        return self.repository.get_case_detail(
+            principal_user_id=principal_user_id,
+            tenant_id=tenant_id,
+            case_id=case_id,
+        )
+
 
 def get_ophthalmology_repository_mode() -> str:
     mode = os.getenv(

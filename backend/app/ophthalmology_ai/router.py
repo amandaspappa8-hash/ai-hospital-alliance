@@ -1207,7 +1207,72 @@ async def phase8_list_cases(
     }
 
 @router.get("/phase-8/cases/{case_id}")
-async def phase8_get_case(case_id: str):
+async def phase8_get_case(
+    case_id: str,
+    request: Request,
+):
+    repository_mode = get_ophthalmology_repository_mode()
+
+    if repository_mode == "postgres":
+        (
+            principal_user_id,
+            tenant_id,
+        ) = get_verified_principal_tenant(request)
+
+        try:
+            detail = get_postgres_ophthalmology_service().get_case_detail(
+                principal_user_id=principal_user_id,
+                tenant_id=tenant_id,
+                case_id=case_id,
+            )
+        except PermissionError as exc:
+            raise HTTPException(
+                status_code=403,
+                detail=str(exc),
+            ) from exc
+
+        if not detail:
+            return {
+                "status": "not_found",
+                "case_id": case_id,
+            }
+
+        case = detail["case"]
+        reports = detail["reports"]
+        audits = detail["audit_logs"]
+
+        timeline = [
+            {
+                "step": "persistent_case_created",
+                "label": "Case saved into canonical persistent database",
+                "timestamp": case.get("created_at"),
+            },
+            {
+                "step": "demo_ai_screening",
+                "label": "Demo AI screening completed",
+                "risk_score": case.get("risk_score"),
+                "risk_level": case.get("risk_level"),
+                "timestamp": case.get("created_at"),
+            },
+            {
+                "step": "doctor_review_status",
+                "label": case.get(
+                    "doctor_review_status",
+                    "pending",
+                ),
+                "timestamp": case.get("updated_at"),
+            },
+        ]
+
+        return {
+            "status": "online",
+            "persistent": True,
+            "case": case,
+            "timeline": timeline,
+            "reports": reports,
+            "audit_logs": audits,
+        }
+
     case = _phase8_find_case(case_id)
 
     if not case:

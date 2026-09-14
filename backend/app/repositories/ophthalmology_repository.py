@@ -44,3 +44,13 @@ class OphthalmologyRepository(ABC):
     ) -> list[dict[str, Any]]:
         """Return ophthalmology cases in verified tenant/hospital scope."""
         raise NotImplementedError
+
+    def get_case_detail(
+        self,
+        *,
+        principal_user_id: int,
+        tenant_id: str,
+        case_id: str,
+    ) -> dict[str, Any] | None:
+        """Return one case with scoped reports and audit logs."""
+        raise NotImplementedError

@@ -341,3 +341,117 @@ class PostgresOphthalmologyRepository(
             dict(row)
             for row in rows
         ]
+
+    def get_case_detail(
+        self,
+        *,
+        principal_user_id: int,
+        tenant_id: str,
+        case_id: str,
+    ) -> dict[str, Any] | None:
+        with self.engine.connect() as connection:
+            (
+                resolved_tenant_id,
+                hospital_id,
+                _principal_user_id,
+            ) = self._resolve_scope(
+                connection,
+                tenant_id=tenant_id,
+                principal_user_id=principal_user_id,
+            )
+
+            case = connection.execute(
+                text(
+                    """
+                    SELECT
+                        c.case_id,
+                        c.patient_id,
+                        c.filename,
+                        c.stored_path,
+                        c.image_type,
+                        c.language,
+                        c.risk_score,
+                        c.risk_level,
+                        c.status,
+                        c.ai_summary,
+                        c.clinical_notice,
+                        c.doctor_review_status,
+                        c.doctor_review_decision,
+                        c.created_at,
+                        c.updated_at
+                    FROM public.ophthalmology_cases AS c
+                    WHERE c.tenant_id = :tenant_id
+                      AND c.hospital_id = :hospital_id
+                      AND c.case_id = :case_id
+                    """
+                ),
+                {
+                    "tenant_id": resolved_tenant_id,
+                    "hospital_id": hospital_id,
+                    "case_id": case_id,
+                },
+            ).mappings().first()
+
+            if case is None:
+                return None
+
+            reports = connection.execute(
+                text(
+                    """
+                    SELECT
+                        r.report_id,
+                        r.case_id,
+                        r.patient_id,
+                        r.report_type,
+                        r.risk_score,
+                        r.risk_level,
+                        r.language,
+                        r.created_at
+                    FROM public.ophthalmology_reports AS r
+                    WHERE r.tenant_id = :tenant_id
+                      AND r.hospital_id = :hospital_id
+                      AND r.case_id = :case_id
+                    ORDER BY r.created_at DESC
+                    """
+                ),
+                {
+                    "tenant_id": resolved_tenant_id,
+                    "hospital_id": hospital_id,
+                    "case_id": case_id,
+                },
+            ).mappings().all()
+
+            audit_logs = connection.execute(
+                text(
+                    """
+                    SELECT
+                        a.audit_id,
+                        a.case_id,
+                        a.action,
+                        a.details,
+                        a.created_at
+                    FROM public.ophthalmology_audit_logs AS a
+                    WHERE a.tenant_id = :tenant_id
+                      AND a.hospital_id = :hospital_id
+                      AND a.case_id = :case_id
+                    ORDER BY a.created_at DESC
+                    """
+                ),
+                {
+                    "tenant_id": resolved_tenant_id,
+                    "hospital_id": hospital_id,
+                    "case_id": case_id,
+                },
+            ).mappings().all()
+
+        return {
+            "case": dict(case),
+            "reports": [
+                dict(row)
+                for row in reports
+            ],
+            "audit_logs": [
+                dict(row)
+                for row in audit_logs
+            ],
+        }
