@@ -3625,7 +3625,38 @@ async def phase14_latest():
     }
 
 @router.get("/phase-14/reviews")
-async def phase14_list_reviews(analysis_id: str = Query("")):
+async def phase14_list_reviews(
+    analysis_id: str = Query(""),
+    request: Request = None,
+):
+    repository_mode = get_ophthalmology_repository_mode()
+
+    if repository_mode == "postgres":
+        (
+            principal_user_id,
+            tenant_id,
+        ) = get_verified_principal_tenant(request)
+
+        try:
+            rows = (
+                get_postgres_ophthalmology_service().list_reviews(
+                    principal_user_id=principal_user_id,
+                    tenant_id=tenant_id,
+                    analysis_id=analysis_id,
+                )
+            )
+        except PermissionError as exc:
+            raise HTTPException(
+                status_code=403,
+                detail=str(exc),
+            ) from exc
+
+        return {
+            "status": "online",
+            "total_reviews": len(rows),
+            "reviews": rows,
+        }
+
     _phase14_init_db()
     conn = _phase8_conn()
 

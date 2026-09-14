@@ -683,3 +683,68 @@ class PostgresOphthalmologyRepository(
                 dict(row)
                 for row in rows
             ]
+
+    def list_reviews(
+        self,
+        *,
+        principal_user_id: int,
+        tenant_id: str,
+        analysis_id: str = "",
+    ) -> list[dict[str, Any]]:
+        with self.engine.connect() as connection:
+            scope = self._resolve_scope(
+                connection,
+                tenant_id,
+                principal_user_id,
+            )
+
+            base_sql = """
+            SELECT
+                r."review_id",
+                r."analysis_id",
+                r."case_id",
+                r."patient_id",
+                r."decision",
+                r."priority",
+                r."review_status",
+                r."doctor_name",
+                r."doctor_signature",
+                r."review_note",
+                r."follow_up_plan",
+                r."annotation_count",
+                r."ai_risk_score",
+                r."ai_risk_level",
+                r."safety_gate",
+                r."created_at",
+                r."updated_at"
+            FROM public.ophthalmology_clinical_reviews AS r
+            WHERE r.tenant_id = :tenant_id
+              AND r.hospital_id = :hospital_id
+            """
+
+            params = {
+                "tenant_id": scope["tenant_id"],
+                "hospital_id": scope["hospital_id"],
+            }
+
+            if analysis_id:
+                sql = base_sql + """
+                  AND r.analysis_id = :analysis_id
+                ORDER BY r.created_at DESC
+                """
+                params["analysis_id"] = analysis_id
+            else:
+                sql = base_sql + """
+                ORDER BY r.created_at DESC
+                LIMIT 200
+                """
+
+            rows = connection.execute(
+                text(sql),
+                params,
+            ).mappings().all()
+
+            return [
+                dict(row)
+                for row in rows
+            ]
