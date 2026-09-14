@@ -129,3 +129,27 @@ class PatientsService:
             )
 
         return True
+
+    def authorize_patient_access(
+        self,
+        patient_id: str,
+        *,
+        tenant_id: str,
+        principal_user_id: int,
+    ) -> None:
+        authorize = getattr(
+            self.patients_repository,
+            "authorize_patient_access",
+            None,
+        )
+
+        if not callable(authorize):
+            raise PermissionError(
+                "Canonical patient authorization unavailable"
+            )
+
+        authorize(
+            patient_id,
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )

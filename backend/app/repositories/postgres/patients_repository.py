@@ -625,3 +625,51 @@ class PostgresPatientsRepository:
             )
 
         return True
+
+    def authorize_patient_access(
+        self,
+        patient_id: str,
+        *,
+        tenant_id: str,
+        principal_user_id: int,
+    ) -> None:
+        patient_id = str(
+            patient_id or ""
+        ).strip()
+
+        if not patient_id:
+            raise PermissionError(
+                "Patient scope cannot be established"
+            )
+
+        with self._engine.connect() as connection:
+            scope = self._resolve_scope(
+                connection,
+                tenant_id,
+                principal_user_id,
+            )
+
+            allowed = connection.execute(
+                text(
+                    """
+                    SELECT 1
+                    FROM public.patients AS p
+                    JOIN public.hospitals AS h
+                      ON h.id = p.hospital_id
+                    WHERE p.id = :patient_id
+                      AND p.hospital_id = :hospital_id
+                      AND h.tenant_id = :tenant_id
+                    LIMIT 1
+                    """
+                ),
+                {
+                    "patient_id": patient_id,
+                    "hospital_id": scope["hospital_id"],
+                    "tenant_id": scope["tenant_id"],
+                },
+            ).scalar_one_or_none()
+
+        if allowed is None:
+            raise PermissionError(
+                "Patient is outside authenticated hospital/tenant scope"
+            )

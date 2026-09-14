@@ -109,3 +109,17 @@ class InMemoryPatientsRepository:
                 return True
 
         return False
+
+    def authorize_patient_access(
+        self,
+        patient_id: str,
+        *,
+        tenant_id: str,
+        principal_user_id: int,
+    ) -> None:
+        del patient_id, tenant_id, principal_user_id
+
+        raise PermissionError(
+            "Hospital-scoped patient authorization unavailable "
+            "for in-memory Patient repository"
+        )

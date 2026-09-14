@@ -39,3 +39,11 @@ class PatientsRepositoryContract(Protocol):
         principal_user_id: int,
         ip_address: str | None = None,
     ) -> bool: ...
+
+    def authorize_patient_access(
+        self,
+        patient_id: str,
+        *,
+        tenant_id: str,
+        principal_user_id: int,
+    ) -> None: ...
