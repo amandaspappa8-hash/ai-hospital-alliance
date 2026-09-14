@@ -96,6 +96,19 @@ class OphthalmologyService:
             analysis_id=analysis_id,
         )
 
+    def get_annotation(
+        self,
+        *,
+        principal_user_id: int,
+        tenant_id: str,
+        annotation_id: str,
+    ) -> dict[str, Any] | None:
+        return self.repository.get_annotation(
+            principal_user_id=principal_user_id,
+            tenant_id=tenant_id,
+            annotation_id=annotation_id,
+        )
+
 
 def get_ophthalmology_repository_mode() -> str:
     mode = os.getenv(

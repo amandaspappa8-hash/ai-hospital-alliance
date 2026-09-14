@@ -64,3 +64,13 @@ class OphthalmologyRepository(ABC):
     ) -> dict[str, Any] | None:
         """Return one analysis in verified tenant/hospital scope."""
         raise NotImplementedError
+
+    def get_annotation(
+        self,
+        *,
+        principal_user_id: int,
+        tenant_id: str,
+        annotation_id: str,
+    ) -> dict[str, Any] | None:
+        """Return one annotation in verified tenant/hospital scope."""
+        raise NotImplementedError

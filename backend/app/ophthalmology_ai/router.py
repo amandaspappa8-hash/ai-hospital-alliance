@@ -3320,7 +3320,43 @@ async def phase13_delete_annotation(annotation_id: str):
     }
 
 @router.get("/phase-13/annotations/{annotation_id}")
-async def phase13_get_annotation(annotation_id: str):
+async def phase13_get_annotation(
+    annotation_id: str,
+    request: Request,
+):
+    repository_mode = get_ophthalmology_repository_mode()
+
+    if repository_mode == "postgres":
+        (
+            principal_user_id,
+            tenant_id,
+        ) = get_verified_principal_tenant(request)
+
+        try:
+            annotation = (
+                get_postgres_ophthalmology_service().get_annotation(
+                    principal_user_id=principal_user_id,
+                    tenant_id=tenant_id,
+                    annotation_id=annotation_id,
+                )
+            )
+        except PermissionError as exc:
+            raise HTTPException(
+                status_code=403,
+                detail=str(exc),
+            ) from exc
+
+        if not annotation:
+            return {
+                "status": "not_found",
+                "annotation_id": annotation_id,
+            }
+
+        return {
+            "status": "online",
+            "annotation": annotation,
+        }
+
     _phase13_init_db()
     conn = _phase8_conn()
 

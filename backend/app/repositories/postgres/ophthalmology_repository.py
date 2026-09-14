@@ -510,3 +510,57 @@ class PostgresOphthalmologyRepository(
                 return None
 
             return dict(row)
+
+    def get_annotation(
+        self,
+        *,
+        principal_user_id: int,
+        tenant_id: str,
+        annotation_id: str,
+    ) -> dict[str, Any] | None:
+        with self.engine.connect() as connection:
+            scope = self._resolve_scope(
+                connection,
+                tenant_id,
+                principal_user_id,
+            )
+
+            row = connection.execute(
+                text(
+                    """
+                    SELECT
+                        a."annotation_id",
+                        a."analysis_id",
+                        a."case_id",
+                        a."patient_id",
+                        a."annotation_type",
+                        a."shape",
+                        a."x_percent",
+                        a."y_percent",
+                        a."width_percent",
+                        a."height_percent",
+                        a."marker_x_percent",
+                        a."marker_y_percent",
+                        a."severity",
+                        a."doctor_note",
+                        a."doctor_name",
+                        a."status",
+                        a."created_at",
+                        a."updated_at"
+                    FROM public.ophthalmology_annotations AS a
+                    WHERE a.tenant_id = :tenant_id
+                      AND a.hospital_id = :hospital_id
+                      AND a.annotation_id = :annotation_id
+                    """
+                ),
+                {
+                    "tenant_id": scope["tenant_id"],
+                    "hospital_id": scope["hospital_id"],
+                    "annotation_id": annotation_id,
+                },
+            ).mappings().first()
+
+            if row is None:
+                return None
+
+            return dict(row)
