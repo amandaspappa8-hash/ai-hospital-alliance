@@ -2532,7 +2532,41 @@ async def phase11_list_analyses(request: Request):
     }
 
 @router.get("/phase-11/analyses/{analysis_id}")
-async def phase11_get_analysis(analysis_id: str):
+async def phase11_get_analysis(
+    analysis_id: str,
+    request: Request,
+):
+    repository_mode = get_ophthalmology_repository_mode()
+
+    if repository_mode == "postgres":
+        (
+            principal_user_id,
+            tenant_id,
+        ) = get_verified_principal_tenant(request)
+
+        try:
+            analysis = get_postgres_ophthalmology_service().get_analysis(
+                principal_user_id=principal_user_id,
+                tenant_id=tenant_id,
+                analysis_id=analysis_id,
+            )
+        except PermissionError as exc:
+            raise HTTPException(
+                status_code=403,
+                detail=str(exc),
+            ) from exc
+
+        if not analysis:
+            return {
+                "status": "not_found",
+                "analysis_id": analysis_id,
+            }
+
+        return {
+            "status": "online",
+            "analysis": analysis,
+        }
+
     _phase11_init_db()
     conn = _phase8_conn()
 

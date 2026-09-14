@@ -455,3 +455,58 @@ class PostgresOphthalmologyRepository(
                 for row in audit_logs
             ],
         }
+
+    def get_analysis(
+        self,
+        *,
+        principal_user_id: int,
+        tenant_id: str,
+        analysis_id: str,
+    ) -> dict[str, Any] | None:
+        with self.engine.connect() as connection:
+            scope = self._resolve_scope(
+                connection,
+                tenant_id,
+                principal_user_id,
+            )
+
+            row = connection.execute(
+                text(
+                    """
+                    SELECT
+                        a."analysis_id",
+                        a."case_id",
+                        a."patient_id",
+                        a."image_type",
+                        a."filename",
+                        a."width",
+                        a."height",
+                        a."mode",
+                        a."quality_score",
+                        a."brightness",
+                        a."contrast",
+                        a."sharpness",
+                        a."risk_score",
+                        a."risk_level",
+                        a."findings_json",
+                        a."recommendations_json",
+                        a."safety_gate",
+                        a."clinical_status",
+                        a."created_at"
+                    FROM public.ophthalmology_ai_analyses AS a
+                    WHERE a.tenant_id = :tenant_id
+                      AND a.hospital_id = :hospital_id
+                      AND a.analysis_id = :analysis_id
+                    """
+                ),
+                {
+                    "tenant_id": scope["tenant_id"],
+                    "hospital_id": scope["hospital_id"],
+                    "analysis_id": analysis_id,
+                },
+            ).mappings().first()
+
+            if row is None:
+                return None
+
+            return dict(row)

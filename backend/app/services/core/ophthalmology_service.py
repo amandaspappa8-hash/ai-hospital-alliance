@@ -83,6 +83,19 @@ class OphthalmologyService:
             case_id=case_id,
         )
 
+    def get_analysis(
+        self,
+        *,
+        principal_user_id: int,
+        tenant_id: str,
+        analysis_id: str,
+    ) -> dict[str, Any] | None:
+        return self.repository.get_analysis(
+            principal_user_id=principal_user_id,
+            tenant_id=tenant_id,
+            analysis_id=analysis_id,
+        )
+
 
 def get_ophthalmology_repository_mode() -> str:
     mode = os.getenv(
