@@ -57,6 +57,19 @@ class OphthalmologyService:
             tenant_id=tenant_id,
         )
 
+    def list_cases(
+        self,
+        *,
+        principal_user_id: int,
+        tenant_id: str,
+        q: str = "",
+    ) -> list[dict[str, Any]]:
+        return self.repository.list_cases(
+            principal_user_id=principal_user_id,
+            tenant_id=tenant_id,
+            q=q,
+        )
+
 
 def get_ophthalmology_repository_mode() -> str:
     mode = os.getenv(

@@ -244,3 +244,100 @@ class PostgresOphthalmologyRepository(
             dict(row)
             for row in rows
         ]
+
+    def list_cases(
+        self,
+        *,
+        principal_user_id: int,
+        tenant_id: str,
+        q: str = "",
+    ) -> list[dict[str, Any]]:
+        with self.engine.connect() as connection:
+            (
+                resolved_tenant_id,
+                hospital_id,
+                _principal_user_id,
+            ) = self._resolve_scope(
+                connection,
+                tenant_id=tenant_id,
+                principal_user_id=principal_user_id,
+            )
+
+            normalized_q = q.strip()
+
+            if normalized_q:
+                rows = connection.execute(
+                    text(
+                        """
+                        SELECT
+                            c.case_id,
+                            c.patient_id,
+                            c.filename,
+                            c.stored_path,
+                            c.image_type,
+                            c.language,
+                            c.risk_score,
+                            c.risk_level,
+                            c.status,
+                            c.ai_summary,
+                            c.clinical_notice,
+                            c.doctor_review_status,
+                            c.doctor_review_decision,
+                            c.created_at,
+                            c.updated_at
+                        FROM public.ophthalmology_cases AS c
+                        WHERE c.tenant_id = :tenant_id
+                          AND c.hospital_id = :hospital_id
+                          AND (
+                              c.case_id ILIKE :pattern
+                              OR c.patient_id ILIKE :pattern
+                              OR c.image_type ILIKE :pattern
+                              OR c.risk_level ILIKE :pattern
+                          )
+                        ORDER BY c.created_at DESC
+                        LIMIT 100
+                        """
+                    ),
+                    {
+                        "tenant_id": resolved_tenant_id,
+                        "hospital_id": hospital_id,
+                        "pattern": f"%{normalized_q}%",
+                    },
+                ).mappings().all()
+            else:
+                rows = connection.execute(
+                    text(
+                        """
+                        SELECT
+                            c.case_id,
+                            c.patient_id,
+                            c.filename,
+                            c.stored_path,
+                            c.image_type,
+                            c.language,
+                            c.risk_score,
+                            c.risk_level,
+                            c.status,
+                            c.ai_summary,
+                            c.clinical_notice,
+                            c.doctor_review_status,
+                            c.doctor_review_decision,
+                            c.created_at,
+                            c.updated_at
+                        FROM public.ophthalmology_cases AS c
+                        WHERE c.tenant_id = :tenant_id
+                          AND c.hospital_id = :hospital_id
+                        ORDER BY c.created_at DESC
+                        LIMIT 100
+                        """
+                    ),
+                    {
+                        "tenant_id": resolved_tenant_id,
+                        "hospital_id": hospital_id,
+                    },
+                ).mappings().all()
+
+        return [
+            dict(row)
+            for row in rows
+        ]

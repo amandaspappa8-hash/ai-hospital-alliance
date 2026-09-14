@@ -1145,7 +1145,40 @@ async def phase8_upload_eye_image_demo(
     return _phase8_find_case(case_id)
 
 @router.get("/phase-8/cases")
-async def phase8_list_cases(q: str = Query("", description="Search by case_id, patient_id, image_type, risk_level")):
+async def phase8_list_cases(
+    request: Request,
+    q: str = Query(
+        "",
+        description="Search by case_id, patient_id, image_type, risk_level",
+    ),
+):
+    repository_mode = get_ophthalmology_repository_mode()
+
+    if repository_mode == "postgres":
+        (
+            principal_user_id,
+            tenant_id,
+        ) = get_verified_principal_tenant(request)
+
+        try:
+            rows = get_postgres_ophthalmology_service().list_cases(
+                principal_user_id=principal_user_id,
+                tenant_id=tenant_id,
+                q=q,
+            )
+        except PermissionError as exc:
+            raise HTTPException(
+                status_code=403,
+                detail=str(exc),
+            ) from exc
+
+        return {
+            "status": "online",
+            "persistent": True,
+            "total_cases": len(rows),
+            "cases": rows,
+        }
+
     _phase8_init_db()
     conn = _phase8_conn()
 
@@ -1170,7 +1203,7 @@ async def phase8_list_cases(q: str = Query("", description="Search by case_id, p
         "status": "online",
         "persistent": True,
         "total_cases": len(rows),
-        "cases": [dict(r) for r in rows]
+        "cases": [dict(r) for r in rows],
     }
 
 @router.get("/phase-8/cases/{case_id}")
