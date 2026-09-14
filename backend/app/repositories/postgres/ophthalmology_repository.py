@@ -617,3 +617,69 @@ class PostgresOphthalmologyRepository(
                 return None
 
             return dict(row)
+
+    def list_annotations(
+        self,
+        *,
+        principal_user_id: int,
+        tenant_id: str,
+        analysis_id: str = "",
+    ) -> list[dict[str, Any]]:
+        with self.engine.connect() as connection:
+            scope = self._resolve_scope(
+                connection,
+                tenant_id,
+                principal_user_id,
+            )
+
+            base_sql = """
+            SELECT
+                a."annotation_id",
+                a."analysis_id",
+                a."case_id",
+                a."patient_id",
+                a."annotation_type",
+                a."shape",
+                a."x_percent",
+                a."y_percent",
+                a."width_percent",
+                a."height_percent",
+                a."marker_x_percent",
+                a."marker_y_percent",
+                a."severity",
+                a."doctor_note",
+                a."doctor_name",
+                a."status",
+                a."created_at",
+                a."updated_at"
+            FROM public.ophthalmology_annotations AS a
+            WHERE a.tenant_id = :tenant_id
+              AND a.hospital_id = :hospital_id
+            """
+
+            params = {
+                "tenant_id": scope["tenant_id"],
+                "hospital_id": scope["hospital_id"],
+            }
+
+            if analysis_id:
+                sql = base_sql + """
+                  AND a.analysis_id = :analysis_id
+                ORDER BY a.created_at DESC
+                """
+                params["analysis_id"] = analysis_id
+            else:
+                sql = base_sql + """
+                ORDER BY a.created_at DESC
+                LIMIT 200
+                """
+
+            rows = connection.execute(
+                text(sql),
+                params,
+            ).mappings().all()
+
+            return [
+                dict(row)
+                for row in rows
+            ]

@@ -84,3 +84,13 @@ class OphthalmologyRepository(ABC):
     ) -> dict[str, Any] | None:
         """Return one clinical review in verified tenant/hospital scope."""
         raise NotImplementedError
+
+    def list_annotations(
+        self,
+        *,
+        principal_user_id: int,
+        tenant_id: str,
+        analysis_id: str = "",
+    ) -> list[dict[str, Any]]:
+        """List annotations in verified tenant/hospital scope."""
+        raise NotImplementedError

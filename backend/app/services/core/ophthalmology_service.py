@@ -122,6 +122,19 @@ class OphthalmologyService:
             review_id=review_id,
         )
 
+    def list_annotations(
+        self,
+        *,
+        principal_user_id: int,
+        tenant_id: str,
+        analysis_id: str = "",
+    ) -> list[dict[str, Any]]:
+        return self.repository.list_annotations(
+            principal_user_id=principal_user_id,
+            tenant_id=tenant_id,
+            analysis_id=analysis_id,
+        )
+
 
 def get_ophthalmology_repository_mode() -> str:
     mode = os.getenv(

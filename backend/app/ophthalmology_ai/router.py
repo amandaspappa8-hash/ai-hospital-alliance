@@ -3169,7 +3169,38 @@ async def phase13_latest():
     }
 
 @router.get("/phase-13/annotations")
-async def phase13_list_annotations(analysis_id: str = Query("")):
+async def phase13_list_annotations(
+    analysis_id: str = Query(""),
+    request: Request = None,
+):
+    repository_mode = get_ophthalmology_repository_mode()
+
+    if repository_mode == "postgres":
+        (
+            principal_user_id,
+            tenant_id,
+        ) = get_verified_principal_tenant(request)
+
+        try:
+            rows = (
+                get_postgres_ophthalmology_service().list_annotations(
+                    principal_user_id=principal_user_id,
+                    tenant_id=tenant_id,
+                    analysis_id=analysis_id,
+                )
+            )
+        except PermissionError as exc:
+            raise HTTPException(
+                status_code=403,
+                detail=str(exc),
+            ) from exc
+
+        return {
+            "status": "online",
+            "total_annotations": len(rows),
+            "annotations": rows,
+        }
+
     _phase13_init_db()
     conn = _phase8_conn()
 
