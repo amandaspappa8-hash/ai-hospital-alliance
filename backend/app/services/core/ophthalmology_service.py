@@ -148,6 +148,17 @@ class OphthalmologyService:
             analysis_id=analysis_id,
         )
 
+    def get_latest_annotation_context(
+        self,
+        *,
+        principal_user_id: int,
+        tenant_id: str,
+    ) -> dict[str, Any]:
+        return self.repository.get_latest_annotation_context(
+            principal_user_id=principal_user_id,
+            tenant_id=tenant_id,
+        )
+
 
 def get_ophthalmology_repository_mode() -> str:
     mode = os.getenv(

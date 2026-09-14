@@ -104,3 +104,12 @@ class OphthalmologyRepository(ABC):
     ) -> list[dict[str, Any]]:
         """List clinical reviews in verified tenant/hospital scope."""
         raise NotImplementedError
+
+    def get_latest_annotation_context(
+        self,
+        *,
+        principal_user_id: int,
+        tenant_id: str,
+    ) -> dict[str, Any]:
+        """Return latest scoped analysis with its annotations."""
+        raise NotImplementedError

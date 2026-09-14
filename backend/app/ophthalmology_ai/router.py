@@ -3140,7 +3140,51 @@ async def phase13_status():
     }
 
 @router.get("/phase-13/latest")
-async def phase13_latest():
+async def phase13_latest(
+    request: Request = None,
+):
+    repository_mode = get_ophthalmology_repository_mode()
+
+    if repository_mode == "postgres":
+        (
+            principal_user_id,
+            tenant_id,
+        ) = get_verified_principal_tenant(request)
+
+        try:
+            context = (
+                get_postgres_ophthalmology_service()
+                .get_latest_annotation_context(
+                    principal_user_id=principal_user_id,
+                    tenant_id=tenant_id,
+                )
+            )
+        except PermissionError as exc:
+            raise HTTPException(
+                status_code=403,
+                detail=str(exc),
+            ) from exc
+
+        analysis = context["analysis"]
+
+        if not analysis:
+            return {
+                "status": "empty",
+                "message": "No Phase 11 analysis found. Run Phase 11 first."
+            }
+
+        rows = context["annotations"]
+
+        return {
+            "status": "online",
+            "phase": "AHOS Ophthalmology Phase 13",
+            "analysis": analysis,
+            "image_url": f"/api/ophthalmology/phase-12/analyses/{analysis['analysis_id']}/image",
+            "heatmap_url": f"/api/ophthalmology/phase-12/analyses/{analysis['analysis_id']}/heatmap",
+            "annotations": rows,
+            "clinical_notice": "Prototype annotation tool only. Doctor findings require real ophthalmologist validation."
+        }
+
     analysis = _phase13_latest_analysis()
 
     if not analysis:

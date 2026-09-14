@@ -748,3 +748,113 @@ class PostgresOphthalmologyRepository(
                 dict(row)
                 for row in rows
             ]
+
+    def get_latest_annotation_context(
+        self,
+        *,
+        principal_user_id: int,
+        tenant_id: str,
+    ) -> dict[str, Any]:
+        with self.engine.connect() as connection:
+            scope = self._resolve_scope(
+                connection,
+                tenant_id,
+                principal_user_id,
+            )
+
+            analysis_sql = """
+            SELECT
+                a."analysis_id",
+                a."case_id",
+                a."patient_id",
+                a."image_type",
+                a."filename",
+                a."width",
+                a."height",
+                a."mode",
+                a."quality_score",
+                a."brightness",
+                a."contrast",
+                a."sharpness",
+                a."risk_score",
+                a."risk_level",
+                a."findings_json",
+                a."recommendations_json",
+                a."safety_gate",
+                a."clinical_status",
+                a."created_at",
+                c."stored_path"
+            FROM public.ophthalmology_ai_analyses AS a
+            LEFT JOIN public.ophthalmology_cases AS c
+              ON c.tenant_id = a.tenant_id
+             AND c.hospital_id = a.hospital_id
+             AND c.case_id = a.case_id
+            WHERE a.tenant_id = :tenant_id
+              AND a.hospital_id = :hospital_id
+            ORDER BY a.created_at DESC
+            LIMIT 1
+            """
+
+            params = {
+                "tenant_id": scope["tenant_id"],
+                "hospital_id": scope["hospital_id"],
+            }
+
+            analysis_row = connection.execute(
+                text(analysis_sql),
+                params,
+            ).mappings().first()
+
+            if analysis_row is None:
+                return {
+                    "analysis": None,
+                    "annotations": [],
+                }
+
+            analysis = dict(analysis_row)
+
+            annotation_sql = """
+            SELECT
+                n."annotation_id",
+                n."analysis_id",
+                n."case_id",
+                n."patient_id",
+                n."annotation_type",
+                n."shape",
+                n."x_percent",
+                n."y_percent",
+                n."width_percent",
+                n."height_percent",
+                n."marker_x_percent",
+                n."marker_y_percent",
+                n."severity",
+                n."doctor_note",
+                n."doctor_name",
+                n."status",
+                n."created_at",
+                n."updated_at"
+            FROM public.ophthalmology_annotations AS n
+            WHERE n.tenant_id = :tenant_id
+              AND n.hospital_id = :hospital_id
+              AND n.analysis_id = :analysis_id
+            ORDER BY n.created_at DESC
+            """
+
+            annotation_params = {
+                "tenant_id": scope["tenant_id"],
+                "hospital_id": scope["hospital_id"],
+                "analysis_id": analysis["analysis_id"],
+            }
+
+            annotation_rows = connection.execute(
+                text(annotation_sql),
+                annotation_params,
+            ).mappings().all()
+
+            return {
+                "analysis": analysis,
+                "annotations": [
+                    dict(row)
+                    for row in annotation_rows
+                ],
+            }
