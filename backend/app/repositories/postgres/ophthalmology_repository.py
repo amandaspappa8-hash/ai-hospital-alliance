@@ -564,3 +564,56 @@ class PostgresOphthalmologyRepository(
                 return None
 
             return dict(row)
+
+    def get_review(
+        self,
+        *,
+        principal_user_id: int,
+        tenant_id: str,
+        review_id: str,
+    ) -> dict[str, Any] | None:
+        with self.engine.connect() as connection:
+            scope = self._resolve_scope(
+                connection,
+                tenant_id,
+                principal_user_id,
+            )
+
+            row = connection.execute(
+                text(
+                    """
+                    SELECT
+                        r."review_id",
+                        r."analysis_id",
+                        r."case_id",
+                        r."patient_id",
+                        r."decision",
+                        r."priority",
+                        r."review_status",
+                        r."doctor_name",
+                        r."doctor_signature",
+                        r."review_note",
+                        r."follow_up_plan",
+                        r."annotation_count",
+                        r."ai_risk_score",
+                        r."ai_risk_level",
+                        r."safety_gate",
+                        r."created_at",
+                        r."updated_at"
+                    FROM public.ophthalmology_clinical_reviews AS r
+                    WHERE r.tenant_id = :tenant_id
+                      AND r.hospital_id = :hospital_id
+                      AND r.review_id = :review_id
+                    """
+                ),
+                {
+                    "tenant_id": scope["tenant_id"],
+                    "hospital_id": scope["hospital_id"],
+                    "review_id": review_id,
+                },
+            ).mappings().first()
+
+            if row is None:
+                return None
+
+            return dict(row)

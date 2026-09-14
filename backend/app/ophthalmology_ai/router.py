@@ -3723,7 +3723,43 @@ async def phase14_create_review(
     }
 
 @router.get("/phase-14/reviews/{review_id}")
-async def phase14_get_review(review_id: str):
+async def phase14_get_review(
+    review_id: str,
+    request: Request,
+):
+    repository_mode = get_ophthalmology_repository_mode()
+
+    if repository_mode == "postgres":
+        (
+            principal_user_id,
+            tenant_id,
+        ) = get_verified_principal_tenant(request)
+
+        try:
+            review = (
+                get_postgres_ophthalmology_service().get_review(
+                    principal_user_id=principal_user_id,
+                    tenant_id=tenant_id,
+                    review_id=review_id,
+                )
+            )
+        except PermissionError as exc:
+            raise HTTPException(
+                status_code=403,
+                detail=str(exc),
+            ) from exc
+
+        if not review:
+            return {
+                "status": "not_found",
+                "review_id": review_id,
+            }
+
+        return {
+            "status": "online",
+            "review": review,
+        }
+
     _phase14_init_db()
     conn = _phase8_conn()
 

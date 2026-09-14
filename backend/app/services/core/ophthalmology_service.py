@@ -109,6 +109,19 @@ class OphthalmologyService:
             annotation_id=annotation_id,
         )
 
+    def get_review(
+        self,
+        *,
+        principal_user_id: int,
+        tenant_id: str,
+        review_id: str,
+    ) -> dict[str, Any] | None:
+        return self.repository.get_review(
+            principal_user_id=principal_user_id,
+            tenant_id=tenant_id,
+            review_id=review_id,
+        )
+
 
 def get_ophthalmology_repository_mode() -> str:
     mode = os.getenv(
