@@ -3727,14 +3727,33 @@ def get_audit_logs(limit: int = 50, db: Session = Depends(get_db)):
 
 
 # ── Multi-tenant info ────────────────────────────────────────────────────────
+from fastapi import Request as _AHOSPhase39_6Request
 @app.get("/tenant/{hospital_id}", response_model=None)
-def get_tenant_info(hospital_id: str):
+def get_tenant_info(
+    hospital_id: str,
+    request: _AHOSPhase39_6Request,
+):
+    _require_tenant_access(
+        request,
+        hospital_id,
+    )
+
     from .tenant import TENANT_REGISTRY
 
-    tenant = TENANT_REGISTRY.get(hospital_id)
+    tenant = TENANT_REGISTRY.get(
+        hospital_id
+    )
+
     if not tenant:
-        raise HTTPException(404, "Tenant not found")
-    return {"hospital_id": hospital_id, **tenant}
+        raise HTTPException(
+            404,
+            "Tenant not found",
+        )
+
+    return {
+        "hospital_id": hospital_id,
+        **tenant,
+    }
 
 
 @app.get("/tenants", response_model=None)
@@ -3803,96 +3822,210 @@ def saas_register(req: HospitalRegisterRequest):
 
 
 @app.get("/saas/tenant/{hospital_id}", response_model=None, tags=["SaaS"])
-def saas_get_tenant(hospital_id: str):
+def saas_get_tenant(
+    hospital_id: str,
+    request: _AHOSPhase39_6Request,
+):
     """Get tenant info by hospital_id (requires admin)."""
+    _require_tenant_access(
+        request,
+        hospital_id,
+    )
+
     db = next(get_db())
-    t = get_tenant_by_id(hospital_id, db)
+
+    t = get_tenant_by_id(
+        hospital_id,
+        db,
+    )
+
     return tenant_to_public(t)
 
 
 @app.get("/saas/tenants", response_model=None, tags=["SaaS"])
-def saas_list_tenants():
+def saas_list_tenants(request: _AHOSPhase39_6Request):
     """Super-admin: list all tenants."""
-    _require_super_admin()
+    _require_super_admin(request)
     db = next(get_db())
     tenants = db.query(Tenant).all()
     return [tenant_to_public(t) for t in tenants]
 
 
 @app.post("/saas/tenant/{hospital_id}/suspend", response_model=None, tags=["SaaS"])
-def saas_suspend_tenant(hospital_id: str):
+def saas_suspend_tenant(hospital_id: str, request: _AHOSPhase39_6Request):
     """Super-admin: suspend a tenant."""
-    _require_super_admin()
+    _require_super_admin(request)
     db = next(get_db())
     t = db.query(Tenant).filter(Tenant.id == hospital_id).first()
     if not t:
-        raise HTTPException(404, "Tenant not found")
+        raise HTTPException(404, 'Tenant not found')
     t.is_active = False
     db.commit()
-    return {"message": f"Tenant {hospital_id} suspended"}
+    return {'message': f'Tenant {hospital_id} suspended'}
 
 
 @app.post("/saas/tenant/{hospital_id}/activate", response_model=None, tags=["SaaS"])
-def saas_activate_tenant(hospital_id: str):
+def saas_activate_tenant(hospital_id: str, request: _AHOSPhase39_6Request):
     """Super-admin: activate a suspended tenant."""
-    _require_super_admin()
+    _require_super_admin(request)
     db = next(get_db())
     t = db.query(Tenant).filter(Tenant.id == hospital_id).first()
     if not t:
-        raise HTTPException(404, "Tenant not found")
+        raise HTTPException(404, 'Tenant not found')
     t.is_active = True
     db.commit()
-    return {"message": f"Tenant {hospital_id} activated"}
+    return {'message': f'Tenant {hospital_id} activated'}
 
 
 @app.post("/saas/tenant/{hospital_id}/upgrade", response_model=None, tags=["SaaS"])
-def saas_upgrade_plan(hospital_id: str, body: dict):
+def saas_upgrade_plan(hospital_id: str, body: dict, request: _AHOSPhase39_6Request):
     """Upgrade/change a tenant's plan."""
-    _require_super_admin()
-    new_plan = body.get("plan")
+    _require_super_admin(request)
+    new_plan = body.get('plan')
     if new_plan not in PLANS:
-        raise HTTPException(400, f"Invalid plan. Choose: {list(PLANS.keys())}")
+        raise HTTPException(400, f'Invalid plan. Choose: {list(PLANS.keys())}')
     db = next(get_db())
     t = db.query(Tenant).filter(Tenant.id == hospital_id).first()
     if not t:
-        raise HTTPException(404, "Tenant not found")
+        raise HTTPException(404, 'Tenant not found')
     t.plan = new_plan
     db.commit()
-    return {"message": f"Plan updated to {new_plan}", **tenant_to_public(t)}
+    return {'message': f'Plan updated to {new_plan}', **tenant_to_public(t)}
 
 
 @app.get("/saas/tenant/{hospital_id}/usage", response_model=None, tags=["SaaS"])
-def saas_usage(hospital_id: str):
+def saas_usage(hospital_id: str, request: _AHOSPhase39_6Request):
     """Get current usage stats for a tenant."""
+    _require_tenant_access(request, hospital_id)
     db = next(get_db())
     t = get_tenant_by_id(hospital_id, db)
     from .models import User, Patient
     user_count = db.query(User).filter(User.hospital_id == hospital_id).count()
     patient_count = db.query(Patient).filter(Patient.hospital_id == hospital_id).count()
-    plan = PLANS.get(t.plan, PLANS["trial"])
-    return {
-        "hospital_id": hospital_id,
-        "plan": t.plan,
-        "usage": {
-            "users": user_count,
-            "patients": patient_count,
-            "ai_calls_today": t.ai_calls_today or 0,
-        },
-        "limits": {
-            "max_users": plan["max_users"],
-            "max_patients": plan["max_patients"],
-            "ai_calls_per_day": plan["ai_calls_per_day"],
-        },
-        "trial_ends_at": t.trial_ends_at.isoformat() if t.trial_ends_at else None,
-    }
+    plan = PLANS.get(t.plan, PLANS['trial'])
+    return {'hospital_id': hospital_id, 'plan': t.plan, 'usage': {'users': user_count, 'patients': patient_count, 'ai_calls_today': t.ai_calls_today or 0}, 'limits': {'max_users': plan['max_users'], 'max_patients': plan['max_patients'], 'ai_calls_per_day': plan['ai_calls_per_day']}, 'trial_ends_at': t.trial_ends_at.isoformat() if t.trial_ends_at else None}
 
 
-def _require_super_admin():
-    """Placeholder — in production wire to JWT super-admin role check."""
-    sa_key = os.environ.get("SUPER_ADMIN_KEY")
-    # For now just check env var is set; real impl checks JWT
-    if not sa_key:
-        raise HTTPException(503, "Super-admin key not configured")
+def _get_control_plane_auth_payload(request: _AHOSPhase39_6Request) -> dict:
+    """Return cryptographically verified JWT claims attached by middleware."""
+    payload = getattr(
+        request.state,
+        "auth_payload",
+        None,
+    )
+
+    if not isinstance(payload, dict):
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required",
+        )
+
+    return payload
+
+
+def _control_plane_roles(payload: dict) -> set[str]:
+    """Normalize trusted JWT role/roles claims without widening privileges."""
+    roles: set[str] = set()
+
+    role = payload.get("role")
+
+    if isinstance(role, str):
+        role = role.strip()
+
+        if role:
+            roles.add(role)
+
+    raw_roles = payload.get("roles")
+
+    if isinstance(raw_roles, str):
+        for value in raw_roles.split(","):
+            value = value.strip()
+
+            if value:
+                roles.add(value)
+
+    elif isinstance(
+        raw_roles,
+        (
+            list,
+            tuple,
+            set,
+        ),
+    ):
+        for value in raw_roles:
+            if not isinstance(
+                value,
+                str,
+            ):
+                continue
+
+            value = value.strip()
+
+            if value:
+                roles.add(value)
+
+    return roles
+
+
+def _is_control_plane_super_admin(payload: dict) -> bool:
+    """Global SaaS super-admin is the canonical Admin role only."""
+    return "Admin" in _control_plane_roles(
+        payload
+    )
+
+
+def _require_super_admin(request: _AHOSPhase39_6Request) -> dict:
+    """Require an authenticated JWT principal with global Admin role."""
+    payload = _get_control_plane_auth_payload(
+        request
+    )
+
+    if not _is_control_plane_super_admin(
+        payload
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Super-admin authorization required",
+        )
+
+    return payload
+
+
+def _require_tenant_access(
+    request: _AHOSPhase39_6Request,
+    hospital_id: str,
+) -> dict:
+    """Allow global Admin or a principal bound to the target hospital."""
+    payload = _get_control_plane_auth_payload(
+        request
+    )
+
+    if _is_control_plane_super_admin(
+        payload
+    ):
+        return payload
+
+    target_hospital_id = str(
+        hospital_id or ""
+    ).strip()
+
+    claimed_hospital_id = str(
+        payload.get("hospital_id")
+        or ""
+    ).strip()
+
+    if (
+        not target_hospital_id
+        or not claimed_hospital_id
+        or claimed_hospital_id
+        != target_hospital_id
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Tenant access denied",
+        )
+
+    return payload
 
 # ===== AI Clinical Router =====
 try:
