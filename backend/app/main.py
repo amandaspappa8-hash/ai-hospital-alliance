@@ -3229,6 +3229,18 @@ def update_mar_status(
     )
 
     try:
+        SERVICES["patients"].authorize_patient_access(
+            patient_id,
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Patient scope denied",
+        ) from exc
+
+    try:
         item_id = SERVICES["mar"].resolve_item_id_by_index(
             patient_id,
             index,
@@ -3285,6 +3297,18 @@ def pharmacy_review_mar_item(
     principal_user_id, tenant_id = (
         get_verified_principal_tenant(request)
     )
+
+    try:
+        SERVICES["patients"].authorize_patient_access(
+            patient_id,
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Patient scope denied",
+        ) from exc
 
     try:
         item_id = SERVICES["mar"].resolve_item_id_by_index(
