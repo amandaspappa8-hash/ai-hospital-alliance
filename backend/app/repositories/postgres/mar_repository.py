@@ -155,6 +155,7 @@ class PostgresMarRepository:
         connection,
         patient_id: str,
         tenant_id: str,
+        hospital_id: str,
     ) -> None:
         exists = connection.execute(
             text(
@@ -164,12 +165,14 @@ class PostgresMarRepository:
                 JOIN public.hospitals AS h
                   ON h.id = p.hospital_id
                 WHERE p.id = :patient_id
+                  AND p.hospital_id = :hospital_id
                   AND h.tenant_id = :tenant_id
                 LIMIT 1
                 """
             ),
             {
                 "patient_id": patient_id,
+                "hospital_id": hospital_id,
                 "tenant_id": tenant_id,
             },
         ).scalar_one_or_none()
@@ -204,12 +207,14 @@ class PostgresMarRepository:
                     JOIN public.hospitals AS h
                       ON h.id = p.hospital_id
                     WHERE mi.patient_id = :patient_id
+                      AND p.hospital_id = :hospital_id
                       AND h.tenant_id = :tenant_id
                     ORDER BY mi.id
                     """
                 ),
                 {
                     "patient_id": patient_id,
+                    "hospital_id": scope["hospital_id"],
                     "tenant_id": scope["tenant_id"],
                 },
             ).fetchall()
@@ -238,6 +243,7 @@ class PostgresMarRepository:
                 connection,
                 patient_id,
                 str(scope["tenant_id"]),
+                str(scope["hospital_id"]),
             )
 
             row = connection.execute(
@@ -272,6 +278,7 @@ class PostgresMarRepository:
                     JOIN public.hospitals AS h
                       ON h.id = p.hospital_id
                     WHERE p.id = :patient_id
+                      AND p.hospital_id = :hospital_id
                       AND h.tenant_id = :tenant_id
                     RETURNING
                         {self._select_columns("mar_items")}
@@ -279,6 +286,7 @@ class PostgresMarRepository:
                 ),
                 {
                     "patient_id": patient_id,
+                    "hospital_id": scope["hospital_id"],
                     "tenant_id": scope["tenant_id"],
                     "medication": payload["medication"],
                     "dose": payload.get("dose"),
@@ -345,6 +353,7 @@ class PostgresMarRepository:
                           JOIN public.hospitals AS h
                             ON h.id = p.hospital_id
                           WHERE p.id = mi.patient_id
+                            AND p.hospital_id = :hospital_id
                             AND h.tenant_id = :tenant_id
                       )
                     RETURNING
@@ -354,6 +363,7 @@ class PostgresMarRepository:
                 {
                     "patient_id": patient_id,
                     "item_id": int(item_id),
+                    "hospital_id": scope["hospital_id"],
                     "tenant_id": scope["tenant_id"],
                     "medication": payload["medication"],
                     "dose": payload.get("dose"),
@@ -403,6 +413,7 @@ class PostgresMarRepository:
                           JOIN public.hospitals AS h
                             ON h.id = p.hospital_id
                           WHERE p.id = mi.patient_id
+                            AND p.hospital_id = :hospital_id
                             AND h.tenant_id = :tenant_id
                       )
                     RETURNING
@@ -412,6 +423,7 @@ class PostgresMarRepository:
                 {
                     "patient_id": patient_id,
                     "item_id": int(item_id),
+                    "hospital_id": scope["hospital_id"],
                     "tenant_id": scope["tenant_id"],
                     "status": payload["status"],
                     "given_at": payload.get("givenAt"),
@@ -453,6 +465,7 @@ class PostgresMarRepository:
                           JOIN public.hospitals AS h
                             ON h.id = p.hospital_id
                           WHERE p.id = mi.patient_id
+                            AND p.hospital_id = :hospital_id
                             AND h.tenant_id = :tenant_id
                       )
                     RETURNING
@@ -462,6 +475,7 @@ class PostgresMarRepository:
                 {
                     "patient_id": patient_id,
                     "item_id": int(item_id),
+                    "hospital_id": scope["hospital_id"],
                     "tenant_id": scope["tenant_id"],
                     "pharmacy_review":
                         payload.get("status")
@@ -498,6 +512,7 @@ class PostgresMarRepository:
                           JOIN public.hospitals AS h
                             ON h.id = p.hospital_id
                           WHERE p.id = mi.patient_id
+                            AND p.hospital_id = :hospital_id
                             AND h.tenant_id = :tenant_id
                       )
                     RETURNING mi.id
@@ -506,6 +521,7 @@ class PostgresMarRepository:
                 {
                     "patient_id": patient_id,
                     "item_id": int(item_id),
+                    "hospital_id": scope["hospital_id"],
                     "tenant_id": scope["tenant_id"],
                 },
             ).fetchone()
