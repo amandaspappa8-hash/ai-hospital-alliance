@@ -3919,25 +3919,38 @@ def refresh_token(data: dict):
 
 # ── Audit Log endpoint ────────────────────────────────────────────────────────
 @app.get("/audit/logs", response_model=None)
-def get_audit_logs(limit: int = 50, db: Session = Depends(get_db)):
-    try:
-        from .models import AuditLog
+def get_audit_logs(
+    request: StarletteRequest,
+    limit: int = 50,
+):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
+    )
 
-        logs = db.query(AuditLog).order_by(AuditLog.timestamp.desc()).limit(limit).all()
-        return [
-            {
-                "id": l.id,
-                "user_id": l.user_id,
-                "action": l.action,
-                "resource": l.resource,
-                "success": l.success,
-                "timestamp": str(l.timestamp),
-                "ip": l.ip_address,
-            }
-            for l in logs
-        ]
-    except:
-        return []
+    repository = REPOSITORIES.get("audit_logs")
+
+    if repository is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Canonical Audit Logs repository unavailable",
+        )
+
+    try:
+        return repository.list_for_principal(
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+            limit=limit,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Audit log scope denied",
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=str(exc),
+        ) from exc
 
 
 # ── Multi-tenant info ────────────────────────────────────────────────────────
