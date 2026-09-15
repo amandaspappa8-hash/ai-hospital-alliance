@@ -448,3 +448,316 @@ class PostgresReportsRepository:
             raise RuntimeError(
                 "Canonical Reports database unavailable"
             ) from exc
+
+    @staticmethod
+    def _validate_report_id(
+        report_id: str,
+    ) -> str:
+        value = str(
+            report_id or ""
+        ).strip()
+
+        if not value:
+            raise ValueError(
+                "report_id must be non-empty"
+            )
+
+        if len(value) > 20:
+            raise ValueError(
+                "report_id exceeds canonical VARCHAR(20)"
+            )
+
+        return value
+
+    def register_verification_for_principal(
+        self,
+        *,
+        report_id: str,
+        tenant_id: str,
+        principal_user_id: int,
+    ) -> dict[str, Any]:
+        report = (
+            self._validate_report_id(
+                report_id
+            )
+        )
+
+        principal_id = (
+            self._validate_principal_user_id(
+                principal_user_id
+            )
+        )
+
+        tenant_claim = (
+            self._validate_tenant_id(
+                tenant_id
+            )
+        )
+
+        report_scope_statement = text(
+            """
+            SELECT 1
+            FROM public.reports AS r
+            JOIN public.patients AS p
+              ON p.id = r.patient_id
+            JOIN public.hospitals AS h
+              ON h.id = p.hospital_id
+            WHERE r.id = :report_id
+              AND p.hospital_id = :hospital_id
+              AND h.tenant_id = :tenant_id
+            LIMIT 1
+            FOR SHARE OF r, p, h
+            """
+        )
+
+        insert_statement = text(
+            """
+            INSERT INTO public.report_verification_events (
+                report_id,
+                verification_type,
+                status,
+                verified_by_user_id
+            )
+            VALUES (
+                :report_id,
+                'REGISTRATION',
+                'REGISTERED',
+                :verified_by_user_id
+            )
+            ON CONFLICT (
+                report_id,
+                verification_type
+            )
+            DO NOTHING
+            RETURNING
+                id,
+                report_id,
+                verification_type,
+                status,
+                verified_by_user_id,
+                verified_at
+            """
+        )
+
+        existing_statement = text(
+            """
+            SELECT
+                id,
+                report_id,
+                verification_type,
+                status,
+                verified_by_user_id,
+                verified_at
+            FROM public.report_verification_events
+            WHERE report_id = :report_id
+              AND verification_type = 'REGISTRATION'
+            LIMIT 1
+            """
+        )
+
+        try:
+            with self._engine.begin() as connection:
+                scope = (
+                    self._resolve_principal_scope_on_connection(
+                        connection,
+                        principal_user_id=
+                            principal_id,
+                        tenant_id=
+                            tenant_claim,
+                        lock_scope=True,
+                    )
+                )
+
+                allowed = connection.execute(
+                    report_scope_statement,
+                    {
+                        "report_id":
+                            report,
+                        "hospital_id":
+                            scope["hospital_id"],
+                        "tenant_id":
+                            scope["tenant_id"],
+                    },
+                ).scalar_one_or_none()
+
+                if allowed is None:
+                    raise PermissionError(
+                        "Report is outside authenticated "
+                        "hospital/tenant scope"
+                    )
+
+                row = connection.execute(
+                    insert_statement,
+                    {
+                        "report_id":
+                            report,
+                        "verified_by_user_id":
+                            principal_id,
+                    },
+                ).mappings().one_or_none()
+
+                if row is None:
+                    row = connection.execute(
+                        existing_statement,
+                        {
+                            "report_id":
+                                report,
+                        },
+                    ).mappings().one_or_none()
+
+                if row is None:
+                    raise RuntimeError(
+                        "Canonical report verification "
+                        "registration unavailable"
+                    )
+
+                return {
+                    "id": int(
+                        row["id"]
+                    ),
+                    "report_id": str(
+                        row["report_id"]
+                    ),
+                    "verification_type": str(
+                        row["verification_type"]
+                    ),
+                    "status": str(
+                        row["status"]
+                    ),
+                    "verified_by_user_id": int(
+                        row[
+                            "verified_by_user_id"
+                        ]
+                    ),
+                    "verified_at":
+                        row["verified_at"],
+                }
+
+        except SQLAlchemyError as exc:
+            raise RuntimeError(
+                "Canonical Reports database unavailable"
+            ) from exc
+
+    def get_verification_for_principal(
+        self,
+        *,
+        report_id: str,
+        tenant_id: str,
+        principal_user_id: int,
+    ) -> dict[str, Any] | None:
+        report = (
+            self._validate_report_id(
+                report_id
+            )
+        )
+
+        principal_id = (
+            self._validate_principal_user_id(
+                principal_user_id
+            )
+        )
+
+        tenant_claim = (
+            self._validate_tenant_id(
+                tenant_id
+            )
+        )
+
+        report_scope_statement = text(
+            """
+            SELECT 1
+            FROM public.reports AS r
+            JOIN public.patients AS p
+              ON p.id = r.patient_id
+            JOIN public.hospitals AS h
+              ON h.id = p.hospital_id
+            WHERE r.id = :report_id
+              AND p.hospital_id = :hospital_id
+              AND h.tenant_id = :tenant_id
+            LIMIT 1
+            """
+        )
+
+        event_statement = text(
+            """
+            SELECT
+                id,
+                report_id,
+                verification_type,
+                status,
+                verified_by_user_id,
+                verified_at
+            FROM public.report_verification_events
+            WHERE report_id = :report_id
+              AND verification_type = 'REGISTRATION'
+            LIMIT 1
+            """
+        )
+
+        try:
+            with self._engine.connect() as connection:
+                scope = (
+                    self._resolve_principal_scope_on_connection(
+                        connection,
+                        principal_user_id=
+                            principal_id,
+                        tenant_id=
+                            tenant_claim,
+                    )
+                )
+
+                allowed = connection.execute(
+                    report_scope_statement,
+                    {
+                        "report_id":
+                            report,
+                        "hospital_id":
+                            scope["hospital_id"],
+                        "tenant_id":
+                            scope["tenant_id"],
+                    },
+                ).scalar_one_or_none()
+
+                if allowed is None:
+                    raise PermissionError(
+                        "Report is outside authenticated "
+                        "hospital/tenant scope"
+                    )
+
+                row = connection.execute(
+                    event_statement,
+                    {
+                        "report_id":
+                            report,
+                    },
+                ).mappings().one_or_none()
+
+                if row is None:
+                    return None
+
+                return {
+                    "id": int(
+                        row["id"]
+                    ),
+                    "report_id": str(
+                        row["report_id"]
+                    ),
+                    "verification_type": str(
+                        row["verification_type"]
+                    ),
+                    "status": str(
+                        row["status"]
+                    ),
+                    "verified_by_user_id": int(
+                        row[
+                            "verified_by_user_id"
+                        ]
+                    ),
+                    "verified_at":
+                        row["verified_at"],
+                }
+
+        except SQLAlchemyError as exc:
+            raise RuntimeError(
+                "Canonical Reports database unavailable"
+            ) from exc

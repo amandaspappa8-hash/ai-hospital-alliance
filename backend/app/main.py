@@ -3045,26 +3045,147 @@ def create_report(
 
 from fastapi import Depends, HTTPException
 
-VERIFIED_REPORTS = {}
 
 
 @app.post("/verify/register/{report_id}")
-def register_report(report_id: str):
-    VERIFIED_REPORTS[report_id] = {"status": "verified", "timestamp": "valid"}
-    return {"message": "Report registered", "report_id": report_id}
+def register_report(
+    report_id: str,
+    request: StarletteRequest,
+):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(
+            request
+        )
+    )
+
+    repository = REPOSITORIES.get(
+        "reports"
+    )
+
+    register_verification = getattr(
+        repository,
+        "register_verification_for_principal",
+        None,
+    )
+
+    if not callable(
+        register_verification
+    ):
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Canonical report verification "
+                "repository unavailable"
+            ),
+        )
+
+    try:
+        register_verification(
+            report_id=report_id,
+            tenant_id=tenant_id,
+            principal_user_id=
+                principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Report verification scope denied"
+            ),
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=str(exc),
+        ) from exc
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Canonical report verification "
+                "write unavailable"
+            ),
+        ) from exc
+
+    return {
+        "message": "Report registered",
+        "report_id": report_id,
+    }
 
 
 @app.get("/verify/{report_id}")
-def verify_report(report_id: str):
-    report = VERIFIED_REPORTS.get(report_id)
-    if not report:
-        raise HTTPException(status_code=404, detail="Report not found or invalid")
+def verify_report(
+    report_id: str,
+    request: StarletteRequest,
+):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(
+            request
+        )
+    )
+
+    repository = REPOSITORIES.get(
+        "reports"
+    )
+
+    get_verification = getattr(
+        repository,
+        "get_verification_for_principal",
+        None,
+    )
+
+    if not callable(
+        get_verification
+    ):
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Canonical report verification "
+                "repository unavailable"
+            ),
+        )
+
+    try:
+        report = get_verification(
+            report_id=report_id,
+            tenant_id=tenant_id,
+            principal_user_id=
+                principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Report verification scope denied"
+            ),
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=str(exc),
+        ) from exc
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Canonical report verification "
+                "read unavailable"
+            ),
+        ) from exc
+
+    if report is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Report not found or invalid",
+        )
 
     return {
         "report_id": report_id,
         "status": "VERIFIED",
         "source": "AI Hospital Alliance",
-        "security": "Blockchain-grade verification",
+        "security": (
+            "AIHA canonical verification registration"
+        ),
     }
 
 

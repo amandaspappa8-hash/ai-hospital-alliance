@@ -23,3 +23,19 @@ class ReportsRepositoryContract(Protocol):
         content: str,
         status: str,
     ) -> dict[str, Any]: ...
+
+    def register_verification_for_principal(
+        self,
+        *,
+        report_id: str,
+        tenant_id: str,
+        principal_user_id: int,
+    ) -> dict[str, Any]: ...
+
+    def get_verification_for_principal(
+        self,
+        *,
+        report_id: str,
+        tenant_id: str,
+        principal_user_id: int,
+    ) -> dict[str, Any] | None: ...
