@@ -3771,29 +3771,38 @@ def fhir_observations(patient: str = None, db: Session = Depends(get_db)):
 
 
 @app.get("/fhir/R4/MedicationRequest", response_model=None)
-def fhir_medication_requests(db: Session = Depends(get_db)):
+def fhir_medication_requests(
+    request: StarletteRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
+    )
 
-    rows = db.execute(text("""
+    repository = REPOSITORIES.get(
+        "medication_orders"
+    )
 
-        SELECT
-            id,
-            patient_id,
-            drug_name,
-            generic_name,
-            dose,
-            route,
-            frequency,
-            duration_days,
-            quantity,
-            is_active,
-            created_at
+    if repository is None:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Canonical Medication Orders "
+                "repository unavailable"
+            ),
+        )
 
-        FROM medication_orders_simple
-
-        ORDER BY id DESC
-        LIMIT 50
-
-    """)).mappings().all()
+    try:
+        rows = repository.list_for_principal(
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+            limit=50,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Medication order scope denied",
+        ) from exc
 
     resources = []
 
