@@ -1,30 +1,37 @@
 from __future__ import annotations
 
+import secrets
 from typing import Any
 
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import SQLAlchemyError
 
 
 class PostgresReportsRepository:
     """
-    Read-only canonical reports repository.
+    Canonical PostgreSQL Reports repository.
 
-    Security model:
-      verified principal user id
-        -> users.hospital_id
-        -> hospitals.tenant_id
+    Security authority:
 
-      report
-        -> reports.patient_id
-        -> patients.hospital_id
-        -> hospitals.tenant_id
+      verified authenticated principal
+        -> public.users.id
+        -> public.users.hospital_id
+        -> public.hospitals.tenant_id
+
+      report patient
+        -> public.patients.id
+        -> public.patients.hospital_id
+        -> public.hospitals.tenant_id
 
     The authenticated tenant claim must match the server-derived
     canonical tenant for the active principal.
 
-    This repository performs no INSERT, UPDATE, or DELETE operations.
+    Writes authorize the principal, authorize the patient, and perform
+    the INSERT using one PostgreSQL transaction.
     """
+
+    _REPORT_ID_ATTEMPTS = 5
 
     def __init__(self, engine: Engine):
         self._engine = engine
@@ -64,11 +71,28 @@ class PostgresReportsRepository:
 
         return value
 
-    def _resolve_principal_scope(
+    @staticmethod
+    def _validate_patient_id(
+        patient_id: str,
+    ) -> str:
+        value = str(
+            patient_id or ""
+        ).strip()
+
+        if not value:
+            raise ValueError(
+                "patient_id must be non-empty"
+            )
+
+        return value
+
+    def _resolve_principal_scope_on_connection(
         self,
+        connection,
         *,
         principal_user_id: int,
         tenant_id: str,
+        lock_scope: bool = False,
     ) -> dict[str, str]:
         principal_id = (
             self._validate_principal_user_id(
@@ -82,8 +106,7 @@ class PostgresReportsRepository:
             )
         )
 
-        statement = text(
-            """
+        statement_sql = """
             SELECT
                 u.hospital_id AS hospital_id,
                 h.tenant_id AS tenant_id
@@ -95,17 +118,24 @@ class PostgresReportsRepository:
             WHERE u.id = :principal_user_id
               AND u.is_active IS TRUE
               AND h.tenant_id IS NOT NULL
-            """
+        """
+
+        if lock_scope:
+            statement_sql += (
+                "\n            FOR SHARE OF u, h"
+            )
+
+        statement = text(
+            statement_sql
         )
 
-        with self._engine.connect() as conn:
-            row = conn.execute(
-                statement,
-                {
-                    "principal_user_id":
-                        principal_id,
-                },
-            ).mappings().one_or_none()
+        row = connection.execute(
+            statement,
+            {
+                "principal_user_id":
+                    principal_id,
+            },
+        ).mappings().one_or_none()
 
         if row is None:
             raise PermissionError(
@@ -137,6 +167,22 @@ class PostgresReportsRepository:
             "hospital_id": derived_hospital,
             "tenant_id": derived_tenant,
         }
+
+    def _resolve_principal_scope(
+        self,
+        *,
+        principal_user_id: int,
+        tenant_id: str,
+    ) -> dict[str, str]:
+        with self._engine.connect() as connection:
+            return (
+                self._resolve_principal_scope_on_connection(
+                    connection,
+                    principal_user_id=
+                        principal_user_id,
+                    tenant_id=tenant_id,
+                )
+            )
 
     def list_for_principal(
         self,
@@ -174,8 +220,8 @@ class PostgresReportsRepository:
             """
         )
 
-        with self._engine.connect() as conn:
-            rows = conn.execute(
+        with self._engine.connect() as connection:
+            rows = connection.execute(
                 statement,
                 {
                     "hospital_id":
@@ -208,3 +254,197 @@ class PostgresReportsRepository:
             }
             for row in rows
         ]
+
+    def create_for_principal(
+        self,
+        *,
+        patient_id: str,
+        tenant_id: str,
+        principal_user_id: int,
+        title: str,
+        report_type: str,
+        summary: str,
+        content: str,
+        status: str,
+    ) -> dict[str, Any]:
+        patient = self._validate_patient_id(
+            patient_id
+        )
+
+        principal_id = (
+            self._validate_principal_user_id(
+                principal_user_id
+            )
+        )
+
+        tenant_claim = (
+            self._validate_tenant_id(
+                tenant_id
+            )
+        )
+
+        title_value = str(
+            title or ""
+        )
+
+        type_value = str(
+            report_type
+            or "Clinical Report"
+        )
+
+        summary_value = str(
+            summary or ""
+        )
+
+        content_value = str(
+            content or ""
+        )
+
+        status_value = str(
+            status or "Draft"
+        )
+
+        patient_statement = text(
+            """
+            SELECT 1
+            FROM public.patients AS p
+            JOIN public.hospitals AS h
+              ON h.id = p.hospital_id
+            WHERE p.id = :patient_id
+              AND p.hospital_id = :hospital_id
+              AND h.tenant_id = :tenant_id
+            LIMIT 1
+            FOR SHARE OF p, h
+            """
+        )
+
+        insert_statement = text(
+            """
+            INSERT INTO public.reports (
+                id,
+                patient_id,
+                author_id,
+                title,
+                type,
+                status,
+                body,
+                summary
+            )
+            VALUES (
+                :id,
+                :patient_id,
+                :author_id,
+                :title,
+                :type,
+                :status,
+                :body,
+                :summary
+            )
+            ON CONFLICT (id) DO NOTHING
+            RETURNING
+                id,
+                patient_id,
+                title,
+                type,
+                status,
+                body,
+                summary
+            """
+        )
+
+        try:
+            with self._engine.begin() as connection:
+                scope = (
+                    self._resolve_principal_scope_on_connection(
+                        connection,
+                        principal_user_id=
+                            principal_id,
+                        tenant_id=
+                            tenant_claim,
+                        lock_scope=True,
+                    )
+                )
+
+                allowed = connection.execute(
+                    patient_statement,
+                    {
+                        "patient_id":
+                            patient,
+                        "hospital_id":
+                            scope["hospital_id"],
+                        "tenant_id":
+                            scope["tenant_id"],
+                    },
+                ).scalar_one_or_none()
+
+                if allowed is None:
+                    raise PermissionError(
+                        "Patient is outside authenticated "
+                        "hospital/tenant scope"
+                    )
+
+                for _ in range(
+                    self._REPORT_ID_ATTEMPTS
+                ):
+                    report_id = (
+                        "R-"
+                        + secrets.token_urlsafe(13)
+                    )
+
+                    row = connection.execute(
+                        insert_statement,
+                        {
+                            "id":
+                                report_id,
+                            "patient_id":
+                                patient,
+                            "author_id":
+                                principal_id,
+                            "title":
+                                title_value,
+                            "type":
+                                type_value,
+                            "status":
+                                status_value,
+                            "body":
+                                content_value,
+                            "summary":
+                                summary_value,
+                        },
+                    ).mappings().one_or_none()
+
+                    if row is None:
+                        continue
+
+                    return {
+                        "id": str(
+                            row["id"]
+                        ),
+                        "patient_id": str(
+                            row["patient_id"]
+                        ),
+                        "title": str(
+                            row["title"] or ""
+                        ),
+                        "type": str(
+                            row["type"] or ""
+                        ),
+                        "summary": str(
+                            row["summary"] or ""
+                        ),
+                        "content": str(
+                            row["body"] or ""
+                        ),
+                        "status": str(
+                            row["status"] or ""
+                        ),
+                    }
+
+                raise RuntimeError(
+                    "Unable to allocate unique report id"
+                )
+
+        except SQLAlchemyError as exc:
+            raise RuntimeError(
+                "Canonical Reports database unavailable"
+            ) from exc

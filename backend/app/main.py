@@ -2967,18 +2967,80 @@ class ReportCreateRequest(BaseModel):
 
 
 @app.post("/reports/{patient_id}")
-def create_report(patient_id: str, payload: ReportCreateRequest):
-    report = {
-        "id": f"R-{len(REPORTS) + 1:04d}",
-        "patient_id": patient_id,
-        "title": payload.title,
-        "type": payload.type or "Clinical Report",
-        "summary": payload.summary or "",
-        "content": payload.content or "",
-        "status": payload.status or "Draft",
-    }
-    REPORTS.append(report)
-    return report
+def create_report(
+    patient_id: str,
+    payload: ReportCreateRequest,
+    request: StarletteRequest,
+):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(
+            request
+        )
+    )
+
+    repository = REPOSITORIES.get(
+        "reports"
+    )
+
+    create_for_principal = getattr(
+        repository,
+        "create_for_principal",
+        None,
+    )
+
+    if not callable(
+        create_for_principal
+    ):
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Canonical writable Reports "
+                "repository unavailable"
+            ),
+        )
+
+    try:
+        return create_for_principal(
+            patient_id=patient_id,
+            tenant_id=tenant_id,
+            principal_user_id=
+                principal_user_id,
+            title=payload.title,
+            report_type=(
+                payload.type
+                or "Clinical Report"
+            ),
+            summary=(
+                payload.summary
+                or ""
+            ),
+            content=(
+                payload.content
+                or ""
+            ),
+            status=(
+                payload.status
+                or "Draft"
+            ),
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Reports scope denied",
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=str(exc),
+        ) from exc
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Canonical Reports write "
+                "unavailable"
+            ),
+        ) from exc
 
 
 from fastapi import Depends, HTTPException

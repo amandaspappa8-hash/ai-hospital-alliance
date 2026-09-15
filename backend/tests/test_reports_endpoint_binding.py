@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import ast
+from pathlib import Path
+
 from fastapi.testclient import TestClient
 
 import backend.app.main as main
@@ -70,28 +73,102 @@ class CapturingScopedRepository:
         )
 
 
-class DeniedScopedRepository:
-    def list_for_principal(
+class CapturingWriteRepository:
+    def __init__(self):
+        self.calls = []
+
+    def create_for_principal(
         self,
-        *,
-        tenant_id: str,
-        principal_user_id: int,
+        **kwargs,
     ):
+        self.calls.append(
+            dict(kwargs)
+        )
+
+        return {
+            "id":
+                "R-0123456789abcdef01",
+            "patient_id":
+                kwargs["patient_id"],
+            "title":
+                kwargs["title"],
+            "type":
+                kwargs["report_type"],
+            "summary":
+                kwargs["summary"],
+            "content":
+                kwargs["content"],
+            "status":
+                kwargs["status"],
+        }
+
+
+class DeniedWriteRepository:
+    def create_for_principal(
+        self,
+        **kwargs,
+    ):
+        del kwargs
+
         raise PermissionError(
-            "tenant mismatch"
+            "scope denied"
         )
 
 
-class InvalidScopedRepository:
-    def list_for_principal(
+class InvalidWriteRepository:
+    def create_for_principal(
         self,
-        *,
-        tenant_id: str,
-        principal_user_id: int,
+        **kwargs,
     ):
+        del kwargs
+
         raise ValueError(
-            "invalid scope"
+            "invalid report"
         )
+
+
+class FailedWriteRepository:
+    def create_for_principal(
+        self,
+        **kwargs,
+    ):
+        del kwargs
+
+        raise RuntimeError(
+            "database unavailable"
+        )
+
+
+def _with_reports_repository(
+    repository,
+):
+    class Scope:
+        def __enter__(self):
+            self.previous = (
+                main.REPOSITORIES.get(
+                    "reports"
+                )
+            )
+
+            main.REPOSITORIES[
+                "reports"
+            ] = repository
+
+            return repository
+
+        def __exit__(
+            self,
+            exc_type,
+            exc,
+            tb,
+        ):
+            main.REPOSITORIES[
+                "reports"
+            ] = self.previous
+
+            return False
+
+    return Scope()
 
 
 def test_reports_anonymous_is_401():
@@ -99,79 +176,31 @@ def test_reports_anonymous_is_401():
         "/reports"
     )
 
-    assert (
-        response.status_code
-        == 401
-    )
+    assert response.status_code == 401
 
 
 def test_reports_unscoped_memory_repository_is_503():
-    previous = main.REPOSITORIES.get(
-        "reports"
-    )
-
-    try:
-        main.REPOSITORIES[
-            "reports"
-        ] = InMemoryReportsRepository(
-            []
-        )
-
+    with _with_reports_repository(
+        InMemoryReportsRepository([])
+    ):
         response = client.get(
             "/reports",
             headers=_auth_headers(),
         )
 
-        assert (
-            response.status_code
-            == 503
-        )
-
-        assert (
-            response.json()["detail"]
-            == (
-                "Canonical scoped Reports "
-                "repository unavailable"
-            )
-        )
-
-    finally:
-        main.REPOSITORIES[
-            "reports"
-        ] = previous
+    assert response.status_code == 503
 
 
 def test_reports_scoped_repository_receives_verified_claims():
-    previous = main.REPOSITORIES.get(
-        "reports"
-    )
-
     repository = (
         CapturingScopedRepository(
-            rows=[
-                {
-                    "id":
-                        "R-1001",
-                    "patient_id":
-                        "P-1001",
-                    "title":
-                        "Clinical Report",
-                    "type":
-                        "Clinical",
-                    "status":
-                        "Ready",
-                    "body":
-                        "Body text",
-                }
-            ]
+            rows=[]
         )
     )
 
-    try:
-        main.REPOSITORIES[
-            "reports"
-        ] = repository
-
+    with _with_reports_repository(
+        repository
+    ):
         response = client.get(
             "/reports",
             headers=_auth_headers(
@@ -180,131 +209,372 @@ def test_reports_scoped_repository_receives_verified_claims():
             ),
         )
 
-        assert (
-            response.status_code
-            == 200
+    assert response.status_code == 200
+
+    assert repository.calls == [
+        {
+            "tenant_id": "TENANT-A",
+            "principal_user_id": 7,
+        }
+    ]
+
+
+def test_post_reports_anonymous_is_401():
+    with _with_reports_repository(
+        CapturingWriteRepository()
+    ):
+        response = client.post(
+            "/reports/P-1001",
+            json={
+                "title":
+                    "Clinical Report"
+            },
         )
 
-        assert response.json() == [
-            {
-                "id":
-                    "R-1001",
-                "patient_id":
-                    "P-1001",
+    assert response.status_code == 401
+
+
+def test_post_reports_memory_repository_is_503():
+    with _with_reports_repository(
+        InMemoryReportsRepository([])
+    ):
+        response = client.post(
+            "/reports/P-1001",
+            headers=_auth_headers(),
+            json={
+                "title":
+                    "Clinical Report"
+            },
+        )
+
+    assert response.status_code == 503
+
+    assert (
+        response.json()["detail"]
+        == (
+            "Canonical writable Reports "
+            "repository unavailable"
+        )
+    )
+
+
+def test_post_reports_forwards_verified_authority_and_payload():
+    repository = (
+        CapturingWriteRepository()
+    )
+
+    with _with_reports_repository(
+        repository
+    ):
+        response = client.post(
+            "/reports/P-1001",
+            headers=_auth_headers(
+                user_id=7,
+                tenant_id="TENANT-A",
+            ),
+            json={
                 "title":
                     "Clinical Report",
                 "type":
                     "Clinical",
+                "summary":
+                    "Summary text",
+                "content":
+                    "Body text",
                 "status":
                     "Ready",
-                "body":
-                    "Body text",
-            }
-        ]
+            },
+        )
 
-        assert repository.calls == [
-            {
-                "tenant_id":
-                    "TENANT-A",
-                "principal_user_id":
-                    7,
-            }
-        ]
+    assert response.status_code == 200
 
-    finally:
-        main.REPOSITORIES[
-            "reports"
-        ] = previous
+    assert repository.calls == [
+        {
+            "patient_id":
+                "P-1001",
+            "tenant_id":
+                "TENANT-A",
+            "principal_user_id":
+                7,
+            "title":
+                "Clinical Report",
+            "report_type":
+                "Clinical",
+            "summary":
+                "Summary text",
+            "content":
+                "Body text",
+            "status":
+                "Ready",
+        }
+    ]
+
+    assert response.json() == {
+        "id":
+            "R-0123456789abcdef01",
+        "patient_id":
+            "P-1001",
+        "title":
+            "Clinical Report",
+        "type":
+            "Clinical",
+        "summary":
+            "Summary text",
+        "content":
+            "Body text",
+        "status":
+            "Ready",
+    }
 
 
-def test_reports_permission_error_maps_to_403():
-    previous = main.REPOSITORIES.get(
-        "reports"
+def test_post_reports_preserves_legacy_defaults():
+    repository = (
+        CapturingWriteRepository()
     )
 
-    try:
-        main.REPOSITORIES[
-            "reports"
-        ] = DeniedScopedRepository()
-
-        response = client.get(
-            "/reports",
-            headers=_auth_headers(),
+    with _with_reports_repository(
+        repository
+    ):
+        response = client.post(
+            "/reports/P-1001",
+            headers=_auth_headers(
+                user_id=7,
+                tenant_id="TENANT-A",
+            ),
+            json={
+                "title": "Only title"
+            },
         )
 
-        assert (
-            response.status_code
-            == 403
-        )
+    assert response.status_code == 200
 
-        assert (
-            response.json()["detail"]
-            == "Reports scope denied"
-        )
+    call = repository.calls[0]
 
-    finally:
-        main.REPOSITORIES[
-            "reports"
-        ] = previous
-
-
-def test_reports_value_error_maps_to_422():
-    previous = main.REPOSITORIES.get(
-        "reports"
+    assert (
+        call["report_type"]
+        == "Clinical Report"
     )
 
-    try:
-        main.REPOSITORIES[
-            "reports"
-        ] = InvalidScopedRepository()
+    assert call["summary"] == ""
+    assert call["content"] == ""
+    assert call["status"] == "Draft"
 
-        response = client.get(
-            "/reports",
+
+def test_post_reports_permission_error_maps_to_403():
+    with _with_reports_repository(
+        DeniedWriteRepository()
+    ):
+        response = client.post(
+            "/reports/P-1001",
             headers=_auth_headers(),
+            json={
+                "title": "Report"
+            },
         )
 
-        assert (
-            response.status_code
-            == 422
+    assert response.status_code == 403
+    assert (
+        response.json()["detail"]
+        == "Reports scope denied"
+    )
+
+
+def test_post_reports_value_error_maps_to_422():
+    with _with_reports_repository(
+        InvalidWriteRepository()
+    ):
+        response = client.post(
+            "/reports/P-1001",
+            headers=_auth_headers(),
+            json={
+                "title": "Report"
+            },
         )
 
-        assert (
-            response.json()["detail"]
-            == "invalid scope"
+    assert response.status_code == 422
+    assert (
+        response.json()["detail"]
+        == "invalid report"
+    )
+
+
+def test_post_reports_runtime_failure_maps_to_503():
+    with _with_reports_repository(
+        FailedWriteRepository()
+    ):
+        response = client.post(
+            "/reports/P-1001",
+            headers=_auth_headers(),
+            json={
+                "title": "Report"
+            },
         )
 
-    finally:
-        main.REPOSITORIES[
-            "reports"
-        ] = previous
+    assert response.status_code == 503
 
 
-def test_post_reports_endpoint_remains_legacy_and_unmodified():
-    import inspect
+def test_post_reports_does_not_append_process_memory():
+    repository = (
+        CapturingWriteRepository()
+    )
 
-    route = next(
-        route
-        for route in main.app.routes
-        if getattr(
-            route,
-            "path",
-            None,
-        ) == "/reports/{patient_id}"
-        and "POST" in (
-            getattr(
-                route,
-                "methods",
-                set(),
+    before = list(
+        main.REPORTS
+    )
+
+    with _with_reports_repository(
+        repository
+    ):
+        response = client.post(
+            "/reports/P-1001",
+            headers=_auth_headers(),
+            json={
+                "title": "Report"
+            },
+        )
+
+    assert response.status_code == 200
+
+    assert main.REPORTS == before
+
+
+def test_post_reports_source_has_no_reports_append():
+    path = Path(
+        "backend/app/main.py"
+    )
+
+    text = path.read_text(
+        encoding="utf-8"
+    )
+
+    tree = ast.parse(text)
+
+    found = []
+
+    for node in tree.body:
+        if not isinstance(
+            node,
+            (
+                ast.FunctionDef,
+                ast.AsyncFunctionDef,
+            ),
+        ):
+            continue
+
+        if node.name != "create_report":
+            continue
+
+        segment = (
+            ast.get_source_segment(
+                text,
+                node,
             )
-            or set()
+            or ""
         )
-    )
 
-    source = inspect.getsource(
-        route.endpoint
+        found.append(segment)
+
+    assert len(found) == 1
+
+    source = found[0]
+
+    assert "REPORTS.append" not in source
+    assert "len(REPORTS)" not in source
+    assert "create_for_principal" in source
+    assert "get_verified_principal_tenant" in source
+
+
+def test_post_reports_openapi_contract_preserved():
+    schema = main.app.openapi()
+
+    post = schema[
+        "paths"
+    ][
+        "/reports/{patient_id}"
+    ][
+        "post"
+    ]
+
+    assert (
+        post["operationId"]
+        == "create_report_reports__patient_id__post"
     )
 
     assert (
-        "REPORTS.append(report)"
-        in source
+        post["requestBody"]
+        ["content"]
+        ["application/json"]
+        ["schema"]
+        ["$ref"]
+        == (
+            "#/components/schemas/"
+            "ReportCreateRequest"
+        )
+    )
+
+    assert "200" in post["responses"]
+    assert "422" in post["responses"]
+
+
+class DeniedReadRepository:
+    def list_for_principal(
+        self,
+        *,
+        tenant_id: str,
+        principal_user_id: int,
+    ):
+        del tenant_id
+        del principal_user_id
+
+        raise PermissionError(
+            "scope denied"
+        )
+
+
+class InvalidReadRepository:
+    def list_for_principal(
+        self,
+        *,
+        tenant_id: str,
+        principal_user_id: int,
+    ):
+        del tenant_id
+        del principal_user_id
+
+        raise ValueError(
+            "invalid scope"
+        )
+
+
+def test_reports_permission_error_maps_to_403():
+    with _with_reports_repository(
+        DeniedReadRepository()
+    ):
+        response = client.get(
+            "/reports",
+            headers=_auth_headers(),
+        )
+
+    assert response.status_code == 403
+
+    assert (
+        response.json()["detail"]
+        == "Reports scope denied"
+    )
+
+
+def test_reports_value_error_maps_to_422():
+    with _with_reports_repository(
+        InvalidReadRepository()
+    ):
+        response = client.get(
+            "/reports",
+            headers=_auth_headers(),
+        )
+
+    assert response.status_code == 422
+
+    assert (
+        response.json()["detail"]
+        == "invalid scope"
     )

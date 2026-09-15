@@ -10,3 +10,16 @@ class ReportsRepositoryContract(Protocol):
         tenant_id: str,
         principal_user_id: int,
     ) -> list[dict[str, Any]]: ...
+
+    def create_for_principal(
+        self,
+        *,
+        patient_id: str,
+        tenant_id: str,
+        principal_user_id: int,
+        title: str,
+        report_type: str,
+        summary: str,
+        content: str,
+        status: str,
+    ) -> dict[str, Any]: ...
