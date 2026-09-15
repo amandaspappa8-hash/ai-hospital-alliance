@@ -22,6 +22,7 @@ from .postgres.radiology_repository import PostgresRadiologyRepository
 from .postgres.mar_repository import PostgresMarRepository
 from .memory.doctor_assignments_repository import InMemoryDoctorAssignmentsRepository
 from .postgres.doctor_assignments_repository import PostgresDoctorAssignmentsRepository
+from backend.app.repositories.postgres.medication_orders_repository import PostgresMedicationOrdersRepository
 
 
 
@@ -419,6 +420,88 @@ def _build_radiology_repository(
 
 
 
+
+def _build_medication_orders_repository():
+    """Build the isolated canonical Medication Orders read adapter.
+
+    Default is disabled. PostgreSQL activation is explicit and cannot
+    silently inherit the global DATABASE_URL.
+    """
+
+    mode = os.getenv(
+        "AIHA_MEDICATION_ORDERS_REPOSITORY",
+        "disabled",
+    ).strip().lower()
+
+    if mode == "disabled":
+        return None
+
+    if mode != "postgres":
+        raise RuntimeError(
+            "AIHA_MEDICATION_ORDERS_REPOSITORY must be "
+            "'disabled' or 'postgres'"
+        )
+
+    names = {
+        "host": "AIHA_MEDICATION_ORDERS_PG_HOST",
+        "port": "AIHA_MEDICATION_ORDERS_PG_PORT",
+        "database": "AIHA_MEDICATION_ORDERS_PG_DATABASE",
+        "username": "AIHA_MEDICATION_ORDERS_PG_USER",
+        "password": "AIHA_MEDICATION_ORDERS_PG_PASSWORD",
+    }
+
+    values = {
+        key: os.getenv(
+            env_name,
+            "",
+        ).strip()
+        for key, env_name in names.items()
+    }
+
+    missing = [
+        names[key]
+        for key, value in values.items()
+        if not value
+    ]
+
+    if missing:
+        raise RuntimeError(
+            "Missing isolated PostgreSQL Medication Orders "
+            "configuration: "
+            + ", ".join(missing)
+        )
+
+    try:
+        port = int(
+            values["port"]
+        )
+    except ValueError as exc:
+        raise RuntimeError(
+            "AIHA_MEDICATION_ORDERS_PG_PORT must be an integer"
+        ) from exc
+
+    url = URL.create(
+        drivername="postgresql+psycopg2",
+        username=values["username"],
+        password=values["password"],
+        host=values["host"],
+        port=port,
+        database=values["database"],
+    )
+
+    engine = create_engine(
+        url,
+        pool_pre_ping=True,
+        pool_size=5,
+        max_overflow=5,
+        pool_recycle=3600,
+    )
+
+    return PostgresMedicationOrdersRepository(
+        engine
+    )
+
+
 def _build_mar_repository(mar_store):
     mode = os.getenv(
         "AIHA_MAR_REPOSITORY",
@@ -614,6 +697,7 @@ def build_repositories(
             nursing_vitals_store or {},
             nursing_notes_store or {},
         ),
+        "medication_orders": _build_medication_orders_repository(),
         "mar": _build_mar_repository(mar_store or {}),
         "labs": _build_labs_repository(labs_catalog_store or {}, lab_orders_store or []),
         "radiology": _build_radiology_repository(radiology_catalog_store or {}, radiology_orders_store or []),
