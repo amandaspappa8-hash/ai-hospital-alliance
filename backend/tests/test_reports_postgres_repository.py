@@ -120,6 +120,8 @@ class FakeEngine:
 def test_list_for_principal_returns_canonical_contract():
     engine = FakeEngine(
         principal_row={
+            "hospital_id":
+                "HOSPITAL-A",
             "tenant_id":
                 "TENANT-A",
         },
@@ -187,6 +189,11 @@ def test_list_for_principal_returns_canonical_contract():
     )
 
     assert (
+        "u.hospital_id AS hospital_id"
+        in scope_sql
+    )
+
+    assert (
         "JOIN public.tenants AS t"
         in scope_sql
     )
@@ -212,13 +219,20 @@ def test_list_for_principal_returns_canonical_contract():
     )
 
     assert (
-        "WHERE h.tenant_id = :tenant_id"
+        "WHERE p.hospital_id = :hospital_id"
+        in reports_sql
+    )
+
+    assert (
+        "AND h.tenant_id = :tenant_id"
         in reports_sql
     )
 
     assert engine.calls[1][
         "params"
     ] == {
+        "hospital_id":
+            "HOSPITAL-A",
         "tenant_id":
             "TENANT-A",
     }
@@ -227,6 +241,8 @@ def test_list_for_principal_returns_canonical_contract():
 def test_tenant_mismatch_fails_closed():
     engine = FakeEngine(
         principal_row={
+            "hospital_id":
+                "HOSPITAL-A",
             "tenant_id":
                 "TENANT-A",
         },
@@ -250,6 +266,37 @@ def test_tenant_mismatch_fails_closed():
     assert len(
         engine.calls
     ) == 1
+
+
+def test_missing_principal_hospital_fails_closed():
+    engine = FakeEngine(
+        principal_row={
+            "hospital_id":
+                None,
+            "tenant_id":
+                "TENANT-A",
+        },
+    )
+
+    repository = (
+        PostgresReportsRepository(
+            engine
+        )
+    )
+
+    with pytest.raises(
+        PermissionError,
+        match="principal hospital unavailable",
+    ):
+        repository.list_for_principal(
+            tenant_id="TENANT-A",
+            principal_user_id=7,
+        )
+
+    assert len(
+        engine.calls
+    ) == 1
+
 
 
 def test_missing_canonical_principal_fails_closed():
@@ -357,7 +404,12 @@ def test_repository_source_is_read_only():
     )
 
     assert (
-        "WHERE H.TENANT_ID = :TENANT_ID"
+        "WHERE P.HOSPITAL_ID = :HOSPITAL_ID"
+        in upper
+    )
+
+    assert (
+        "AND H.TENANT_ID = :TENANT_ID"
         in upper
     )
 

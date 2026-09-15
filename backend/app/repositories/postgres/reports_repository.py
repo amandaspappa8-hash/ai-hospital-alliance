@@ -64,12 +64,12 @@ class PostgresReportsRepository:
 
         return value
 
-    def _resolve_principal_tenant(
+    def _resolve_principal_scope(
         self,
         *,
         principal_user_id: int,
         tenant_id: str,
-    ) -> str:
+    ) -> dict[str, str]:
         principal_id = (
             self._validate_principal_user_id(
                 principal_user_id
@@ -85,6 +85,7 @@ class PostgresReportsRepository:
         statement = text(
             """
             SELECT
+                u.hospital_id AS hospital_id,
                 h.tenant_id AS tenant_id
             FROM public.users AS u
             JOIN public.hospitals AS h
@@ -111,9 +112,18 @@ class PostgresReportsRepository:
                 "Canonical principal scope unavailable"
             )
 
+        derived_hospital = str(
+            row["hospital_id"] or ""
+        ).strip()
+
         derived_tenant = str(
             row["tenant_id"] or ""
         ).strip()
+
+        if not derived_hospital:
+            raise PermissionError(
+                "Canonical principal hospital unavailable"
+            )
 
         if (
             not derived_tenant
@@ -123,7 +133,10 @@ class PostgresReportsRepository:
                 "Authenticated tenant scope mismatch"
             )
 
-        return derived_tenant
+        return {
+            "hospital_id": derived_hospital,
+            "tenant_id": derived_tenant,
+        }
 
     def list_for_principal(
         self,
@@ -131,8 +144,8 @@ class PostgresReportsRepository:
         tenant_id: str,
         principal_user_id: int,
     ) -> list[dict[str, Any]]:
-        derived_tenant = (
-            self._resolve_principal_tenant(
+        scope = (
+            self._resolve_principal_scope(
                 principal_user_id=
                     principal_user_id,
                 tenant_id=tenant_id,
@@ -153,7 +166,8 @@ class PostgresReportsRepository:
               ON p.id = r.patient_id
             JOIN public.hospitals AS h
               ON h.id = p.hospital_id
-            WHERE h.tenant_id = :tenant_id
+            WHERE p.hospital_id = :hospital_id
+              AND h.tenant_id = :tenant_id
             ORDER BY
                 r.created_at DESC NULLS LAST,
                 r.id DESC
@@ -164,8 +178,10 @@ class PostgresReportsRepository:
             rows = conn.execute(
                 statement,
                 {
+                    "hospital_id":
+                        scope["hospital_id"],
                     "tenant_id":
-                        derived_tenant,
+                        scope["tenant_id"],
                 },
             ).mappings().all()
 
