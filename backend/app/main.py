@@ -2053,7 +2053,26 @@ def _build_reconciliation_summary(patient_id: str):
 
 
 @app.get("/drug-intel/reconciliation/{patient_id}")
-def get_medication_reconciliation(patient_id: str):
+def get_medication_reconciliation(
+    patient_id: str,
+    request: _AIHACore4Request,
+):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
+    )
+
+    try:
+        SERVICES["patients"].authorize_patient_access(
+            patient_id,
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Patient scope denied",
+        ) from exc
+
     return _build_reconciliation_summary(patient_id)
 
 
@@ -2145,7 +2164,26 @@ def _build_discharge_counseling(patient_id: str):
 
 
 @app.get("/drug-intel/discharge-counseling/{patient_id}")
-def get_discharge_counseling(patient_id: str):
+def get_discharge_counseling(
+    patient_id: str,
+    request: _AIHACore4Request,
+):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
+    )
+
+    try:
+        SERVICES["patients"].authorize_patient_access(
+            patient_id,
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Patient scope denied",
+        ) from exc
+
     return _build_discharge_counseling(patient_id)
 
 
@@ -2572,7 +2610,27 @@ def _build_medication_recommendations(medications: list[str], age: int | None = 
 
 
 @app.get("/drug-intel/recommendations/{patient_id}")
-def get_medication_recommendations_for_patient(patient_id: str, age: int | None = None):
+def get_medication_recommendations_for_patient(
+    patient_id: str,
+    request: _AIHACore4Request,
+    age: int | None = None,
+):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
+    )
+
+    try:
+        SERVICES["patients"].authorize_patient_access(
+            patient_id,
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Patient scope denied",
+        ) from exc
+
     mar_items = MAR.get(patient_id, [])
     medications = [item.get("medication", "") for item in mar_items]
     result = _build_medication_recommendations(medications, age)
@@ -2589,7 +2647,27 @@ def analyze_medication_recommendations(payload: MedicationRecommendationRequest)
 
 
 @app.get("/drug-intel/dose-safety/{patient_id}")
-def get_dose_safety_for_patient(patient_id: str, age: int | None = None):
+def get_dose_safety_for_patient(
+    patient_id: str,
+    request: _AIHACore4Request,
+    age: int | None = None,
+):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
+    )
+
+    try:
+        SERVICES["patients"].authorize_patient_access(
+            patient_id,
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Patient scope denied",
+        ) from exc
+
     mar_items = MAR.get(patient_id, [])
     medications = [item.get("medication", "") for item in mar_items]
     result = _analyze_dose_safety(medications, age)
@@ -2606,7 +2684,26 @@ def analyze_dose_safety(payload: DoseSafetyRequest):
 
 
 @app.get("/drug-intel/interactions/{patient_id}")
-def get_drug_interactions_for_patient(patient_id: str):
+def get_drug_interactions_for_patient(
+    patient_id: str,
+    request: _AIHACore4Request,
+):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
+    )
+
+    try:
+        SERVICES["patients"].authorize_patient_access(
+            patient_id,
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Patient scope denied",
+        ) from exc
+
     mar_items = MAR.get(patient_id, [])
     medications = [item.get("medication", "") for item in mar_items]
     result = _analyze_medication_list(medications)
@@ -2747,7 +2844,26 @@ def delete_mar_item(patient_id: str, item_id: int):
 
 
 @app.get("/drug-intel/risk/{patient_id}")
-def get_risk(patient_id: str):
+def get_risk(
+    patient_id: str,
+    request: _AIHACore4Request,
+):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
+    )
+
+    try:
+        SERVICES["patients"].authorize_patient_access(
+            patient_id,
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Patient scope denied",
+        ) from exc
+
     patient = next((p for p in PATIENTS if p["id"] == patient_id), None)
 
     if not patient:
