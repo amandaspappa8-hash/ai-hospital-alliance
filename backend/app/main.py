@@ -1403,8 +1403,47 @@ def create_appointment(
 
 
 @app.get("/reports")
-def get_reports():
-    return SERVICES["reports"].list_reports()
+def get_reports(request: StarletteRequest):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
+    )
+
+    repository = REPOSITORIES.get(
+        "reports"
+    )
+
+    list_for_principal = getattr(
+        repository,
+        "list_for_principal",
+        None,
+    )
+
+    if not callable(
+        list_for_principal
+    ):
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Canonical scoped Reports "
+                "repository unavailable"
+            ),
+        )
+
+    try:
+        return list_for_principal(
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Reports scope denied",
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=str(exc),
+        ) from exc
 
 
 @app.get("/doctors/summary")

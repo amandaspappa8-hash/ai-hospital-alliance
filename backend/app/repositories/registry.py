@@ -13,6 +13,7 @@ from .memory.appointments_repository import InMemoryAppointmentsRepository
 from .postgres.appointments_repository import PostgresAppointmentsRepository
 from .postgres.nursing_repository import PostgresNursingRepository
 from .memory.reports_repository import InMemoryReportsRepository
+from .postgres.reports_repository import PostgresReportsRepository
 from .memory.nursing_repository import InMemoryNursingRepository
 from .memory.mar_repository import InMemoryMarRepository
 from .memory.labs_repository import InMemoryLabsRepository
@@ -672,6 +673,94 @@ def _build_users_repository(users_store):
 
 
 
+def _build_reports_repository(
+    reports_store=None,
+):
+    """Build Reports repository.
+
+    Default behavior preserves the existing in-memory reports_store.
+
+    PostgreSQL activation is explicit and uses isolated Reports-specific
+    configuration. No SQLite fallback is permitted.
+    """
+
+    mode = (
+        os.getenv(
+            "AIHA_REPORTS_REPOSITORY",
+            "memory",
+        )
+        or "memory"
+    ).strip().lower()
+
+    if mode in {
+        "",
+        "memory",
+        "inmemory",
+        "in-memory",
+    }:
+        return InMemoryReportsRepository(
+            reports_store or []
+        )
+
+    if mode != "postgres":
+        raise RuntimeError(
+            "Unsupported AIHA_REPORTS_REPOSITORY mode: "
+            + mode
+        )
+
+    required = {
+        "host":
+            "AIHA_REPORTS_PG_HOST",
+        "port":
+            "AIHA_REPORTS_PG_PORT",
+        "database":
+            "AIHA_REPORTS_PG_DATABASE",
+        "username":
+            "AIHA_REPORTS_PG_USER",
+        "password":
+            "AIHA_REPORTS_PG_PASSWORD",
+    }
+
+    values = {
+        key: (
+            os.getenv(env_name)
+            or ""
+        ).strip()
+        for key, env_name
+        in required.items()
+    }
+
+    missing = [
+        required[key]
+        for key, value
+        in values.items()
+        if not value
+    ]
+
+    if missing:
+        raise RuntimeError(
+            "Missing PostgreSQL Reports configuration: "
+            + ", ".join(missing)
+        )
+
+    engine = create_engine(
+        URL.create(
+            drivername="postgresql+psycopg2",
+            username=values["username"],
+            password=values["password"],
+            host=values["host"],
+            port=int(values["port"]),
+            database=values["database"],
+        ),
+        future=True,
+        pool_pre_ping=True,
+    )
+
+    return PostgresReportsRepository(
+        engine
+    )
+
+
 def _build_audit_logs_repository():
     """Build canonical read-only Audit Logs repository.
 
@@ -775,7 +864,7 @@ def build_repositories(
         "notes": InMemoryNotesRepository(notes_store),
         "orders": InMemoryOrdersRepository(orders_store),
         "appointments": _build_appointments_repository(appointments_store or []),
-        "reports": InMemoryReportsRepository(reports_store or []),
+        "reports": _build_reports_repository(reports_store or []),
         "nursing": _build_nursing_repository(
             nursing_vitals_store or {},
             nursing_notes_store or {},
