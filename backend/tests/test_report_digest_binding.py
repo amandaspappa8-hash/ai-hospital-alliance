@@ -509,3 +509,149 @@ def test_digest_comparison_property():
         left,
         different,
     )
+
+# SEC-S4E18A — canonical digest NULL semantics
+
+
+def test_e18a_digest_canonicalizer_preserves_json_null_runtime():
+    import hashlib
+    import json
+
+    from backend.app.repositories.postgres.reports_repository import (
+        PostgresReportsRepository,
+    )
+
+    row_with_nulls = {
+        "report_id": "R-E18A-NULL",
+        "patient_id": None,
+        "author_id": None,
+        "title": None,
+        "type": None,
+        "status": None,
+        "body": None,
+        "summary": None,
+    }
+
+    canonical = {
+        "report_id": "R-E18A-NULL",
+        "patient_id": None,
+        "author_id": None,
+        "title": None,
+        "type": None,
+        "status": None,
+        "body": None,
+        "summary": None,
+    }
+
+    expected = hashlib.sha256(
+        json.dumps(
+            canonical,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        ).encode("utf-8")
+    ).hexdigest()
+
+    actual = (
+        PostgresReportsRepository
+        ._canonical_report_digest(
+            row_with_nulls
+        )
+    )
+
+    assert actual == expected
+
+
+
+def test_e18a_digest_distinguishes_null_from_empty_string():
+    from backend.app.repositories.postgres.reports_repository import (
+        PostgresReportsRepository,
+    )
+
+    null_row = {
+        "report_id": "R-E18A-DIFF",
+        "patient_id": None,
+        "author_id": None,
+        "title": None,
+        "type": None,
+        "status": None,
+        "body": None,
+        "summary": None,
+    }
+
+    empty_row = {
+        "report_id": "R-E18A-DIFF",
+        "patient_id": "",
+        "author_id": None,
+        "title": "",
+        "type": "",
+        "status": "",
+        "body": "",
+        "summary": "",
+    }
+
+    null_digest = (
+        PostgresReportsRepository
+        ._canonical_report_digest(
+            null_row
+        )
+    )
+
+    empty_digest = (
+        PostgresReportsRepository
+        ._canonical_report_digest(
+            empty_row
+        )
+    )
+
+    assert null_digest != empty_digest
+
+
+
+def test_e18a_digest_source_has_no_null_collapse():
+    source = _source(POSTGRES)
+
+    methods = _class_methods(
+        POSTGRES,
+        "PostgresReportsRepository",
+    )
+
+    canonical = ast.get_source_segment(
+        source,
+        methods[
+            "_canonical_report_digest"
+        ],
+    ) or ""
+
+    register = ast.get_source_segment(
+        source,
+        methods[
+            "register_content_digest_for_principal"
+        ],
+    ) or ""
+
+    verify = ast.get_source_segment(
+        source,
+        methods[
+            "verify_content_digest_for_principal"
+        ],
+    ) or ""
+
+    assert 'or ""' not in canonical
+    assert "COALESCE(" not in register
+    assert "COALESCE(" not in verify
+
+    for field in (
+        "report_id",
+        "patient_id",
+        "author_id",
+        "title",
+        "type",
+        "status",
+        "body",
+        "summary",
+    ):
+        assert (
+            f'row["{field}"]'
+            in canonical
+        )

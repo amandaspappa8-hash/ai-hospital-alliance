@@ -771,32 +771,22 @@ class PostgresReportsRepository:
         import json
 
         canonical = {
-            "report_id": str(
-                row["report_id"]
-            ),
-            "patient_id": str(
-                row["patient_id"] or ""
-            ),
-            "author_id": (
-                None
-                if row["author_id"] is None
-                else int(row["author_id"])
-            ),
-            "title": str(
-                row["title"] or ""
-            ),
-            "type": str(
-                row["type"] or ""
-            ),
-            "status": str(
-                row["status"] or ""
-            ),
-            "body": str(
-                row["body"] or ""
-            ),
-            "summary": str(
-                row["summary"] or ""
-            ),
+            "report_id":
+                row["report_id"],
+            "patient_id":
+                row["patient_id"],
+            "author_id":
+                row["author_id"],
+            "title":
+                row["title"],
+            "type":
+                row["type"],
+            "status":
+                row["status"],
+            "body":
+                row["body"],
+            "summary":
+                row["summary"],
         }
 
         serialized = json.dumps(
@@ -841,11 +831,11 @@ class PostgresReportsRepository:
                 r.id AS report_id,
                 r.patient_id AS patient_id,
                 r.author_id AS author_id,
-                COALESCE(r.title, '') AS title,
-                COALESCE(r.type, '') AS type,
-                COALESCE(r.status, '') AS status,
-                COALESCE(r.body, '') AS body,
-                COALESCE(r.summary, '') AS summary
+                r.title AS title,
+                r.type AS type,
+                r.status AS status,
+                r.body AS body,
+                r.summary AS summary
             FROM public.reports AS r
             JOIN public.patients AS p
               ON p.id = r.patient_id
@@ -1094,11 +1084,11 @@ class PostgresReportsRepository:
                 r.id AS report_id,
                 r.patient_id AS patient_id,
                 r.author_id AS author_id,
-                COALESCE(r.title, '') AS title,
-                COALESCE(r.type, '') AS type,
-                COALESCE(r.status, '') AS status,
-                COALESCE(r.body, '') AS body,
-                COALESCE(r.summary, '') AS summary
+                r.title AS title,
+                r.type AS type,
+                r.status AS status,
+                r.body AS body,
+                r.summary AS summary
             FROM public.reports AS r
             JOIN public.patients AS p
               ON p.id = r.patient_id
