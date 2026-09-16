@@ -675,6 +675,7 @@ class PostgresReportsRepository:
               AND p.hospital_id = :hospital_id
               AND h.tenant_id = :tenant_id
             LIMIT 1
+            FOR SHARE OF r, p, h
             """
         )
 
@@ -695,7 +696,7 @@ class PostgresReportsRepository:
         )
 
         try:
-            with self._engine.connect() as connection:
+            with self._engine.begin() as connection:
                 scope = (
                     self._resolve_principal_scope_on_connection(
                         connection,
@@ -703,6 +704,7 @@ class PostgresReportsRepository:
                             principal_id,
                         tenant_id=
                             tenant_claim,
+                        lock_scope=True,
                     )
                 )
 
