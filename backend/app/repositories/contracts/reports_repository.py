@@ -39,3 +39,20 @@ class ReportsRepositoryContract(Protocol):
         tenant_id: str,
         principal_user_id: int,
     ) -> dict[str, Any] | None: ...
+
+
+    def register_content_digest_for_principal(
+        self,
+        *,
+        report_id: str,
+        tenant_id: str,
+        principal_user_id: int,
+    ) -> dict[str, Any]: ...
+
+    def verify_content_digest_for_principal(
+        self,
+        *,
+        report_id: str,
+        tenant_id: str,
+        principal_user_id: int,
+    ) -> dict[str, Any] | None: ...

@@ -761,3 +761,465 @@ class PostgresReportsRepository:
             raise RuntimeError(
                 "Canonical Reports database unavailable"
             ) from exc
+
+
+    @staticmethod
+    def _canonical_report_digest(
+        row,
+    ) -> str:
+        import hashlib
+        import json
+
+        canonical = {
+            "report_id": str(
+                row["report_id"]
+            ),
+            "patient_id": str(
+                row["patient_id"] or ""
+            ),
+            "author_id": (
+                None
+                if row["author_id"] is None
+                else int(row["author_id"])
+            ),
+            "title": str(
+                row["title"] or ""
+            ),
+            "type": str(
+                row["type"] or ""
+            ),
+            "status": str(
+                row["status"] or ""
+            ),
+            "body": str(
+                row["body"] or ""
+            ),
+            "summary": str(
+                row["summary"] or ""
+            ),
+        }
+
+        serialized = json.dumps(
+            canonical,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        ).encode("utf-8")
+
+        return hashlib.sha256(
+            serialized
+        ).hexdigest()
+
+    def register_content_digest_for_principal(
+        self,
+        *,
+        report_id: str,
+        tenant_id: str,
+        principal_user_id: int,
+    ) -> dict[str, Any]:
+        report = (
+            self._validate_report_id(
+                report_id
+            )
+        )
+
+        principal_id = (
+            self._validate_principal_user_id(
+                principal_user_id
+            )
+        )
+
+        tenant_claim = (
+            self._validate_tenant_id(
+                tenant_id
+            )
+        )
+
+        report_statement = text(
+            """
+            SELECT
+                r.id AS report_id,
+                r.patient_id AS patient_id,
+                r.author_id AS author_id,
+                COALESCE(r.title, '') AS title,
+                COALESCE(r.type, '') AS type,
+                COALESCE(r.status, '') AS status,
+                COALESCE(r.body, '') AS body,
+                COALESCE(r.summary, '') AS summary
+            FROM public.reports AS r
+            JOIN public.patients AS p
+              ON p.id = r.patient_id
+            JOIN public.hospitals AS h
+              ON h.id = p.hospital_id
+            WHERE r.id = :report_id
+              AND p.hospital_id = :hospital_id
+              AND h.tenant_id = :tenant_id
+            LIMIT 1
+            FOR SHARE OF r, p, h
+            """
+        )
+
+        existing_statement = text(
+            """
+            SELECT
+                id,
+                report_id,
+                canonicalization_version,
+                digest_algorithm,
+                digest_hex,
+                secured_by_user_id,
+                secured_at
+            FROM public.report_content_digests
+            WHERE report_id = :report_id
+              AND canonicalization_version =
+                    'AIHA_REPORT_DIGEST_V1'
+            LIMIT 1
+            """
+        )
+
+        insert_statement = text(
+            """
+            INSERT INTO public.report_content_digests (
+                report_id,
+                canonicalization_version,
+                digest_algorithm,
+                digest_hex,
+                secured_by_user_id
+            )
+            VALUES (
+                :report_id,
+                'AIHA_REPORT_DIGEST_V1',
+                'SHA-256',
+                :digest_hex,
+                :secured_by_user_id
+            )
+            ON CONFLICT (
+                report_id,
+                canonicalization_version
+            )
+            DO NOTHING
+            RETURNING
+                id,
+                report_id,
+                canonicalization_version,
+                digest_algorithm,
+                digest_hex,
+                secured_by_user_id,
+                secured_at
+            """
+        )
+
+        try:
+            with self._engine.begin() as connection:
+                scope = (
+                    self._resolve_principal_scope_on_connection(
+                        connection,
+                        principal_user_id=
+                            principal_id,
+                        tenant_id=
+                            tenant_claim,
+                        lock_scope=True,
+                    )
+                )
+
+                report_row = connection.execute(
+                    report_statement,
+                    {
+                        "report_id":
+                            report,
+                        "hospital_id":
+                            scope["hospital_id"],
+                        "tenant_id":
+                            scope["tenant_id"],
+                    },
+                ).mappings().one_or_none()
+
+                if report_row is None:
+                    raise PermissionError(
+                        "Report is outside authenticated "
+                        "hospital/tenant scope"
+                    )
+
+                digest_hex = (
+                    self._canonical_report_digest(
+                        report_row
+                    )
+                )
+
+                existing = connection.execute(
+                    existing_statement,
+                    {
+                        "report_id":
+                            report,
+                    },
+                ).mappings().one_or_none()
+
+                if existing is not None:
+                    if str(
+                        existing["digest_hex"]
+                    ) != digest_hex:
+                        raise FileExistsError(
+                            "Canonical report content "
+                            "digest baseline conflict"
+                        )
+
+                    return {
+                        "id": int(
+                            existing["id"]
+                        ),
+                        "report_id": str(
+                            existing["report_id"]
+                        ),
+                        "canonicalization_version":
+                            str(
+                                existing[
+                                    "canonicalization_version"
+                                ]
+                            ),
+                        "digest_algorithm": str(
+                            existing[
+                                "digest_algorithm"
+                            ]
+                        ),
+                        "digest_hex": str(
+                            existing["digest_hex"]
+                        ),
+                        "secured_by_user_id": int(
+                            existing[
+                                "secured_by_user_id"
+                            ]
+                        ),
+                        "secured_at":
+                            existing["secured_at"],
+                    }
+
+                row = connection.execute(
+                    insert_statement,
+                    {
+                        "report_id":
+                            report,
+                        "digest_hex":
+                            digest_hex,
+                        "secured_by_user_id":
+                            principal_id,
+                    },
+                ).mappings().one_or_none()
+
+                if row is None:
+                    row = connection.execute(
+                        existing_statement,
+                        {
+                            "report_id":
+                                report,
+                        },
+                    ).mappings().one_or_none()
+
+                if row is None:
+                    raise RuntimeError(
+                        "Canonical report content "
+                        "digest registration unavailable"
+                    )
+
+                if str(
+                    row["digest_hex"]
+                ) != digest_hex:
+                    raise FileExistsError(
+                        "Canonical report content "
+                        "digest baseline conflict"
+                    )
+
+                return {
+                    "id": int(
+                        row["id"]
+                    ),
+                    "report_id": str(
+                        row["report_id"]
+                    ),
+                    "canonicalization_version":
+                        str(
+                            row[
+                                "canonicalization_version"
+                            ]
+                        ),
+                    "digest_algorithm": str(
+                        row["digest_algorithm"]
+                    ),
+                    "digest_hex": str(
+                        row["digest_hex"]
+                    ),
+                    "secured_by_user_id": int(
+                        row[
+                            "secured_by_user_id"
+                        ]
+                    ),
+                    "secured_at":
+                        row["secured_at"],
+                }
+
+        except SQLAlchemyError as exc:
+            raise RuntimeError(
+                "Canonical Reports database unavailable"
+            ) from exc
+
+    def verify_content_digest_for_principal(
+        self,
+        *,
+        report_id: str,
+        tenant_id: str,
+        principal_user_id: int,
+    ) -> dict[str, Any] | None:
+        import hmac
+
+        report = (
+            self._validate_report_id(
+                report_id
+            )
+        )
+
+        principal_id = (
+            self._validate_principal_user_id(
+                principal_user_id
+            )
+        )
+
+        tenant_claim = (
+            self._validate_tenant_id(
+                tenant_id
+            )
+        )
+
+        report_statement = text(
+            """
+            SELECT
+                r.id AS report_id,
+                r.patient_id AS patient_id,
+                r.author_id AS author_id,
+                COALESCE(r.title, '') AS title,
+                COALESCE(r.type, '') AS type,
+                COALESCE(r.status, '') AS status,
+                COALESCE(r.body, '') AS body,
+                COALESCE(r.summary, '') AS summary
+            FROM public.reports AS r
+            JOIN public.patients AS p
+              ON p.id = r.patient_id
+            JOIN public.hospitals AS h
+              ON h.id = p.hospital_id
+            WHERE r.id = :report_id
+              AND p.hospital_id = :hospital_id
+              AND h.tenant_id = :tenant_id
+            LIMIT 1
+            FOR SHARE OF r, p, h
+            """
+        )
+
+        digest_statement = text(
+            """
+            SELECT
+                id,
+                report_id,
+                canonicalization_version,
+                digest_algorithm,
+                digest_hex,
+                secured_by_user_id,
+                secured_at
+            FROM public.report_content_digests
+            WHERE report_id = :report_id
+              AND canonicalization_version =
+                    'AIHA_REPORT_DIGEST_V1'
+            LIMIT 1
+            """
+        )
+
+        try:
+            with self._engine.begin() as connection:
+                scope = (
+                    self._resolve_principal_scope_on_connection(
+                        connection,
+                        principal_user_id=
+                            principal_id,
+                        tenant_id=
+                            tenant_claim,
+                    )
+                )
+
+                report_row = connection.execute(
+                    report_statement,
+                    {
+                        "report_id":
+                            report,
+                        "hospital_id":
+                            scope["hospital_id"],
+                        "tenant_id":
+                            scope["tenant_id"],
+                    },
+                ).mappings().one_or_none()
+
+                if report_row is None:
+                    raise PermissionError(
+                        "Report is outside authenticated "
+                        "hospital/tenant scope"
+                    )
+
+                baseline = connection.execute(
+                    digest_statement,
+                    {
+                        "report_id":
+                            report,
+                    },
+                ).mappings().one_or_none()
+
+                if baseline is None:
+                    return None
+
+                current_digest = (
+                    self._canonical_report_digest(
+                        report_row
+                    )
+                )
+
+                stored_digest = str(
+                    baseline["digest_hex"]
+                )
+
+                matches = hmac.compare_digest(
+                    stored_digest,
+                    current_digest,
+                )
+
+                return {
+                    "id": int(
+                        baseline["id"]
+                    ),
+                    "report_id": str(
+                        baseline["report_id"]
+                    ),
+                    "canonicalization_version":
+                        str(
+                            baseline[
+                                "canonicalization_version"
+                            ]
+                        ),
+                    "digest_algorithm": str(
+                        baseline[
+                            "digest_algorithm"
+                        ]
+                    ),
+                    "stored_digest":
+                        stored_digest,
+                    "current_digest":
+                        current_digest,
+                    "matches":
+                        bool(matches),
+                    "secured_by_user_id": int(
+                        baseline[
+                            "secured_by_user_id"
+                        ]
+                    ),
+                    "secured_at":
+                        baseline["secured_at"],
+                }
+
+        except SQLAlchemyError as exc:
+            raise RuntimeError(
+                "Canonical Reports database unavailable"
+            ) from exc

@@ -3192,36 +3192,175 @@ def verify_report(
 import hashlib
 import json
 
-REPORT_HASHES = {}
-
-
-def generate_report_hash(data: dict):
-    content = json.dumps(data, sort_keys=True).encode()
-    return hashlib.sha256(content).hexdigest()
-
-
 @app.post("/secure-report/{report_id}")
-def secure_report(report_id: str, payload: dict):
-    report_hash = generate_report_hash(payload)
+def secure_report(
+    report_id: str,
+    payload: dict,
+    request: StarletteRequest,
+):
+    # The legacy request body remains in the API contract,
+    # but it is not an integrity authority.
+    _ = payload
 
-    REPORT_HASHES[report_id] = {"hash": report_hash, "data": payload}
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(
+            request
+        )
+    )
 
-    return {"report_id": report_id, "hash": report_hash, "status": "secured"}
+    repository = REPOSITORIES.get(
+        "reports"
+    )
+
+    register_digest = getattr(
+        repository,
+        "register_content_digest_for_principal",
+        None,
+    )
+
+    if not callable(
+        register_digest
+    ):
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Canonical report digest "
+                "repository unavailable"
+            ),
+        )
+
+    try:
+        result = register_digest(
+            report_id=report_id,
+            tenant_id=tenant_id,
+            principal_user_id=
+                principal_user_id,
+        )
+
+    except FileExistsError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Canonical report digest "
+                "baseline conflict"
+            ),
+        ) from exc
+
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Report digest scope denied"
+            ),
+        ) from exc
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=str(exc),
+        ) from exc
+
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Canonical report digest "
+                "write unavailable"
+            ),
+        ) from exc
+
+    return {
+        "report_id": report_id,
+        "hash": result["digest_hex"],
+        "status": "secured",
+    }
 
 
 @app.post("/verify-secure/{report_id}")
-def verify_secure(report_id: str, payload: dict):
-    existing = REPORT_HASHES.get(report_id)
+def verify_secure(
+    report_id: str,
+    payload: dict,
+    request: StarletteRequest,
+):
+    # The legacy request body is retained for compatibility only.
+    _ = payload
 
-    if not existing:
-        return {"status": "NOT FOUND"}
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(
+            request
+        )
+    )
 
-    new_hash = generate_report_hash(payload)
+    repository = REPOSITORIES.get(
+        "reports"
+    )
 
-    if new_hash == existing["hash"]:
-        return {"status": "VALID", "security": "UNCHANGED"}
-    else:
-        return {"status": "TAMPERED", "security": "DATA MODIFIED"}
+    verify_digest = getattr(
+        repository,
+        "verify_content_digest_for_principal",
+        None,
+    )
+
+    if not callable(
+        verify_digest
+    ):
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Canonical report digest "
+                "repository unavailable"
+            ),
+        )
+
+    try:
+        result = verify_digest(
+            report_id=report_id,
+            tenant_id=tenant_id,
+            principal_user_id=
+                principal_user_id,
+        )
+
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Report digest scope denied"
+            ),
+        ) from exc
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=str(exc),
+        ) from exc
+
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Canonical report digest "
+                "read unavailable"
+            ),
+        ) from exc
+
+    if result is None:
+        return {
+            "status": "NOT FOUND"
+        }
+
+    if result["matches"]:
+        return {
+            "status": "VALID",
+            "security": "UNCHANGED",
+        }
+
+    # "TAMPERED" is legacy presentation wording only.
+    # It means current canonical report content differs
+    # from the stored AIHA_REPORT_DIGEST_V1 baseline.
+    return {
+        "status": "TAMPERED",
+        "security": "DATA MODIFIED",
+    }
 
 
 def sign_data(data: bytes) -> str:
