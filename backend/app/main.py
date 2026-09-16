@@ -3363,41 +3363,192 @@ def verify_secure(
     }
 
 
-def sign_data(data: bytes) -> str:
-    import hmac, hashlib
+def _get_report_mac_key() -> bytes:
+    import os
 
-    key = os.environ.get("SECRET_KEY", "").encode()
-    if not key:
-        raise RuntimeError("SECRET_KEY environment variable is required")
-    return hmac.new(key, data, hashlib.sha256).hexdigest()
+    value = os.environ.get(
+        "AIHA_REPORT_MAC_KEY",
+        "",
+    )
 
+    if (
+        not value
+        or not value.strip()
+    ):
+        raise HTTPException(
+            status_code=503,
+            detail="Report MAC key unavailable",
+        )
 
-def verify_signature(data: bytes, signature: str) -> bool:
-    import hmac
+    return value.encode("utf-8")
 
-    expected = sign_data(data)
-    return hmac.compare_digest(expected, signature)
 
 
 @app.post("/sign-report/{report_id}")
-def sign_report(report_id: str, payload: dict):
-    import json
+def sign_report(
+    report_id: str,
+    payload: dict,
+    request: StarletteRequest,
+):
+    from .repositories.contracts.reports_repository import (
+        ReportContentMacConflictError,
+    )
 
-    data = json.dumps(payload, sort_keys=True).encode()
-    signature = sign_data(data)
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(
+            request
+        )
+    )
 
-    return {"report_id": report_id, "signature": signature, "status": "signed"}
+    repository = REPOSITORIES.get(
+        "reports"
+    )
+
+    register_mac = getattr(
+        repository,
+        "register_content_mac_for_principal",
+        None,
+    )
+
+    if not callable(register_mac):
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Canonical report MAC "
+                "repository unavailable"
+            ),
+        )
+
+    mac_key = _get_report_mac_key()
+
+    try:
+        result = register_mac(
+            report_id=report_id,
+            tenant_id=tenant_id,
+            principal_user_id=
+                principal_user_id,
+            mac_key=mac_key,
+        )
+
+    except ReportContentMacConflictError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        ) from exc
+
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=str(exc),
+        ) from exc
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=str(exc),
+        ) from exc
+
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=str(exc),
+        ) from exc
+
+    return {
+        "report_id":
+            report_id,
+        "signature":
+            result["mac_hex"],
+        "status":
+            "signed",
+    }
+
 
 
 @app.post("/verify-signature/{report_id}")
-def verify_report_signature(report_id: str, payload: dict, signature: str):
-    import json
+def verify_report_signature(
+    report_id: str,
+    payload: dict,
+    signature: str,
+    request: StarletteRequest,
+):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(
+            request
+        )
+    )
 
-    data = json.dumps(payload, sort_keys=True).encode()
+    repository = REPOSITORIES.get(
+        "reports"
+    )
 
-    valid = verify_signature(data, signature)
+    verify_mac = getattr(
+        repository,
+        "verify_content_mac_for_principal",
+        None,
+    )
 
-    return {"status": "VALID" if valid else "INVALID", "security": "HMAC-SHA256"}
+    if not callable(verify_mac):
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Canonical report MAC "
+                "repository unavailable"
+            ),
+        )
+
+    mac_key = _get_report_mac_key()
+
+    try:
+        result = verify_mac(
+            report_id=report_id,
+            tenant_id=tenant_id,
+            principal_user_id=
+                principal_user_id,
+            mac_key=mac_key,
+        )
+
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=str(exc),
+        ) from exc
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=str(exc),
+        ) from exc
+
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=str(exc),
+        ) from exc
+
+    if result is None:
+        return {
+            "status":
+                "NOT FOUND",
+            "security":
+                "HMAC-SHA256",
+        }
+
+    if result["matches"]:
+        return {
+            "status":
+                "VALID",
+            "security":
+                "HMAC-SHA256",
+        }
+
+    return {
+        "status":
+            "INVALID",
+        "security":
+            "DATA MODIFIED",
+    }
+
 
 
 BLOCKCHAIN_LEDGER = {}

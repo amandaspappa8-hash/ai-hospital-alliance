@@ -1,6 +1,11 @@
 from typing import Protocol, Any
 
 
+
+class ReportContentMacConflictError(RuntimeError):
+    """Immutable report content MAC baseline conflict."""
+
+
 class ReportsRepositoryContract(Protocol):
     def list_all(self) -> list[dict[str, Any]]: ...
 
@@ -56,3 +61,23 @@ class ReportsRepositoryContract(Protocol):
         tenant_id: str,
         principal_user_id: int,
     ) -> dict[str, Any] | None: ...
+
+    def register_content_mac_for_principal(
+        self,
+        *,
+        report_id: str,
+        tenant_id: str,
+        principal_user_id: int,
+        mac_key: bytes,
+    ) -> dict[str, Any]:
+        raise NotImplementedError
+
+    def verify_content_mac_for_principal(
+        self,
+        *,
+        report_id: str,
+        tenant_id: str,
+        principal_user_id: int,
+        mac_key: bytes,
+    ) -> dict[str, Any] | None:
+        raise NotImplementedError

@@ -1223,3 +1223,477 @@ class PostgresReportsRepository:
             raise RuntimeError(
                 "Canonical Reports database unavailable"
             ) from exc
+
+    @staticmethod
+    def _canonical_report_mac(
+        row,
+        mac_key: bytes,
+    ) -> str:
+        import hashlib
+        import hmac
+        import json
+
+        if (
+            not isinstance(mac_key, bytes)
+            or not mac_key
+        ):
+            raise RuntimeError(
+                "Report MAC key unavailable"
+            )
+
+        canonical = {
+            "mac_version":
+                "AIHA_REPORT_CONTENT_MAC_V1",
+            "report_id":
+                row["report_id"],
+            "patient_id":
+                row["patient_id"],
+            "author_id":
+                row["author_id"],
+            "title":
+                row["title"],
+            "type":
+                row["type"],
+            "status":
+                row["status"],
+            "body":
+                row["body"],
+            "summary":
+                row["summary"],
+        }
+
+        serialized = json.dumps(
+            canonical,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        ).encode("utf-8")
+
+        return hmac.new(
+            mac_key,
+            serialized,
+            hashlib.sha256,
+        ).hexdigest()
+
+    def register_content_mac_for_principal(
+        self,
+        *,
+        report_id: str,
+        tenant_id: str,
+        principal_user_id: int,
+        mac_key: bytes,
+    ) -> dict[str, Any]:
+        import hmac
+
+        from ..contracts.reports_repository import (
+            ReportContentMacConflictError,
+        )
+
+        report = self._validate_report_id(
+            report_id
+        )
+
+        principal_id = (
+            self._validate_principal_user_id(
+                principal_user_id
+            )
+        )
+
+        tenant_claim = (
+            self._validate_tenant_id(
+                tenant_id
+            )
+        )
+
+        if (
+            not isinstance(mac_key, bytes)
+            or not mac_key
+        ):
+            raise RuntimeError(
+                "Report MAC key unavailable"
+            )
+
+        report_statement = text(
+            """
+            SELECT
+                r.id AS report_id,
+                r.patient_id AS patient_id,
+                r.author_id AS author_id,
+                r.title AS title,
+                r.type AS type,
+                r.status AS status,
+                r.body AS body,
+                r.summary AS summary
+            FROM public.reports AS r
+            JOIN public.patients AS p
+              ON p.id = r.patient_id
+            JOIN public.hospitals AS h
+              ON h.id = p.hospital_id
+            WHERE r.id = :report_id
+              AND p.hospital_id = :hospital_id
+              AND h.tenant_id = :tenant_id
+            LIMIT 1
+            FOR SHARE OF r, p, h
+            """
+        )
+
+        baseline_statement = text(
+            """
+            SELECT
+                id,
+                report_id,
+                mac_version,
+                mac_algorithm,
+                mac_hex,
+                created_by_user_id,
+                created_at
+            FROM public.report_content_macs
+            WHERE report_id = :report_id
+              AND mac_version =
+                    'AIHA_REPORT_CONTENT_MAC_V1'
+            LIMIT 1
+            FOR UPDATE
+            """
+        )
+
+        insert_statement = text(
+            """
+            INSERT INTO public.report_content_macs (
+                report_id,
+                mac_version,
+                mac_algorithm,
+                mac_hex,
+                created_by_user_id
+            )
+            VALUES (
+                :report_id,
+                'AIHA_REPORT_CONTENT_MAC_V1',
+                'HMAC-SHA256',
+                :mac_hex,
+                :created_by_user_id
+            )
+            ON CONFLICT (
+                report_id,
+                mac_version
+            )
+            DO NOTHING
+            RETURNING
+                id,
+                report_id,
+                mac_version,
+                mac_algorithm,
+                mac_hex,
+                created_by_user_id,
+                created_at
+            """
+        )
+
+        def result_from_row(row):
+            return {
+                "id":
+                    int(row["id"]),
+                "report_id":
+                    str(row["report_id"]),
+                "mac_version":
+                    str(row["mac_version"]),
+                "mac_algorithm":
+                    str(row["mac_algorithm"]),
+                "mac_hex":
+                    str(row["mac_hex"]),
+                "created_by_user_id":
+                    int(
+                        row[
+                            "created_by_user_id"
+                        ]
+                    ),
+                "created_at":
+                    row["created_at"],
+            }
+
+        try:
+            with self._engine.begin() as connection:
+
+                scope = (
+                    self._resolve_principal_scope_on_connection(
+                        connection,
+                        principal_user_id=
+                            principal_id,
+                        tenant_id=
+                            tenant_claim,
+                        lock_scope=True,
+                    )
+                )
+
+                report_row = connection.execute(
+                    report_statement,
+                    {
+                        "report_id":
+                            report,
+                        "hospital_id":
+                            scope["hospital_id"],
+                        "tenant_id":
+                            scope["tenant_id"],
+                    },
+                ).mappings().one_or_none()
+
+                if report_row is None:
+                    raise PermissionError(
+                        "Report outside principal scope"
+                    )
+
+                current_mac = (
+                    self._canonical_report_mac(
+                        report_row,
+                        mac_key,
+                    )
+                )
+
+                baseline = connection.execute(
+                    baseline_statement,
+                    {
+                        "report_id":
+                            report,
+                    },
+                ).mappings().one_or_none()
+
+                if baseline is not None:
+
+                    stored_mac = str(
+                        baseline["mac_hex"]
+                    )
+
+                    if hmac.compare_digest(
+                        stored_mac,
+                        current_mac,
+                    ):
+                        return result_from_row(
+                            baseline
+                        )
+
+                    raise (
+                        ReportContentMacConflictError(
+                            "Immutable report content "
+                            "MAC baseline conflict"
+                        )
+                    )
+
+                inserted = connection.execute(
+                    insert_statement,
+                    {
+                        "report_id":
+                            report,
+                        "mac_hex":
+                            current_mac,
+                        "created_by_user_id":
+                            principal_id,
+                    },
+                ).mappings().one_or_none()
+
+                if inserted is not None:
+                    return result_from_row(
+                        inserted
+                    )
+
+                baseline = connection.execute(
+                    baseline_statement,
+                    {
+                        "report_id":
+                            report,
+                    },
+                ).mappings().one()
+
+                if hmac.compare_digest(
+                    str(baseline["mac_hex"]),
+                    current_mac,
+                ):
+                    return result_from_row(
+                        baseline
+                    )
+
+                raise (
+                    ReportContentMacConflictError(
+                        "Immutable report content "
+                        "MAC baseline conflict"
+                    )
+                )
+
+        except SQLAlchemyError as exc:
+            raise RuntimeError(
+                "Canonical Reports database unavailable"
+            ) from exc
+
+    def verify_content_mac_for_principal(
+        self,
+        *,
+        report_id: str,
+        tenant_id: str,
+        principal_user_id: int,
+        mac_key: bytes,
+    ) -> dict[str, Any] | None:
+        import hmac
+
+        report = self._validate_report_id(
+            report_id
+        )
+
+        principal_id = (
+            self._validate_principal_user_id(
+                principal_user_id
+            )
+        )
+
+        tenant_claim = (
+            self._validate_tenant_id(
+                tenant_id
+            )
+        )
+
+        if (
+            not isinstance(mac_key, bytes)
+            or not mac_key
+        ):
+            raise RuntimeError(
+                "Report MAC key unavailable"
+            )
+
+        report_statement = text(
+            """
+            SELECT
+                r.id AS report_id,
+                r.patient_id AS patient_id,
+                r.author_id AS author_id,
+                r.title AS title,
+                r.type AS type,
+                r.status AS status,
+                r.body AS body,
+                r.summary AS summary
+            FROM public.reports AS r
+            JOIN public.patients AS p
+              ON p.id = r.patient_id
+            JOIN public.hospitals AS h
+              ON h.id = p.hospital_id
+            WHERE r.id = :report_id
+              AND p.hospital_id = :hospital_id
+              AND h.tenant_id = :tenant_id
+            LIMIT 1
+            FOR SHARE OF r, p, h
+            """
+        )
+
+        baseline_statement = text(
+            """
+            SELECT
+                id,
+                report_id,
+                mac_version,
+                mac_algorithm,
+                mac_hex,
+                created_by_user_id,
+                created_at
+            FROM public.report_content_macs
+            WHERE report_id = :report_id
+              AND mac_version =
+                    'AIHA_REPORT_CONTENT_MAC_V1'
+            LIMIT 1
+            """
+        )
+
+        try:
+            with self._engine.begin() as connection:
+
+                scope = (
+                    self._resolve_principal_scope_on_connection(
+                        connection,
+                        principal_user_id=
+                            principal_id,
+                        tenant_id=
+                            tenant_claim,
+                        lock_scope=True,
+                    )
+                )
+
+                report_row = connection.execute(
+                    report_statement,
+                    {
+                        "report_id":
+                            report,
+                        "hospital_id":
+                            scope["hospital_id"],
+                        "tenant_id":
+                            scope["tenant_id"],
+                    },
+                ).mappings().one_or_none()
+
+                if report_row is None:
+                    raise PermissionError(
+                        "Report outside principal scope"
+                    )
+
+                baseline = connection.execute(
+                    baseline_statement,
+                    {
+                        "report_id":
+                            report,
+                    },
+                ).mappings().one_or_none()
+
+                if baseline is None:
+                    return None
+
+                current_mac = (
+                    self._canonical_report_mac(
+                        report_row,
+                        mac_key,
+                    )
+                )
+
+                stored_mac = str(
+                    baseline["mac_hex"]
+                )
+
+                return {
+                    "id":
+                        int(baseline["id"]),
+                    "report_id":
+                        str(
+                            baseline[
+                                "report_id"
+                            ]
+                        ),
+                    "mac_version":
+                        str(
+                            baseline[
+                                "mac_version"
+                            ]
+                        ),
+                    "mac_algorithm":
+                        str(
+                            baseline[
+                                "mac_algorithm"
+                            ]
+                        ),
+                    "stored_mac":
+                        stored_mac,
+                    "current_mac":
+                        current_mac,
+                    "created_by_user_id":
+                        int(
+                            baseline[
+                                "created_by_user_id"
+                            ]
+                        ),
+                    "created_at":
+                        baseline[
+                            "created_at"
+                        ],
+                    "matches":
+                        hmac.compare_digest(
+                            stored_mac,
+                            current_mac,
+                        ),
+                }
+
+        except SQLAlchemyError as exc:
+            raise RuntimeError(
+                "Canonical Reports database unavailable"
+            ) from exc
