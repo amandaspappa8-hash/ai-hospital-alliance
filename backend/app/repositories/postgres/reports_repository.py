@@ -1318,13 +1318,6 @@ class PostgresReportsRepository:
             )
         )
 
-        if (
-            not isinstance(mac_key, bytes)
-            or not mac_key
-        ):
-            raise RuntimeError(
-                "Report MAC key unavailable"
-            )
 
         report_statement = text(
             """

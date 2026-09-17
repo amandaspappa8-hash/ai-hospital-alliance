@@ -535,3 +535,36 @@ def test_rotation_repository_uses_stored_key_id():
     assert "baseline_mac_key" in source
     assert "mac_key_resolver(" in source
     assert ":key_id" in source
+
+
+def test_register_content_mac_has_no_unbound_legacy_mac_key_reference():
+    import ast
+    import inspect
+    import textwrap
+
+    from backend.app.repositories.postgres.reports_repository import (
+        PostgresReportsRepository,
+    )
+
+    source = textwrap.dedent(
+        inspect.getsource(
+            PostgresReportsRepository
+            .register_content_mac_for_principal
+        )
+    )
+
+    tree = ast.parse(source)
+
+    legacy_loads = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Name)
+        and isinstance(node.ctx, ast.Load)
+        and node.id == "mac_key"
+    ]
+
+    assert legacy_loads == []
+
+    assert "mac_key_resolver" in source
+    assert "active_mac_key" in source
+    assert "baseline_mac_key" in source
