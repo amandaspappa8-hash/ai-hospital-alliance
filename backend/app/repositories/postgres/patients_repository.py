@@ -239,6 +239,104 @@ class PostgresPatientsRepository:
         return self._serialize_patient(rows[0])
 
     @staticmethod
+    def _fhir_patient_select_sql() -> str:
+        return """
+            SELECT
+                p.id,
+                p.name,
+                p.gender,
+                p.phone,
+                p.condition,
+                p.status,
+                p.department_id
+            FROM public.patients AS p
+            JOIN public.hospitals AS h
+              ON h.id = p.hospital_id
+            WHERE h.tenant_id = :tenant_id
+              AND p.hospital_id = :hospital_id
+        """
+
+    def list_fhir_for_principal(
+        self,
+        *,
+        tenant_id: str,
+        principal_user_id: int,
+    ) -> list[dict[str, Any]]:
+        with self._engine.connect() as connection:
+            scope = self._resolve_scope(
+                connection,
+                tenant_id,
+                principal_user_id,
+            )
+
+            rows = (
+                connection.execute(
+                    text(
+                        self._fhir_patient_select_sql()
+                        + " ORDER BY p.id"
+                    ),
+                    {
+                        "tenant_id": scope["tenant_id"],
+                        "hospital_id": scope["hospital_id"],
+                    },
+                )
+                .mappings()
+                .all()
+            )
+
+        return [
+            dict(row)
+            for row in rows
+        ]
+
+    def get_fhir_by_id(
+        self,
+        patient_id: str,
+        *,
+        tenant_id: str,
+        principal_user_id: int,
+    ) -> dict[str, Any] | None:
+        patient_id = str(
+            patient_id or ""
+        ).strip()
+
+        if not patient_id:
+            return None
+
+        with self._engine.connect() as connection:
+            scope = self._resolve_scope(
+                connection,
+                tenant_id,
+                principal_user_id,
+            )
+
+            rows = (
+                connection.execute(
+                    text(
+                        self._fhir_patient_select_sql()
+                        + " AND p.id = :patient_id"
+                    ),
+                    {
+                        "tenant_id": scope["tenant_id"],
+                        "hospital_id": scope["hospital_id"],
+                        "patient_id": patient_id,
+                    },
+                )
+                .mappings()
+                .all()
+            )
+
+        if not rows:
+            return None
+
+        if len(rows) != 1:
+            raise RuntimeError(
+                "Canonical FHIR Patient ID is not unique"
+            )
+
+        return dict(rows[0])
+
+    @staticmethod
     def _write_audit(
         connection,
         *,

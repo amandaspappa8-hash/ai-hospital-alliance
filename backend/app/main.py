@@ -4500,23 +4500,121 @@ from .legacy_security import (
 from .tenant import TenantContext
 
 
-@app.get("/fhir/R4/Patient", response_model=None)
-def fhir_patients(db: Session = Depends(get_db)):
-    from .models import Patient
+def _canonical_patient_row_to_fhir(
+    row: dict,
+) -> dict:
+    from types import SimpleNamespace
 
-    patients = db.query(Patient).all()
-    resources = [patient_to_fhir(p) for p in patients]
+    patient = SimpleNamespace(
+        id=row.get("id"),
+        status=row.get("status"),
+        name=row.get("name"),
+        gender=row.get("gender"),
+        phone=row.get("phone"),
+        condition=row.get("condition"),
+        department_id=row.get("department_id"),
+    )
+
+    return patient_to_fhir(patient)
+
+
+@app.get("/fhir/R4/Patient", response_model=None)
+def fhir_patients(
+    request: StarletteRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
+    )
+
+    repository = REPOSITORIES.get(
+        "patients"
+    )
+
+    list_fhir = getattr(
+        repository,
+        "list_fhir_for_principal",
+        None,
+    )
+
+    if not callable(list_fhir):
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Canonical Patient repository "
+                "FHIR view unavailable"
+            ),
+        )
+
+    try:
+        rows = list_fhir(
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Patient scope denied",
+        ) from exc
+
+    resources = [
+        _canonical_patient_row_to_fhir(row)
+        for row in rows
+    ]
+
     return bundle_response(resources)
 
 
 @app.get("/fhir/R4/Patient/{patient_id}", response_model=None)
-def fhir_patient(patient_id: str, db: Session = Depends(get_db)):
-    from .models import Patient
+def fhir_patient(
+    patient_id: str,
+    request: StarletteRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(request)
+    )
 
-    p = db.query(Patient).filter(Patient.id == patient_id).first()
-    if not p:
-        raise HTTPException(404, "Patient not found")
-    return patient_to_fhir(p)
+    repository = REPOSITORIES.get(
+        "patients"
+    )
+
+    get_fhir = getattr(
+        repository,
+        "get_fhir_by_id",
+        None,
+    )
+
+    if not callable(get_fhir):
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Canonical Patient repository "
+                "FHIR view unavailable"
+            ),
+        )
+
+    try:
+        patient = get_fhir(
+            patient_id,
+            tenant_id=tenant_id,
+            principal_user_id=principal_user_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Patient scope denied",
+        ) from exc
+
+    if not patient:
+        raise HTTPException(
+            status_code=404,
+            detail="Patient not found",
+        )
+
+    return _canonical_patient_row_to_fhir(
+        patient
+    )
 
 
 @app.get("/fhir/R4/Observation", response_model=None)
