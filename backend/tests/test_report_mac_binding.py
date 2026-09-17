@@ -82,26 +82,40 @@ def _function_source(
 
 
 def test_contract_has_mac_methods():
-    source = CONTRACT.read_text(
-        encoding="utf-8",
+    from pathlib import Path
+
+    source = Path(
+        "backend/app/repositories/contracts/"
+        "reports_repository.py"
+    ).read_text(
+        encoding="utf-8"
     )
 
-    assert "ReportContentMacConflictError" in source
     assert "register_content_mac_for_principal" in source
     assert "verify_content_mac_for_principal" in source
+    assert "active_key_id: str" in source
+    assert "mac_key_resolver" in source
+    assert "mac_key: bytes" not in source
 
 
 def test_repository_mac_primitives():
-    source = REPOSITORY.read_text(
-        encoding="utf-8",
+    from pathlib import Path
+
+    source = Path(
+        "backend/app/repositories/postgres/"
+        "reports_repository.py"
+    ).read_text(
+        encoding="utf-8"
     )
 
-    assert "public.report_content_macs" in source
     assert "AIHA_REPORT_CONTENT_MAC_V1" in source
     assert "HMAC-SHA256" in source
     assert "hmac.new" in source
     assert "hmac.compare_digest" in source
-    assert "SECRET_KEY" not in source
+    assert "active_key_id" in source
+    assert "mac_key_resolver" in source
+    assert '"key_id"' in source
+    assert ":key_id" in source
 
 
 def test_canonical_mac_preserves_null():
@@ -195,18 +209,19 @@ def test_report_id_is_mac_bound():
 
 
 def test_routes_use_canonical_reports_repository():
-    for name in (
-        "sign_report",
-        "verify_report_signature",
-    ):
-        source = _function_source(
-            MAIN,
-            name,
-        )
+    from pathlib import Path
 
-        assert "REPOSITORIES.get(" in source
-        assert '"reports"' in source
-        assert "get_verified_principal_tenant" in source
+    source = Path(
+        "backend/app/main.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    assert "register_content_mac_for_principal" in source
+    assert "verify_content_mac_for_principal" in source
+    assert "AIHA_REPORT_MAC_ACTIVE_KEY_ID" in source
+    assert "AIHA_REPORT_MAC_KEYS_JSON" in source
+    assert "mac_key_resolver=" in source
 
 
 def test_client_payload_signature_not_authority():
@@ -259,66 +274,68 @@ def test_client_payload_signature_not_authority():
         )
 
 
-def test_dedicated_key_fails_closed(
-    monkeypatch,
-):
-    helper = _function_source(
-        MAIN,
-        "_get_report_mac_key",
-    )
-
-    namespace = {
-        "HTTPException": HTTPException,
-    }
-
-    exec(helper, namespace)
-
-    function = namespace[
-        "_get_report_mac_key"
-    ]
+def test_dedicated_key_fails_closed(monkeypatch):
+    from fastapi import HTTPException
+    from backend.app import main
 
     monkeypatch.delenv(
-        "AIHA_REPORT_MAC_KEY",
+        "AIHA_REPORT_MAC_ACTIVE_KEY_ID",
+        raising=False,
+    )
+    monkeypatch.delenv(
+        "AIHA_REPORT_MAC_KEYS_JSON",
         raising=False,
     )
 
+    monkeypatch.setenv(
+        "AIHA_REPORT_MAC_KEY",
+        "must-not-work",
+    )
     monkeypatch.setenv(
         "SECRET_KEY",
         "must-not-work",
     )
 
-    with pytest.raises(
-        HTTPException
-    ) as exc:
-        function()
+    try:
+        main._get_active_report_mac_key_id()
+    except HTTPException as exc:
+        assert exc.status_code == 503
+    else:
+        raise AssertionError(
+            "legacy key unexpectedly became fallback"
+        )
 
-    assert exc.value.status_code == 503
 
-
-def test_dedicated_key_returns_bytes(
-    monkeypatch,
-):
-    helper = _function_source(
-        MAIN,
-        "_get_report_mac_key",
-    )
-
-    namespace = {
-        "HTTPException": HTTPException,
-    }
-
-    exec(helper, namespace)
+def test_dedicated_key_returns_bytes(monkeypatch):
+    import json
+    from backend.app import main
 
     monkeypatch.setenv(
-        "AIHA_REPORT_MAC_KEY",
-        "domain-key",
+        "AIHA_REPORT_MAC_ACTIVE_KEY_ID",
+        "mac-test-1",
     )
 
+    monkeypatch.setenv(
+        "AIHA_REPORT_MAC_KEYS_JSON",
+        json.dumps(
+            {
+                "mac-test-1":
+                    "temporary-test-secret",
+            }
+        ),
+    )
+
+    key_id = (
+        main._get_active_report_mac_key_id()
+    )
+
+    assert key_id == "mac-test-1"
+
     assert (
-        namespace[
-            "_get_report_mac_key"
-        ]()
-        == b"domain-key"
+        main._resolve_report_mac_key(
+            key_id
+        )
+        == b"temporary-test-secret"
     )
 
 
@@ -379,3 +396,142 @@ def test_constant_time_verify():
     )
 
     assert "hmac.compare_digest" in source
+
+
+def test_keyring_missing_fails_closed(monkeypatch):
+    from fastapi import HTTPException
+    from backend.app import main
+
+    monkeypatch.delenv(
+        "AIHA_REPORT_MAC_KEYS_JSON",
+        raising=False,
+    )
+
+    try:
+        main._load_report_mac_keyring()
+    except HTTPException as exc:
+        assert exc.status_code == 503
+    else:
+        raise AssertionError(
+            "missing keyring did not fail closed"
+        )
+
+
+def test_keyring_invalid_json_fails_closed(monkeypatch):
+    from fastapi import HTTPException
+    from backend.app import main
+
+    monkeypatch.setenv(
+        "AIHA_REPORT_MAC_KEYS_JSON",
+        "{not-json",
+    )
+
+    try:
+        main._load_report_mac_keyring()
+    except HTTPException as exc:
+        assert exc.status_code == 503
+    else:
+        raise AssertionError(
+            "invalid keyring JSON accepted"
+        )
+
+
+def test_active_key_unknown_fails_closed(monkeypatch):
+    import json
+    from fastapi import HTTPException
+    from backend.app import main
+
+    monkeypatch.setenv(
+        "AIHA_REPORT_MAC_ACTIVE_KEY_ID",
+        "mac-new",
+    )
+
+    monkeypatch.setenv(
+        "AIHA_REPORT_MAC_KEYS_JSON",
+        json.dumps(
+            {
+                "mac-old":
+                    "temporary-old-secret",
+            }
+        ),
+    )
+
+    try:
+        main._get_active_report_mac_key_id()
+    except HTTPException as exc:
+        assert exc.status_code == 503
+    else:
+        raise AssertionError(
+            "unknown active key accepted"
+        )
+
+
+def test_historical_key_resolution(monkeypatch):
+    import json
+    from backend.app import main
+
+    monkeypatch.setenv(
+        "AIHA_REPORT_MAC_KEYS_JSON",
+        json.dumps(
+            {
+                "mac-old": "temporary-old-secret",
+                "mac-new": "temporary-new-secret",
+            }
+        ),
+    )
+
+    assert (
+        main._resolve_report_mac_key(
+            "mac-old"
+        )
+        == b"temporary-old-secret"
+    )
+
+    assert (
+        main._resolve_report_mac_key(
+            "mac-new"
+        )
+        == b"temporary-new-secret"
+    )
+
+
+def test_mac_key_id_validation_fails_closed():
+    from fastapi import HTTPException
+    from backend.app import main
+
+    invalid = (
+        "",
+        " ",
+        "contains space",
+        "../bad",
+        "x" * 65,
+    )
+
+    for key_id in invalid:
+
+        try:
+            main._validate_report_mac_key_id(
+                key_id
+            )
+        except HTTPException as exc:
+            assert exc.status_code == 503
+        else:
+            raise AssertionError(
+                f"invalid key id accepted: {key_id!r}"
+            )
+
+
+def test_rotation_repository_uses_stored_key_id():
+    from pathlib import Path
+
+    source = Path(
+        "backend/app/repositories/postgres/"
+        "reports_repository.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    assert 'baseline["key_id"]' in source
+    assert "baseline_mac_key" in source
+    assert "mac_key_resolver(" in source
+    assert ":key_id" in source

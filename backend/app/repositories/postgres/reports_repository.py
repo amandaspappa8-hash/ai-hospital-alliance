@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import secrets
 from typing import Any
 
@@ -1273,9 +1275,28 @@ class PostgresReportsRepository:
         report_id: str,
         tenant_id: str,
         principal_user_id: int,
-        mac_key: bytes,
+        active_key_id: str,
+        mac_key_resolver: Callable[[str], bytes],
     ) -> dict[str, Any]:
         import hmac
+        import re
+
+        if (
+            not isinstance(active_key_id, str)
+            or re.fullmatch(
+                r"[A-Za-z0-9][A-Za-z0-9._:-]{0,63}",
+                active_key_id,
+            )
+            is None
+        ):
+            raise RuntimeError(
+                "Report MAC active key identity unavailable"
+            )
+
+        if not callable(mac_key_resolver):
+            raise RuntimeError(
+                "Report MAC key resolver unavailable"
+            )
 
         from ..contracts.reports_repository import (
             ReportContentMacConflictError,
@@ -1337,6 +1358,7 @@ class PostgresReportsRepository:
                 mac_version,
                 mac_algorithm,
                 mac_hex,
+                key_id,
                 created_by_user_id,
                 created_at
             FROM public.report_content_macs
@@ -1355,6 +1377,7 @@ class PostgresReportsRepository:
                 mac_version,
                 mac_algorithm,
                 mac_hex,
+                key_id,
                 created_by_user_id
             )
             VALUES (
@@ -1362,6 +1385,7 @@ class PostgresReportsRepository:
                 'AIHA_REPORT_CONTENT_MAC_V1',
                 'HMAC-SHA256',
                 :mac_hex,
+                :key_id,
                 :created_by_user_id
             )
             ON CONFLICT (
@@ -1375,6 +1399,7 @@ class PostgresReportsRepository:
                 mac_version,
                 mac_algorithm,
                 mac_hex,
+                key_id,
                 created_by_user_id,
                 created_at
             """
@@ -1392,6 +1417,8 @@ class PostgresReportsRepository:
                     str(row["mac_algorithm"]),
                 "mac_hex":
                     str(row["mac_hex"]),
+                "key_id":
+                    str(row["key_id"]),
                 "created_by_user_id":
                     int(
                         row[
@@ -1433,12 +1460,6 @@ class PostgresReportsRepository:
                         "Report outside principal scope"
                     )
 
-                current_mac = (
-                    self._canonical_report_mac(
-                        report_row,
-                        mac_key,
-                    )
-                )
 
                 baseline = connection.execute(
                     baseline_statement,
@@ -1449,6 +1470,21 @@ class PostgresReportsRepository:
                 ).mappings().one_or_none()
 
                 if baseline is not None:
+
+                    baseline_key_id = str(
+                        baseline["key_id"]
+                    )
+                    baseline_mac_key = (
+                        mac_key_resolver(
+                            baseline_key_id
+                        )
+                    )
+                    current_mac = (
+                        self._canonical_report_mac(
+                            report_row,
+                            baseline_mac_key,
+                        )
+                    )
 
                     stored_mac = str(
                         baseline["mac_hex"]
@@ -1469,6 +1505,18 @@ class PostgresReportsRepository:
                         )
                     )
 
+                active_mac_key = (
+                    mac_key_resolver(
+                        active_key_id
+                    )
+                )
+                current_mac = (
+                    self._canonical_report_mac(
+                        report_row,
+                        active_mac_key,
+                    )
+                )
+
                 inserted = connection.execute(
                     insert_statement,
                     {
@@ -1476,6 +1524,8 @@ class PostgresReportsRepository:
                             report,
                         "mac_hex":
                             current_mac,
+                        "key_id":
+                            active_key_id,
                         "created_by_user_id":
                             principal_id,
                     },
@@ -1493,6 +1543,21 @@ class PostgresReportsRepository:
                             report,
                     },
                 ).mappings().one()
+
+                baseline_key_id = str(
+                    baseline["key_id"]
+                )
+                baseline_mac_key = (
+                    mac_key_resolver(
+                        baseline_key_id
+                    )
+                )
+                current_mac = (
+                    self._canonical_report_mac(
+                        report_row,
+                        baseline_mac_key,
+                    )
+                )
 
                 if hmac.compare_digest(
                     str(baseline["mac_hex"]),
@@ -1520,9 +1585,14 @@ class PostgresReportsRepository:
         report_id: str,
         tenant_id: str,
         principal_user_id: int,
-        mac_key: bytes,
+        mac_key_resolver: Callable[[str], bytes],
     ) -> dict[str, Any] | None:
         import hmac
+
+        if not callable(mac_key_resolver):
+            raise RuntimeError(
+                "Report MAC key resolver unavailable"
+            )
 
         report = self._validate_report_id(
             report_id
@@ -1580,6 +1650,7 @@ class PostgresReportsRepository:
                 mac_version,
                 mac_algorithm,
                 mac_hex,
+                key_id,
                 created_by_user_id,
                 created_at
             FROM public.report_content_macs
@@ -1632,10 +1703,18 @@ class PostgresReportsRepository:
                 if baseline is None:
                     return None
 
+                baseline_key_id = str(
+                    baseline["key_id"]
+                )
+                baseline_mac_key = (
+                    mac_key_resolver(
+                        baseline_key_id
+                    )
+                )
                 current_mac = (
                     self._canonical_report_mac(
                         report_row,
-                        mac_key,
+                        baseline_mac_key,
                     )
                 )
 
@@ -1662,6 +1741,12 @@ class PostgresReportsRepository:
                         str(
                             baseline[
                                 "mac_algorithm"
+                            ]
+                        ),
+                    "key_id":
+                        str(
+                            baseline[
+                                "key_id"
                             ]
                         ),
                     "stored_mac":

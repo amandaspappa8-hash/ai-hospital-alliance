@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from typing import Protocol, Any
 
 
@@ -68,7 +69,8 @@ class ReportsRepositoryContract(Protocol):
         report_id: str,
         tenant_id: str,
         principal_user_id: int,
-        mac_key: bytes,
+        active_key_id: str,
+        mac_key_resolver: Callable[[str], bytes],
     ) -> dict[str, Any]:
         raise NotImplementedError
 
@@ -78,6 +80,6 @@ class ReportsRepositoryContract(Protocol):
         report_id: str,
         tenant_id: str,
         principal_user_id: int,
-        mac_key: bytes,
+        mac_key_resolver: Callable[[str], bytes],
     ) -> dict[str, Any] | None:
         raise NotImplementedError

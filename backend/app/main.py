@@ -3363,24 +3363,136 @@ def verify_secure(
     }
 
 
-def _get_report_mac_key() -> bytes:
+def _validate_report_mac_key_id(
+    key_id: str,
+) -> str:
+    import re
+
+    if (
+        not isinstance(key_id, str)
+        or re.fullmatch(
+            r"[A-Za-z0-9][A-Za-z0-9._:-]{0,63}",
+            key_id,
+        )
+        is None
+    ):
+        raise HTTPException(
+            status_code=503,
+            detail="Report MAC key identity unavailable",
+        )
+
+    return key_id
+
+
+def _load_report_mac_keyring() -> dict[str, bytes]:
+    import json
     import os
 
-    value = os.environ.get(
-        "AIHA_REPORT_MAC_KEY",
+    raw = os.environ.get(
+        "AIHA_REPORT_MAC_KEYS_JSON",
         "",
     )
 
     if (
-        not value
-        or not value.strip()
+        not raw
+        or not raw.strip()
     ):
+        raise HTTPException(
+            status_code=503,
+            detail="Report MAC keyring unavailable",
+        )
+
+    try:
+        decoded = json.loads(raw)
+    except (
+        json.JSONDecodeError,
+        TypeError,
+        ValueError,
+    ) as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Report MAC keyring unavailable",
+        ) from exc
+
+    if (
+        not isinstance(decoded, dict)
+        or not decoded
+    ):
+        raise HTTPException(
+            status_code=503,
+            detail="Report MAC keyring unavailable",
+        )
+
+    keyring: dict[str, bytes] = {}
+
+    for key_id, secret in decoded.items():
+
+        validated_key_id = (
+            _validate_report_mac_key_id(
+                key_id
+            )
+        )
+
+        if (
+            not isinstance(secret, str)
+            or not secret
+            or not secret.strip()
+        ):
+            raise HTTPException(
+                status_code=503,
+                detail="Report MAC keyring unavailable",
+            )
+
+        keyring[validated_key_id] = (
+            secret.encode("utf-8")
+        )
+
+    return keyring
+
+
+def _resolve_report_mac_key(
+    key_id: str,
+) -> bytes:
+    validated_key_id = (
+        _validate_report_mac_key_id(
+            key_id
+        )
+    )
+
+    keyring = _load_report_mac_keyring()
+
+    key = keyring.get(
+        validated_key_id
+    )
+
+    if key is None:
         raise HTTPException(
             status_code=503,
             detail="Report MAC key unavailable",
         )
 
-    return value.encode("utf-8")
+    return key
+
+
+def _get_active_report_mac_key_id() -> str:
+    import os
+
+    active_key_id = os.environ.get(
+        "AIHA_REPORT_MAC_ACTIVE_KEY_ID",
+        "",
+    )
+
+    validated_key_id = (
+        _validate_report_mac_key_id(
+            active_key_id
+        )
+    )
+
+    _resolve_report_mac_key(
+        validated_key_id
+    )
+
+    return validated_key_id
 
 
 
@@ -3419,7 +3531,9 @@ def sign_report(
             ),
         )
 
-    mac_key = _get_report_mac_key()
+    active_key_id = (
+        _get_active_report_mac_key_id()
+    )
 
     try:
         result = register_mac(
@@ -3427,7 +3541,10 @@ def sign_report(
             tenant_id=tenant_id,
             principal_user_id=
                 principal_user_id,
-            mac_key=mac_key,
+            active_key_id=
+                active_key_id,
+            mac_key_resolver=
+                _resolve_report_mac_key,
         )
 
     except ReportContentMacConflictError as exc:
@@ -3497,15 +3614,14 @@ def verify_report_signature(
             ),
         )
 
-    mac_key = _get_report_mac_key()
-
     try:
         result = verify_mac(
             report_id=report_id,
             tenant_id=tenant_id,
             principal_user_id=
                 principal_user_id,
-            mac_key=mac_key,
+            mac_key_resolver=
+                _resolve_report_mac_key,
         )
 
     except PermissionError as exc:
