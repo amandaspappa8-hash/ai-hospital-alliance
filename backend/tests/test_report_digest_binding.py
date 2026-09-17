@@ -655,3 +655,174 @@ def test_e18a_digest_source_has_no_null_collapse():
             f'row["{field}"]'
             in canonical
         )
+
+
+def test_blockchain_legacy_routes_use_canonical_digest_authority():
+    import inspect
+
+    from backend.app import main
+
+    register_source = inspect.getsource(
+        main.blockchain_register
+    )
+
+    verify_source = inspect.getsource(
+        main.blockchain_verify
+    )
+
+    assert (
+        "get_verified_principal_tenant"
+        in register_source
+    )
+    assert (
+        "register_content_digest_for_principal"
+        in register_source
+    )
+
+    assert (
+        "get_verified_principal_tenant"
+        in verify_source
+    )
+    assert (
+        "verify_content_digest_for_principal"
+        in verify_source
+    )
+
+    assert "BLOCKCHAIN_LEDGER" not in register_source
+    assert "BLOCKCHAIN_LEDGER" not in verify_source
+
+    assert "hashlib.sha256" not in register_source
+    assert "hashlib.sha256" not in verify_source
+
+
+def test_blockchain_register_ignores_client_payload_as_integrity_authority(
+    monkeypatch,
+):
+    from backend.app import main
+
+    calls = []
+
+    class _Repository:
+        def register_content_digest_for_principal(
+            self,
+            *,
+            report_id,
+            tenant_id,
+            principal_user_id,
+        ):
+            calls.append(
+                {
+                    "report_id": report_id,
+                    "tenant_id": tenant_id,
+                    "principal_user_id":
+                        principal_user_id,
+                }
+            )
+
+            return {
+                "digest_hex": "a" * 64,
+            }
+
+    monkeypatch.setitem(
+        main.REPOSITORIES,
+        "reports",
+        _Repository(),
+    )
+
+    monkeypatch.setattr(
+        main,
+        "get_verified_principal_tenant",
+        lambda request: (
+            2,
+            "T-AIHA-7548C3579712",
+        ),
+    )
+
+    result = main.blockchain_register(
+        "R-controlled",
+        {
+            "client":
+                "payload must not be authority",
+        },
+        object(),
+    )
+
+    assert calls == [
+        {
+            "report_id": "R-controlled",
+            "tenant_id":
+                "T-AIHA-7548C3579712",
+            "principal_user_id": 2,
+        }
+    ]
+
+    assert result == {
+        "report_id": "R-controlled",
+        "hash": "a" * 64,
+        "blockchain": "registered",
+    }
+
+
+def test_blockchain_verify_uses_canonical_digest_result(
+    monkeypatch,
+):
+    from backend.app import main
+
+    calls = []
+
+    class _Repository:
+        def verify_content_digest_for_principal(
+            self,
+            *,
+            report_id,
+            tenant_id,
+            principal_user_id,
+        ):
+            calls.append(
+                (
+                    report_id,
+                    tenant_id,
+                    principal_user_id,
+                )
+            )
+
+            return {
+                "matches": True,
+            }
+
+    monkeypatch.setitem(
+        main.REPOSITORIES,
+        "reports",
+        _Repository(),
+    )
+
+    monkeypatch.setattr(
+        main,
+        "get_verified_principal_tenant",
+        lambda request: (
+            2,
+            "T-AIHA-7548C3579712",
+        ),
+    )
+
+    result = main.blockchain_verify(
+        "R-controlled",
+        {
+            "client":
+                "payload must not be authority",
+        },
+        object(),
+    )
+
+    assert calls == [
+        (
+            "R-controlled",
+            "T-AIHA-7548C3579712",
+            2,
+        )
+    ]
+
+    assert result == {
+        "status": "VALID",
+        "layer": "BLOCKCHAIN",
+    }

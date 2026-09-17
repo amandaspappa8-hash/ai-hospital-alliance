@@ -3671,29 +3671,166 @@ BLOCKCHAIN_LEDGER = {}
 
 
 @app.post("/blockchain/register/{report_id}")
-def blockchain_register(report_id: str, payload: dict):
-    import hashlib, json
+def blockchain_register(
+    report_id: str,
+    payload: dict,
+    request: StarletteRequest,
+):
+    # Legacy endpoint/response contract retained for compatibility.
+    # This is NOT a blockchain authority. The canonical integrity
+    # authority is the persisted AIHA_REPORT_DIGEST_V1 baseline.
+    _ = payload
 
-    content = json.dumps(payload, sort_keys=True).encode()
-    hash_value = hashlib.sha256(content).hexdigest()
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(
+            request
+        )
+    )
 
-    BLOCKCHAIN_LEDGER[report_id] = hash_value
+    repository = REPOSITORIES.get(
+        "reports"
+    )
 
-    return {"report_id": report_id, "hash": hash_value, "blockchain": "registered"}
+    register_digest = getattr(
+        repository,
+        "register_content_digest_for_principal",
+        None,
+    )
+
+    if not callable(register_digest):
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Canonical report digest "
+                "repository unavailable"
+            ),
+        )
+
+    try:
+        result = register_digest(
+            report_id=report_id,
+            tenant_id=tenant_id,
+            principal_user_id=
+                principal_user_id,
+        )
+
+    except FileExistsError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Canonical report digest "
+                "baseline conflict"
+            ),
+        ) from exc
+
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Report digest scope denied"
+            ),
+        ) from exc
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=str(exc),
+        ) from exc
+
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Canonical report digest "
+                "write unavailable"
+            ),
+        ) from exc
+
+    return {
+        "report_id": report_id,
+        "hash": result["digest_hex"],
+        "blockchain": "registered",
+    }
 
 
 @app.get("/blockchain/verify/{report_id}")
-def blockchain_verify(report_id: str, payload: dict):
-    import hashlib, json
+def blockchain_verify(
+    report_id: str,
+    payload: dict,
+    request: StarletteRequest,
+):
+    # Legacy request body and presentation wording are retained only
+    # for compatibility. Verification authority is canonical PG digest.
+    _ = payload
 
-    stored = BLOCKCHAIN_LEDGER.get(report_id)
-    if not stored:
-        return {"status": "NOT FOUND"}
+    principal_user_id, tenant_id = (
+        get_verified_principal_tenant(
+            request
+        )
+    )
 
-    new_hash = hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
+    repository = REPOSITORIES.get(
+        "reports"
+    )
+
+    verify_digest = getattr(
+        repository,
+        "verify_content_digest_for_principal",
+        None,
+    )
+
+    if not callable(verify_digest):
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Canonical report digest "
+                "repository unavailable"
+            ),
+        )
+
+    try:
+        result = verify_digest(
+            report_id=report_id,
+            tenant_id=tenant_id,
+            principal_user_id=
+                principal_user_id,
+        )
+
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Report digest scope denied"
+            ),
+        ) from exc
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=str(exc),
+        ) from exc
+
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Canonical report digest "
+                "read unavailable"
+            ),
+        ) from exc
+
+    if result is None:
+        return {
+            "status": "NOT FOUND"
+        }
 
     return {
-        "status": "VALID" if stored == new_hash else "TAMPERED",
+        "status":
+            "VALID"
+            if result["matches"]
+            else "TAMPERED",
+        # Legacy presentation label only.
+        # No distributed-ledger/blockchain claim is established.
         "layer": "BLOCKCHAIN",
     }
 
