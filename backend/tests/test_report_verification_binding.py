@@ -578,8 +578,22 @@ def test_repository_read_has_no_writer_lock():
         for call in engine.calls
     )
 
+    # E18B intentionally uses shared authority locks on the
+    # verification read path. Those are read-consistency locks,
+    # not writer/exclusive mutation semantics.
+    assert "FOR UPDATE" not in relevant_sql
+    assert "FOR NO KEY UPDATE" not in relevant_sql
+
     assert (
-        "FOR SHARE OF r, p, h"
+        "INSERT INTO public.report_verification_events"
+        not in relevant_sql
+    )
+    assert (
+        "UPDATE public.report_verification_events"
+        not in relevant_sql
+    )
+    assert (
+        "DELETE FROM public.report_verification_events"
         not in relevant_sql
     )
 
