@@ -164,6 +164,7 @@ class PostgresPatientsRepository:
                     OR d.hospital_id IS NULL
                  )
             WHERE h.tenant_id = :tenant_id
+              AND p.hospital_id = :hospital_id
         """
 
     def list_all(
@@ -186,6 +187,7 @@ class PostgresPatientsRepository:
                     ),
                     {
                         "tenant_id": scope["tenant_id"],
+                        "hospital_id": scope["hospital_id"],
                     },
                 )
                 .mappings()
@@ -218,6 +220,7 @@ class PostgresPatientsRepository:
                     ),
                     {
                         "tenant_id": scope["tenant_id"],
+                        "hospital_id": scope["hospital_id"],
                         "patient_id": patient_id,
                     },
                 )
