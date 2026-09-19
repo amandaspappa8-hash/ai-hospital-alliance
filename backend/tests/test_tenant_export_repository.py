@@ -57,10 +57,10 @@ def _repo_without_init():
     return repo
 
 
-def test_export_whitelist_has_expected_42_tables():
+def test_export_whitelist_has_expected_41_tables():
     assert len(
         PostgresTenantExportRepository.TABLE_STRATEGIES
-    ) == 42
+    ) == 41
 
     assert (
         "tenants"
@@ -100,9 +100,7 @@ def test_secret_field_exclusions_are_explicit():
         "password"
     }
 
-    assert rules["refresh_tokens"] == {
-        "token_hash"
-    }
+    assert "refresh_tokens" not in rules
 
 
 def test_unknown_table_is_rejected():
@@ -146,22 +144,28 @@ def test_sql_strategies_are_select_only_and_tenant_scoped():
         assert ":tenant_id" in sql
 
 
-def test_refresh_tokens_use_safe_text_side_join():
+
+def test_refresh_tokens_are_not_in_portable_export_whitelist():
     repo = _repo_without_init()
 
-    sql = repo._select_sql(
+    assert (
         "refresh_tokens"
+        not in repo.TABLE_STRATEGIES
     )
 
-    assert (
-        "u.id::text = BTRIM(x.user_id)"
-        in sql
-    )
-
-    assert (
-        "x.user_id::integer"
-        not in sql.lower()
-    )
+    try:
+        repo._select_sql(
+            "refresh_tokens"
+        )
+    except ValueError as exc:
+        assert (
+            "Tenant export table is not allowed: refresh_tokens"
+            in str(exc)
+        )
+    else:
+        raise AssertionError(
+            "refresh_tokens unexpectedly remained portable"
+        )
 
 
 def test_report_integrity_uses_report_patient_hospital_chain():
@@ -191,13 +195,13 @@ def test_report_integrity_uses_report_patient_hospital_chain():
             in sql
         )
 
+
 def test_sensitive_fields_are_excluded_from_sql_projection():
     repo = _repo_without_init()
 
     sensitive = {
         "tenants": "api_key",
         "users": "password",
-        "refresh_tokens": "token_hash",
     }
 
     for table, field in sensitive.items():
@@ -213,6 +217,7 @@ def test_sensitive_fields_are_excluded_from_sql_projection():
         )
 
 
+
 def test_sensitive_nonsecret_columns_remain_selected():
     repo = _repo_without_init()
 
@@ -224,18 +229,11 @@ def test_sensitive_nonsecret_columns_remain_selected():
         "users"
     )
 
-    refresh_sql = repo._select_sql(
-        "refresh_tokens"
-    )
-
     assert 'x."id"' in tenant_sql
     assert 'x."name"' in tenant_sql
 
     assert 'x."id"' in user_sql
     assert 'x."hospital_id"' in user_sql
-
-    assert 'x."id"' in refresh_sql
-    assert 'x."user_id"' in refresh_sql
 
 
 def test_tenant_export_repository_shared_connection_does_not_reconnect():
@@ -443,5 +441,59 @@ def test_tenant_export_excluded_tables_uses_caller_connection_inspector():
             "table": "legacy_table",
             "reason":
             "UNCLASSIFIED_NOT_WHITELISTED",
+        },
+    ]
+
+
+
+def test_refresh_tokens_have_explicit_nonportable_exclusion_reason():
+    from unittest.mock import MagicMock, patch
+
+    from backend.app.repositories.postgres.tenant_export_repository import (
+        PostgresTenantExportRepository,
+    )
+
+    repository = (
+        PostgresTenantExportRepository.__new__(
+            PostgresTenantExportRepository
+        )
+    )
+
+    repository.engine = MagicMock()
+    repository._inspector = MagicMock()
+
+    connection = MagicMock()
+    connection_inspector = MagicMock()
+
+    connection_inspector.get_table_names.return_value = [
+        "patients",
+        "refresh_tokens",
+    ]
+
+    repository.TABLE_STRATEGIES = {
+        "patients": "VIA_HOSPITAL",
+    }
+
+    repository.PORTABILITY_EXCLUDED_TABLES = {
+        "refresh_tokens":
+        "PLATFORM_AUTHENTICATION_SECURITY_STATE",
+    }
+
+    repository.PLATFORM_INTERNAL_TABLES = set()
+
+    with patch(
+        "backend.app.repositories.postgres."
+        "tenant_export_repository.sa_inspect",
+        return_value=connection_inspector,
+    ):
+        result = repository.excluded_tables(
+            connection=connection,
+        )
+
+    assert result == [
+        {
+            "table": "refresh_tokens",
+            "reason":
+            "PLATFORM_AUTHENTICATION_SECURITY_STATE",
         },
     ]

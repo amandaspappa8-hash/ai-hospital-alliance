@@ -34,7 +34,6 @@ class TenantExportPackageService:
     _SOURCE_SECRET_FIELDS = {
         "tenants": frozenset({"api_key"}),
         "users": frozenset({"password"}),
-        "refresh_tokens": frozenset({"token_hash"}),
     }
 
     @staticmethod
@@ -148,6 +147,16 @@ class TenantExportPackageService:
         if not cls._TABLE_NAME_RE.fullmatch(table):
             raise ValueError(
                 f"unsafe export table name: {table!r}"
+            )
+
+        if table in (
+            PostgresTenantExportRepository
+            .PORTABILITY_EXCLUDED_TABLES
+        ):
+
+            raise ValueError(
+                "non-portable authentication security state table: "
+                + table
             )
 
         if (

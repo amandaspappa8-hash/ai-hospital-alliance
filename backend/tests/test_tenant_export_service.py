@@ -15,15 +15,11 @@ class FakeTenantExportRepository:
         "users": frozenset({
             "password",
         }),
-        "refresh_tokens": frozenset({
-            "token_hash",
-        }),
     }
 
     @classmethod
     def export_tables(cls):
         return (
-            "refresh_tokens",
             "tenants",
             "users",
         )
@@ -105,19 +101,6 @@ class FakeTenantExportRepository:
                 }
             ]
 
-        if table == "refresh_tokens":
-            return [
-                {
-                    "id": 1,
-                    "user_id": "7",
-                    "token_hash": "SECRET",
-                    "marker":
-                    UUID(
-                        "00000000-0000-0000-0000-000000000001"
-                    ),
-                }
-            ]
-
         raise AssertionError(table)
 
     def excluded_tables(self):
@@ -174,8 +157,8 @@ def test_snapshot_excludes_credentials_and_is_deterministic():
         "H-2",
     ]
 
-    assert first["table_count"] == 3
-    assert first["record_count"] == 3
+    assert first["table_count"] == 2
+    assert first["record_count"] == 2
 
     assert (
         "api_key"
@@ -185,13 +168,6 @@ def test_snapshot_excludes_credentials_and_is_deterministic():
     assert (
         "password"
         not in first["tables"]["users"][0]
-    )
-
-    assert (
-        "token_hash"
-        not in first[
-            "tables"
-        ]["refresh_tokens"][0]
     )
 
     assert (

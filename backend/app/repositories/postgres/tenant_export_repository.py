@@ -54,7 +54,6 @@ class PostgresTenantExportRepository:
         "ophthalmology_validation_evidence_reports": "DIRECT_TENANT",
         "patients": "VIA_HOSPITAL",
         "radiology_orders": "VIA_PATIENT",
-        "refresh_tokens": "VIA_USER_TEXT_ID",
         "report_content_digests": "VIA_REPORT",
         "report_content_macs": "VIA_REPORT",
         "report_verification_events": "VIA_REPORT",
@@ -63,10 +62,15 @@ class PostgresTenantExportRepository:
         "users": "VIA_HOSPITAL",
     }
 
+    PORTABILITY_EXCLUDED_TABLES: dict[str, str] = {
+        "refresh_tokens": (
+            "PLATFORM_AUTHENTICATION_SECURITY_STATE"
+        ),
+    }
+
     FIELD_EXCLUSIONS: dict[str, frozenset[str]] = {
         "tenants": frozenset({"api_key"}),
         "users": frozenset({"password"}),
-        "refresh_tokens": frozenset({"token_hash"}),
     }
 
     PLATFORM_INTERNAL_TABLES = frozenset({
@@ -479,7 +483,17 @@ class PostgresTenantExportRepository:
             if table in allowed:
                 continue
 
-            if table.startswith(
+            if table in (
+                self.PORTABILITY_EXCLUDED_TABLES
+            ):
+
+                reason = (
+                    self.PORTABILITY_EXCLUDED_TABLES[
+                        table
+                    ]
+                )
+
+            elif table.startswith(
                 "ahos_28_"
             ):
                 reason = (

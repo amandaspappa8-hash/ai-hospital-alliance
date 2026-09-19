@@ -577,3 +577,37 @@ def test_source_contains_no_database_or_http_surface():
 
     assert "zipfile" not in source
     assert "tarfile" not in source
+
+
+
+def test_package_rejects_nonportable_refresh_tokens():
+    from backend.app.services.core.tenant_export_package_service import (
+        TenantExportPackageService,
+    )
+
+    snapshot = {
+        "tenant_id": "TEN-1",
+        "hospital_ids": [],
+        "tables": {
+            "refresh_tokens": [],
+        },
+        "table_count": 1,
+        "record_count": 0,
+        "excluded_tables": [],
+        "excluded_fields": {},
+    }
+
+    try:
+        TenantExportPackageService._validate_snapshot(
+            snapshot
+        )
+    except ValueError as exc:
+        assert (
+            "non-portable authentication security state table: "
+            "refresh_tokens"
+            in str(exc)
+        )
+    else:
+        raise AssertionError(
+            "package accepted non-portable refresh_tokens"
+        )
