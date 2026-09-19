@@ -186,27 +186,53 @@ class TenantExportService:
 
         return normalized_rows
 
-    def build_tenant_export_snapshot(
+    def _build_snapshot_payload(
         self,
         *,
         tenant_id: str,
         principal_user_id: int,
+        connection: Any | None = None,
     ) -> dict[str, Any]:
 
-        scope = self.repository.resolve_scope(
-            tenant_id=tenant_id,
-            principal_user_id=principal_user_id,
-        )
+        if connection is None:
 
-        hospital_ids = (
-            self.repository
-            .hospital_ids_for_principal(
-                tenant_id=scope["tenant_id"],
-                principal_user_id=scope[
-                    "principal_user_id"
-                ],
+            scope = self.repository.resolve_scope(
+                tenant_id=tenant_id,
+                principal_user_id=principal_user_id,
             )
-        )
+
+            hospital_ids = (
+                self.repository
+                .hospital_ids_for_principal(
+                    tenant_id=scope[
+                        "tenant_id"
+                    ],
+                    principal_user_id=scope[
+                        "principal_user_id"
+                    ],
+                )
+            )
+
+        else:
+
+            scope = self.repository.resolve_scope(
+                tenant_id=tenant_id,
+                principal_user_id=principal_user_id,
+                connection=connection,
+            )
+
+            hospital_ids = (
+                self.repository
+                .hospital_ids_for_principal(
+                    tenant_id=scope[
+                        "tenant_id"
+                    ],
+                    principal_user_id=scope[
+                        "principal_user_id"
+                    ],
+                    connection=connection,
+                )
+            )
 
         tables: dict[
             str,
@@ -219,18 +245,36 @@ class TenantExportService:
             self.repository.export_tables()
         ):
 
-            raw_rows = (
-                self.repository
-                .read_tenant_export_rows(
-                    table=table,
-                    tenant_id=scope[
-                        "tenant_id"
-                    ],
-                    principal_user_id=scope[
-                        "principal_user_id"
-                    ],
+            if connection is None:
+
+                raw_rows = (
+                    self.repository
+                    .read_tenant_export_rows(
+                        table=table,
+                        tenant_id=scope[
+                            "tenant_id"
+                        ],
+                        principal_user_id=scope[
+                            "principal_user_id"
+                        ],
+                    )
                 )
-            )
+
+            else:
+
+                raw_rows = (
+                    self.repository
+                    .read_tenant_export_rows(
+                        table=table,
+                        tenant_id=scope[
+                            "tenant_id"
+                        ],
+                        principal_user_id=scope[
+                            "principal_user_id"
+                        ],
+                        connection=connection,
+                    )
+                )
 
             rows = self._sanitize_rows(
                 table=table,
@@ -250,7 +294,21 @@ class TenantExportService:
             )
         }
 
-        snapshot = {
+        if connection is None:
+
+            excluded_tables = (
+                self.repository.excluded_tables()
+            )
+
+        else:
+
+            excluded_tables = (
+                self.repository.excluded_tables(
+                    connection=connection,
+                )
+            )
+
+        return {
             "format_version":
             self.FORMAT_VERSION,
             "tenant_id":
@@ -268,9 +326,52 @@ class TenantExportService:
                 )
             ),
             "excluded_tables":
-            self.repository.excluded_tables(),
+            excluded_tables,
             "excluded_fields":
             excluded_fields,
         }
 
-        return snapshot
+    def build_tenant_export_snapshot(
+        self,
+        *,
+        tenant_id: str,
+        principal_user_id: int,
+    ) -> dict[str, Any]:
+
+        engine = getattr(
+            self.repository,
+            "engine",
+            None,
+        )
+
+        # Preserve the existing repository protocol for test doubles
+        # and alternate in-memory implementations that do not own a
+        # PostgreSQL engine.
+        if engine is None:
+
+            return self._build_snapshot_payload(
+                tenant_id=tenant_id,
+                principal_user_id=principal_user_id,
+                connection=None,
+            )
+
+        # Canonical PostgreSQL tenant exports are read from exactly one
+        # read-only REPEATABLE READ transaction.
+        with (
+            engine.connect()
+            .execution_options(
+                isolation_level="REPEATABLE READ"
+            )
+        ) as connection:
+
+            with connection.begin():
+
+                connection.exec_driver_sql(
+                    "SET TRANSACTION READ ONLY"
+                )
+
+                return self._build_snapshot_payload(
+                    tenant_id=tenant_id,
+                    principal_user_id=principal_user_id,
+                    connection=connection,
+                )

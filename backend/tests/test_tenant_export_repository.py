@@ -236,3 +236,212 @@ def test_sensitive_nonsecret_columns_remain_selected():
 
     assert 'x."id"' in refresh_sql
     assert 'x."user_id"' in refresh_sql
+
+
+def test_tenant_export_repository_shared_connection_does_not_reconnect():
+    from unittest.mock import MagicMock
+
+    from backend.app.repositories.postgres.tenant_export_repository import (
+        PostgresTenantExportRepository,
+    )
+
+    engine = MagicMock()
+    repository = PostgresTenantExportRepository.__new__(
+        PostgresTenantExportRepository
+    )
+    repository.engine = engine
+
+    connection = MagicMock()
+
+    result = MagicMock()
+    result.mappings.return_value.first.return_value = {
+        "user_id": 1,
+        "hospital_id": "H-1",
+        "tenant_id": "T-1",
+    }
+    connection.execute.return_value = result
+
+    scope = repository.resolve_scope(
+        tenant_id="T-1",
+        principal_user_id=1,
+        connection=connection,
+    )
+
+    assert scope["tenant_id"] == "T-1"
+    engine.connect.assert_not_called()
+    connection.execute.assert_called_once()
+
+
+def test_tenant_export_repository_shared_connection_hospital_ids():
+    from unittest.mock import MagicMock
+
+    from backend.app.repositories.postgres.tenant_export_repository import (
+        PostgresTenantExportRepository,
+    )
+
+    repository = PostgresTenantExportRepository.__new__(
+        PostgresTenantExportRepository
+    )
+
+    repository.engine = MagicMock()
+
+    connection = MagicMock()
+
+    scope_result = MagicMock()
+    scope_result.mappings.return_value.first.return_value = {
+        "user_id": 1,
+        "hospital_id": "H-1",
+        "tenant_id": "T-1",
+    }
+
+    hospital_result = MagicMock()
+    hospital_result.scalars.return_value.all.return_value = [
+        "H-1",
+        "H-2",
+    ]
+
+    connection.execute.side_effect = [
+        scope_result,
+        hospital_result,
+    ]
+
+    result = repository.hospital_ids_for_principal(
+        tenant_id="T-1",
+        principal_user_id=1,
+        connection=connection,
+    )
+
+    assert result == [
+        "H-1",
+        "H-2",
+    ]
+
+    repository.engine.connect.assert_not_called()
+
+    assert connection.execute.call_count == 2
+
+
+
+def test_tenant_export_projection_uses_caller_connection_inspector():
+    from unittest.mock import MagicMock, patch
+
+    from backend.app.repositories.postgres.tenant_export_repository import (
+        PostgresTenantExportRepository,
+    )
+
+    repository = (
+        PostgresTenantExportRepository.__new__(
+            PostgresTenantExportRepository
+        )
+    )
+
+    repository.engine = MagicMock()
+    repository._inspector = MagicMock()
+
+    connection = MagicMock()
+    connection_inspector = MagicMock()
+
+    connection_inspector.get_columns.return_value = [
+        {
+            "name": "id",
+        },
+        {
+            "name": "password",
+        },
+    ]
+
+    repository.FIELD_EXCLUSIONS = {
+        "users": {
+            "password",
+        },
+    }
+
+    repository.TABLE_STRATEGIES = {
+        "users": "VIA_HOSPITAL",
+    }
+
+    with patch(
+        "backend.app.repositories.postgres."
+        "tenant_export_repository.sa_inspect",
+        return_value=connection_inspector,
+    ) as inspect_mock:
+
+        projection = (
+            repository._select_projection(
+                "users",
+                connection=connection,
+            )
+        )
+
+    inspect_mock.assert_called_once_with(
+        connection
+    )
+
+    connection_inspector.get_columns.assert_called_once_with(
+        "users",
+        schema="public",
+    )
+
+    repository._inspector.get_columns.assert_not_called()
+
+    assert projection == 'x."id"'
+
+
+
+def test_tenant_export_excluded_tables_uses_caller_connection_inspector():
+    from unittest.mock import MagicMock, patch
+
+    from backend.app.repositories.postgres.tenant_export_repository import (
+        PostgresTenantExportRepository,
+    )
+
+    repository = (
+        PostgresTenantExportRepository.__new__(
+            PostgresTenantExportRepository
+        )
+    )
+
+    repository.engine = MagicMock()
+    repository._inspector = MagicMock()
+
+    connection = MagicMock()
+    connection_inspector = MagicMock()
+
+    connection_inspector.get_table_names.return_value = [
+        "patients",
+        "legacy_table",
+    ]
+
+    repository.TABLE_STRATEGIES = {
+        "patients": "VIA_HOSPITAL",
+    }
+
+    repository.PLATFORM_INTERNAL_TABLES = set()
+
+    with patch(
+        "backend.app.repositories.postgres."
+        "tenant_export_repository.sa_inspect",
+        return_value=connection_inspector,
+    ) as inspect_mock:
+
+        result = repository.excluded_tables(
+            connection=connection,
+        )
+
+    inspect_mock.assert_called_once_with(
+        connection
+    )
+
+    connection_inspector.get_table_names.assert_called_once_with(
+        schema="public",
+    )
+
+    repository._inspector.get_table_names.assert_not_called()
+
+    assert result == [
+        {
+            "table": "legacy_table",
+            "reason":
+            "UNCLASSIFIED_NOT_WHITELISTED",
+        },
+    ]

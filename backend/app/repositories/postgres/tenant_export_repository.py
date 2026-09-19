@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import nullcontext
 from typing import Any
 
 from sqlalchemy import inspect as sa_inspect
@@ -98,6 +99,7 @@ class PostgresTenantExportRepository:
     def _select_projection(
         self,
         table: str,
+        connection: Any | None = None,
     ) -> str:
         """Return an explicit SQL projection with secrets excluded.
 
@@ -114,9 +116,15 @@ class PostgresTenantExportRepository:
             table
         )
 
+        inspector = (
+            sa_inspect(connection)
+            if connection is not None
+            else self._inspector
+        )
+
         column_names = [
             item["name"]
-            for item in self._inspector.get_columns(
+            for item in inspector.get_columns(
                 table,
                 schema="public",
             )
@@ -141,6 +149,7 @@ class PostgresTenantExportRepository:
         *,
         tenant_id: str,
         principal_user_id: int,
+        connection: Any | None = None,
     ) -> dict[str, Any]:
 
         tenant_id = str(
@@ -161,9 +170,15 @@ class PostgresTenantExportRepository:
                 "Verified principal is invalid"
             ) from exc
 
-        with self.engine.connect() as connection:
+        connection_context = (
+            nullcontext(connection)
+            if connection is not None
+            else self.engine.connect()
+        )
+
+        with connection_context as active_connection:
             row = (
-                connection.execute(
+                active_connection.execute(
                     text(
                         """
                         SELECT
@@ -217,16 +232,24 @@ class PostgresTenantExportRepository:
         *,
         tenant_id: str,
         principal_user_id: int,
+        connection: Any | None = None,
     ) -> list[str]:
 
         scope = self.resolve_scope(
             tenant_id=tenant_id,
             principal_user_id=principal_user_id,
+            connection=connection,
         )
 
-        with self.engine.connect() as connection:
+        connection_context = (
+            nullcontext(connection)
+            if connection is not None
+            else self.engine.connect()
+        )
+
+        with connection_context as active_connection:
             rows = (
-                connection.execute(
+                active_connection.execute(
                     text(
                         """
                         SELECT id
@@ -252,6 +275,7 @@ class PostgresTenantExportRepository:
     def _select_sql(
         self,
         table: str,
+        connection: Any | None = None,
     ) -> str:
 
         if table not in self.TABLE_STRATEGIES:
@@ -268,7 +292,8 @@ class PostgresTenantExportRepository:
         )
 
         projection = self._select_projection(
-            table
+            table,
+            connection=connection,
         )
 
         if strategy == "TENANT_ROOT":
@@ -342,20 +367,29 @@ class PostgresTenantExportRepository:
         table: str,
         tenant_id: str,
         principal_user_id: int,
+        connection: Any | None = None,
     ) -> list[dict[str, Any]]:
 
         scope = self.resolve_scope(
             tenant_id=tenant_id,
             principal_user_id=principal_user_id,
+            connection=connection,
         )
 
         sql = self._select_sql(
-            table
+            table,
+            connection=connection,
         )
 
-        with self.engine.connect() as connection:
+        connection_context = (
+            nullcontext(connection)
+            if connection is not None
+            else self.engine.connect()
+        )
+
+        with connection_context as active_connection:
             rows = (
-                connection.execute(
+                active_connection.execute(
                     text(sql),
                     {
                         "tenant_id":
@@ -415,10 +449,19 @@ class PostgresTenantExportRepository:
             "audit_logs": int(audit_logs),
         }
 
-    def excluded_tables(self) -> list[dict[str, str]]:
+    def excluded_tables(
+        self,
+        connection: Any | None = None,
+    ) -> list[dict[str, str]]:
+
+        inspector = (
+            sa_inspect(connection)
+            if connection is not None
+            else self._inspector
+        )
 
         public_tables = sorted(
-            self._inspector.get_table_names(
+            inspector.get_table_names(
                 schema="public",
             )
         )

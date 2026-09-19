@@ -263,3 +263,98 @@ def test_duplicate_canonical_rows_fail_closed():
         raise AssertionError(
             "duplicate canonical rows were accepted"
         )
+
+
+def test_tenant_export_snapshot_uses_one_repeatable_read_read_only_connection():
+    from unittest.mock import MagicMock
+
+    from backend.app.services.core.tenant_export_service import (
+        TenantExportService,
+    )
+
+    repository = MagicMock()
+
+    connection = MagicMock()
+
+    configured_connection = MagicMock()
+
+    repository.engine.connect.return_value = connection
+
+    connection.execution_options.return_value = (
+        configured_connection
+    )
+
+    configured_connection.__enter__.return_value = (
+        configured_connection
+    )
+
+    configured_connection.begin.return_value.__enter__.return_value = (
+        MagicMock()
+    )
+
+    repository.resolve_scope.return_value = {
+        "tenant_id": "T-1",
+        "principal_user_id": 1,
+        "hospital_id": "H-1",
+    }
+
+    repository.hospital_ids_for_principal.return_value = [
+        "H-1",
+    ]
+
+    repository.export_tables.return_value = (
+        "patients",
+    )
+
+    repository.read_tenant_export_rows.return_value = []
+
+    repository.FIELD_EXCLUSIONS = {}
+
+    repository.excluded_tables.return_value = []
+
+    service = TenantExportService(
+        repository
+    )
+
+    snapshot = service.build_tenant_export_snapshot(
+        tenant_id="T-1",
+        principal_user_id=1,
+    )
+
+    repository.engine.connect.assert_called_once_with()
+
+    connection.execution_options.assert_called_once_with(
+        isolation_level="REPEATABLE READ"
+    )
+
+    configured_connection.begin.assert_called_once_with()
+
+    configured_connection.exec_driver_sql.assert_called_once_with(
+        "SET TRANSACTION READ ONLY"
+    )
+
+    assert (
+        repository.resolve_scope.call_args.kwargs[
+            "connection"
+        ]
+        is configured_connection
+    )
+
+    assert (
+        repository.hospital_ids_for_principal
+        .call_args.kwargs[
+            "connection"
+        ]
+        is configured_connection
+    )
+
+    assert (
+        repository.read_tenant_export_rows
+        .call_args.kwargs[
+            "connection"
+        ]
+        is configured_connection
+    )
+
+    assert snapshot["table_count"] == 1
+    assert snapshot["record_count"] == 0
