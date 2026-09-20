@@ -320,69 +320,138 @@ def test_tenant_export_repository_shared_connection_hospital_ids():
 
 
 
-def test_tenant_export_projection_uses_caller_connection_inspector():
-    from unittest.mock import MagicMock, patch
-
-    from backend.app.repositories.postgres.tenant_export_repository import (
-        PostgresTenantExportRepository,
+def test_tenant_export_projection_is_static_and_fail_closed():
+    repository = object.__new__(
+        PostgresTenantExportRepository
     )
-
-    repository = (
-        PostgresTenantExportRepository.__new__(
-            PostgresTenantExportRepository
-        )
-    )
-
-    repository.engine = MagicMock()
-    repository._inspector = MagicMock()
-
-    connection = MagicMock()
-    connection_inspector = MagicMock()
-
-    connection_inspector.get_columns.return_value = [
-        {
-            "name": "id",
-        },
-        {
-            "name": "password",
-        },
-    ]
-
-    repository.FIELD_EXCLUSIONS = {
-        "users": {
-            "password",
-        },
-    }
 
     repository.TABLE_STRATEGIES = {
         "users": "VIA_HOSPITAL",
     }
 
-    with patch(
-        "backend.app.repositories.postgres."
-        "tenant_export_repository.sa_inspect",
-        return_value=connection_inspector,
-    ) as inspect_mock:
+    repository.EXPORT_FIELD_ALLOWLIST = {
+        "users": (
+            "id",
+            "username",
+        ),
+    }
 
-        projection = (
-            repository._select_projection(
-                "users",
-                connection=connection,
-            )
+    repository.FIELD_EXCLUSIONS = {
+        "users": frozenset({
+            "password",
+        }),
+    }
+
+    projection = repository._select_projection(
+        "users"
+    )
+
+    assert projection == (
+        'x."id", x."username"'
+    )
+
+
+def test_export_field_allowlist_matches_portable_table_set():
+    assert (
+        set(
+            PostgresTenantExportRepository
+            .EXPORT_FIELD_ALLOWLIST
+        )
+        ==
+        set(
+            PostgresTenantExportRepository
+            .TABLE_STRATEGIES
+        )
+    )
+
+    assert len(
+        PostgresTenantExportRepository
+        .EXPORT_FIELD_ALLOWLIST
+    ) == 41
+
+
+def test_export_field_allowlist_is_fail_closed_for_known_secrets():
+    allowlist = (
+        PostgresTenantExportRepository
+        .EXPORT_FIELD_ALLOWLIST
+    )
+
+    assert "api_key" not in allowlist["tenants"]
+    assert "password" not in allowlist["users"]
+
+    assert sum(
+        len(fields)
+        for fields in allowlist.values()
+    ) == 545
+
+
+def test_lifecycle_tables_have_explicit_nonportable_reasons():
+    reasons = (
+        PostgresTenantExportRepository
+        .PORTABILITY_EXCLUDED_TABLES
+    )
+
+    assert reasons[
+        "tenant_data_lifecycle"
+    ] == "NON_PORTABLE_GOVERNANCE_STATE"
+
+    assert reasons[
+        "tenant_data_lifecycle_events"
+    ] == (
+        "NON_PORTABLE_GOVERNANCE_AUDIT_STATE"
+    )
+
+    assert (
+        "tenant_data_lifecycle"
+        not in
+        PostgresTenantExportRepository
+        .TABLE_STRATEGIES
+    )
+
+    assert (
+        "tenant_data_lifecycle_events"
+        not in
+        PostgresTenantExportRepository
+        .TABLE_STRATEGIES
+    )
+
+
+def test_export_projection_rejects_allowlisted_secret_defense_in_depth():
+    repository = object.__new__(
+        PostgresTenantExportRepository
+    )
+
+    repository.TABLE_STRATEGIES = {
+        "users": "VIA_HOSPITAL",
+    }
+
+    repository.EXPORT_FIELD_ALLOWLIST = {
+        "users": (
+            "id",
+            "password",
+        ),
+    }
+
+    repository.FIELD_EXCLUSIONS = {
+        "users": frozenset({
+            "password",
+        }),
+    }
+
+    try:
+        repository._select_projection(
+            "users"
+        )
+    except RuntimeError as exc:
+        assert (
+            "defense-in-depth excluded fields"
+            in str(exc)
+        )
+    else:
+        raise AssertionError(
+            "allowlisted secret did not fail closed"
         )
 
-    inspect_mock.assert_called_once_with(
-        connection
-    )
-
-    connection_inspector.get_columns.assert_called_once_with(
-        "users",
-        schema="public",
-    )
-
-    repository._inspector.get_columns.assert_not_called()
-
-    assert projection == 'x."id"'
 
 
 
