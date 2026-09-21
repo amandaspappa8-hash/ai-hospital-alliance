@@ -18,7 +18,7 @@ from typing import Sequence, Union
 from alembic import op
 
 
-revision: str = "aiha_lifecycle_updated_at_20260921"
+revision: str = "aiha_lifecycle_uat_20260921"
 down_revision: Union[str, Sequence[str], None] = (
     "aiha_lifecycle_immut_20260920"
 )
