@@ -217,33 +217,29 @@ def tenant_to_public(t: Tenant) -> dict:
 # ─── Registration ─────────────────────────────────────────────────────────────
 
 def register_hospital(req: HospitalRegisterRequest, db: Session) -> dict:
-    from .models import Hospital, User, Department
+    from .db.canonical_postgres import get_canonical_postgres_engine
+    from .repositories.postgres.saas_registration_repository import (
+        PostgresCanonicalSaaSRegistrationRepository,
+    )
+    from .repositories.postgres.tenant_lifecycle_mutation_repository import (
+        PostgresTenantLifecycleMutationRepository,
+    )
+    from .repositories.postgres.tenant_lifecycle_event_writer_repository import (
+        PostgresTenantLifecycleEventWriterRepository,
+    )
+
+    # Preserve the established function signature while isolating canonical
+    # registration persistence from unrelated legacy SQLite runtime paths.
+    _ = db
 
     if req.plan not in PLANS:
         raise HTTPException(400, f"Invalid plan. Choose from: {list(PLANS.keys())}")
 
-    # Validate password strength
     if len(req.admin_password) < 12:
         raise HTTPException(400, "Password must be at least 12 characters")
 
-    slug = _make_slug(req.hospital_name)
-    # Ensure slug uniqueness
-    base_slug = slug
-    i = 1
-    while db.query(Tenant).filter(Tenant.slug == slug).first():
-        slug = f"{base_slug}-{i}"
-        i += 1
-
-    # Check email uniqueness
-    if db.query(Tenant).filter(Tenant.admin_email == req.admin_email).first():
-        raise HTTPException(409, "An account with this email already exists")
-
-    tenant_id = _generate_hospital_id()
-    # Ensure id uniqueness
-    while db.query(Tenant).filter(Tenant.id == tenant_id).first():
-        tenant_id = _generate_hospital_id()
-
     plan_cfg = PLANS[req.plan]
+
     trial_ends = (
         datetime.utcnow() + timedelta(days=plan_cfg["trial_days"])
         if plan_cfg["trial_days"] > 0
@@ -252,51 +248,173 @@ def register_hospital(req: HospitalRegisterRequest, db: Session) -> dict:
 
     api_key = _generate_api_key()
 
-    # Create tenant record
-    tenant = Tenant(
-        id=tenant_id,
-        name=req.hospital_name,
-        slug=slug,
-        plan=req.plan,
-        admin_email=req.admin_email,
-        admin_name=req.admin_name,
-        country=req.country,
-        phone=req.phone,
-        api_key=api_key,
-        is_active=True,
-        is_verified=False,
-        trial_ends_at=trial_ends,
+    admin_password_hash = hash_password(
+        req.admin_password
     )
-    db.add(tenant)
 
-    # Create Hospital record (for existing system compatibility)
-    hospital = Hospital(
-        id=tenant_id,
-        name=req.hospital_name,
-        address=req.country,
-        phone=req.phone,
+    default_depts = [
+        "Emergency",
+        "ICU",
+        "Cardiology",
+        "Radiology",
+        "General",
+    ]
+
+    dept_codes = [
+        "ER",
+        "ICU",
+        "CARD",
+        "RAD",
+        "GEN",
+    ]
+
+    engine = get_canonical_postgres_engine()
+
+    registration_repository = (
+        PostgresCanonicalSaaSRegistrationRepository(
+            engine
+        )
     )
-    db.add(hospital)
-    db.flush()
 
-    # Create default departments
-    default_depts = ["Emergency", "ICU", "Cardiology", "Radiology", "General"]
-    dept_codes = ["ER", "ICU", "CARD", "RAD", "GEN"]
-    for name, code in zip(default_depts, dept_codes):
-        db.add(Department(name=name, code=f"{code}-{tenant_id[-4:]}", hospital_id=tenant_id))
-    db.flush()
-
-    # Create admin user
-    admin = User(
-        username=req.admin_email,
-        password=hash_password(req.admin_password),
-        name=req.admin_name,
-        role="admin",
-        hospital_id=tenant_id,
-        is_active=True,
+    lifecycle_repository = (
+        PostgresTenantLifecycleMutationRepository(
+            engine
+        )
     )
-    db.add(admin)
-    db.commit()
+
+    event_writer = (
+        PostgresTenantLifecycleEventWriterRepository(
+            engine
+        )
+    )
+
+    with engine.connect() as connection:
+        transaction = connection.begin()
+
+        try:
+            slug = _make_slug(
+                req.hospital_name
+            )
+
+            base_slug = slug
+            i = 1
+
+            while registration_repository.slug_exists(
+                slug=slug,
+                connection=connection,
+            ):
+                slug = f"{base_slug}-{i}"
+                i += 1
+
+            if registration_repository.admin_email_exists(
+                admin_email=req.admin_email,
+                connection=connection,
+            ):
+                raise HTTPException(
+                    409,
+                    "An account with this email already exists",
+                )
+
+            if registration_repository.username_exists(
+                username=req.admin_email,
+                connection=connection,
+            ):
+                raise HTTPException(
+                    409,
+                    "An account with this email already exists",
+                )
+
+            while True:
+                tenant_id = _generate_hospital_id()
+
+                if registration_repository.tenant_id_exists(
+                    tenant_id=tenant_id,
+                    connection=connection,
+                ):
+                    continue
+
+                if registration_repository.hospital_id_exists(
+                    hospital_id=tenant_id,
+                    connection=connection,
+                ):
+                    continue
+
+                departments = [
+                    (
+                        name,
+                        f"{code}-{tenant_id[-4:]}",
+                    )
+                    for name, code in zip(
+                        default_depts,
+                        dept_codes,
+                    )
+                ]
+
+                department_collision = any(
+                    registration_repository.department_code_exists(
+                        department_code=code,
+                        connection=connection,
+                    )
+                    for _, code in departments
+                )
+
+                if department_collision:
+                    continue
+
+                break
+
+            registration_repository.create_registration_records(
+                tenant_id=tenant_id,
+                tenant_name=req.hospital_name,
+                slug=slug,
+                plan=req.plan,
+                admin_email=req.admin_email,
+                admin_name=req.admin_name,
+                country=req.country,
+                phone=req.phone,
+                api_key=api_key,
+                trial_ends_at=trial_ends,
+                hospital_name=req.hospital_name,
+                hospital_address=req.country,
+                hospital_phone=req.phone,
+                departments=departments,
+                admin_username=req.admin_email,
+                admin_password_hash=admin_password_hash,
+                admin_display_name=req.admin_name,
+                admin_role="admin",
+                connection=connection,
+            )
+
+            lifecycle_repository.create_initial_lifecycle(
+                tenant_id=tenant_id,
+                lifecycle_state="ACTIVE",
+                connection=connection,
+            )
+
+            event_writer.append_event(
+                tenant_id=tenant_id,
+                event_type="TENANT_LIFECYCLE_INITIALIZED",
+                actor_user_id=None,
+                reason=(
+                    "Canonical tenant lifecycle initialized "
+                    "during registration"
+                ),
+                metadata={
+                    "schema_version": 1,
+                    "policy_control": "SEC-S6A-P22H",
+                    "initial_state": "ACTIVE",
+                    "registration_route": "POST /saas/register",
+                },
+                connection=connection,
+            )
+
+            transaction.commit()
+
+        except Exception:
+            if transaction.is_active:
+                transaction.rollback()
+
+            raise
 
     return {
         "message": "Hospital registered successfully",
@@ -304,7 +422,11 @@ def register_hospital(req: HospitalRegisterRequest, db: Session) -> dict:
         "slug": slug,
         "api_key": api_key,
         "plan": req.plan,
-        "trial_ends_at": trial_ends.isoformat() if trial_ends else None,
+        "trial_ends_at": (
+            trial_ends.isoformat()
+            if trial_ends
+            else None
+        ),
         "next_steps": [
             "Save your API key securely — it won't be shown again",
             "Login with your admin email and password at /auth/login",
