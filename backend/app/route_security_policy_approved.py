@@ -15,6 +15,7 @@ def classify_approved(path:str)->str:
         "/docs",
         "/redoc",
         "/openapi.json",
+        "/saas/register",
         "/docs/oauth2-redirect",
     }
 

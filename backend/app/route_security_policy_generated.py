@@ -325,6 +325,7 @@ PUBLIC_EXACT = {
     '/auth/jwt-login',
     '/auth/login',
     '/auth/refresh',
+    '/saas/register',
     '/container/health',
     '/docs',
     '/docs/oauth2-redirect',

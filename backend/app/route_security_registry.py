@@ -9,6 +9,7 @@ PUBLIC_ROUTES = {
     '/auth/jwt-login',
     '/auth/login',
     '/auth/refresh',
+    '/saas/register',
     '/docs',
     '/docs/oauth2-redirect',
     '/fhir/R4/metadata',
